@@ -1,0 +1,41 @@
+syntax = "proto3";
+package fixtures;
+
+message Nested {
+  int32 id = 1;
+  string note = 2;
+}
+
+message AllTypes {
+  int32 int32_f = 1;
+  int64 int64_f = 2;
+  uint32 uint32_f = 3;
+  uint64 uint64_f = 4;
+  sint32 sint32_f = 5;
+  sint64 sint64_f = 6;
+  bool bool_f = 7;
+  fixed32 fixed32_f = 8;
+  fixed64 fixed64_f = 9;
+  sfixed32 sfixed32_f = 10;
+  sfixed64 sfixed64_f = 11;
+  float float_f = 12;
+  double double_f = 13;
+  string string_f = 14;
+  bytes bytes_f = 15;
+  Nested nested_f = 16;
+  repeated int32 repeated_int32 = 17 [packed = false];
+  repeated sint32 packed_sint32 = 18 [packed = true];
+}
+
+message AdvancedTypes {
+  oneof variant {
+    int32 choice_i32 = 1;
+    string choice_text = 2;
+  }
+  repeated fixed64 packed_fixed64 = 3 [packed = true];
+  repeated bytes chunks = 4;
+  bool flag = 5;
+  string utf8 = 6;
+  bytes blob = 7;
+  Nested nested = 8;
+}

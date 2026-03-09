@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04]
+        mode: [normal, asan, ubsan]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gnat gprbuild libaunit22-dev protobuf-compiler libprotobuf-dev valgrind
+
+      - name: Regenerate fixtures
+        run: tools/generate_fixtures.sh
+
+      - name: Build
+        run: |
+          if [ "${{ matrix.mode }}" = "asan" ]; then
+            gprbuild -P protobuf_ada.gpr -cargs -gnat2012 -g -O1 -fsanitize=address -fno-omit-frame-pointer -largs -fsanitize=address
+          elif [ "${{ matrix.mode }}" = "ubsan" ]; then
+            gprbuild -P protobuf_ada.gpr -cargs -gnat2012 -g -O1 -fsanitize=undefined -fno-omit-frame-pointer -largs -fsanitize=undefined
+          else
+            gprbuild -P protobuf_ada.gpr
+          fi
+
+      - name: Unit tests
+        run: ./bin/protobuf-ada-test
+
+      - name: Compiler compatibility smoke
+        run: tools/test_compiler_compat.sh
+
+      - name: JUnit output
+        run: ./bin/protobuf-ada-junit > tests/junit.xml
+
+      - name: Benchmark regression guard
+        run: tools/bench_compare.sh
+
+  valgrind:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gnat gprbuild libaunit22-dev protobuf-compiler libprotobuf-dev valgrind
+      - name: Build
+        run: gprbuild -P protobuf_ada.gpr
+      - name: Valgrind leak check
+        run: |
+          valgrind --leak-check=full --show-leak-kinds=all --error-exitcode=1 ./bin/protobuf-ada-test
+
+  fuzz-smoke:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gnat gprbuild libaunit22-dev
+      - name: Build
+        run: gprbuild -P protobuf_ada.gpr
+      - name: Fuzz harness smoke
+        run: |
+          printf '0b' | xxd -r -p > /tmp/fuzz1.bin
+          printf '08ff' | xxd -r -p > /tmp/fuzz2.bin
+          ./bin/protobuf-ada-fuzz /tmp/fuzz1.bin || true
+          ./bin/protobuf-ada-fuzz /tmp/fuzz2.bin || true

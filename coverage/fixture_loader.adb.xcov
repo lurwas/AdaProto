@@ -1,0 +1,63 @@
+/home/richard/src/Ada/protobuf-ada-best/tests/fixture_loader.adb:
+69% of 29 lines covered
+69% statement coverage (20 out of 29)
+
+Coverage level: stmt
+   1 .: with Ada.Directories;
+   2 .: with Ada.Streams.Stream_IO;
+   3 .: 
+   4 .: package body Fixture_Loader is
+   5 .: 
+   6 .:    function Try_Path (Path : String) return String is
+   7 .:       use Ada.Streams;
+   8 .:       use Ada.Streams.Stream_IO;
+   9 +:       File : File_Type;
+  10 .:    begin
+  11 +:       Open (File, In_File, Path);
+  12 .:       declare
+  13 +:          File_Size : constant Count := Size (File);
+  14 +:          Data : Stream_Element_Array (1 .. Stream_Element_Offset'Max (1, Stream_Element_Offset (File_Size)));
+  15 +:          Last : Stream_Element_Offset := 0;
+  16 .:       begin
+  17 +:          if File_Size = 0 then
+  18 +:             Close (File);
+  19 +:             return "";
+  20 .:          end if;
+  21 +:          Read (File, Data, Last);
+  22 +:          Close (File);
+  23 +:          if Last /= Data'Last then
+  24 -:             return "";
+  25 .:          end if;
+  26 .:          declare
+  27 +:             Result : String (1 .. Integer (Last));
+  28 .:          begin
+  29 +:             for I in Data'Range loop
+  30 +:                Result (Integer (I)) := Character'Val (Data (I));
+  31 .:             end loop;
+  32 +:             return Result;
+  33 .:          end;
+  34 .:       end;
+  35 .:    exception
+  36 .:       when others =>
+  37 -:          if Is_Open (File) then
+  38 -:             Close (File);
+  39 .:          end if;
+  40 -:          raise;
+  41 .:    end Try_Path;
+  42 .: 
+  43 .:    function Read_Fixture (Name : String) return String is
+  44 +:       Path_1 : constant String := "fixtures/" & Name;
+  45 +:       Path_2 : constant String := "../fixtures/" & Name;
+  46 +:       Path_3 : constant String := "../../fixtures/" & Name;
+  47 .:    begin
+  48 +:       if Ada.Directories.Exists (Path_1) then
+  49 +:          return Try_Path (Path_1);
+  50 -:       elsif Ada.Directories.Exists (Path_2) then
+  51 -:          return Try_Path (Path_2);
+  52 -:       elsif Ada.Directories.Exists (Path_3) then
+  53 -:          return Try_Path (Path_3);
+  54 .:       end if;
+  55 -:       raise Ada.Directories.Name_Error with "fixture not found: " & Name;
+  56 .:    end Read_Fixture;
+  57 .: 
+  58 .: end Fixture_Loader;

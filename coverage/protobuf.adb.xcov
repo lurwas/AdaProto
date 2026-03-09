@@ -1,0 +1,847 @@
+/home/richard/src/Ada/protobuf-ada-best/src/protobuf.adb:
+92% of 345 lines covered
+92% statement coverage (316 out of 345)
+
+Coverage level: stmt
+   1 .: with Ada.Containers.Vectors;
+   2 .: with Ada.Streams;
+   3 .: with Ada.Strings.Unbounded;
+   4 .: with Ada.Unchecked_Conversion;
+   5 .: with Interfaces;
+   6 .: 
+   7 .: package body Protobuf is
+   8 .:    use Ada.Strings.Unbounded;
+   9 .:    use Interfaces;
+  10 .:    use type Ada.Streams.Stream_Element_Offset;
+  11 .: 
+  12 .:    function To_Signed_32 is new Ada.Unchecked_Conversion (Unsigned_32, Integer_32);
+  13 .:    function To_Unsigned_32 is new Ada.Unchecked_Conversion (Integer_32, Unsigned_32);
+  14 .:    function To_Signed_64 is new Ada.Unchecked_Conversion (Unsigned_64, Integer_64);
+  15 .:    function To_Unsigned_64 is new Ada.Unchecked_Conversion (Integer_64, Unsigned_64);
+  16 .:    function Bits_To_Float is new Ada.Unchecked_Conversion (Unsigned_32, Float32);
+  17 .:    function Float_To_Bits is new Ada.Unchecked_Conversion (Float32, Unsigned_32);
+  18 .:    function Bits_To_Double is new Ada.Unchecked_Conversion (Unsigned_64, Float64);
+  19 .:    function Double_To_Bits is new Ada.Unchecked_Conversion (Float64, Unsigned_64);
+  20 .: 
+  21 .:    package Int32_Vectors is new Ada.Containers.Vectors (Natural, Integer_32);
+  22 .:    package Int64_Vectors is new Ada.Containers.Vectors (Natural, Integer_64);
+  23 .:    package UInt32_Vectors is new Ada.Containers.Vectors (Natural, Unsigned_32);
+  24 .:    package UInt64_Vectors is new Ada.Containers.Vectors (Natural, Unsigned_64);
+  25 .:    package Bool_Vectors is new Ada.Containers.Vectors (Natural, Boolean);
+  26 .:    package Fixed32_Vectors is new Ada.Containers.Vectors (Natural, Unsigned_32);
+  27 .:    package Fixed64_Vectors is new Ada.Containers.Vectors (Natural, Unsigned_64);
+  28 .:    package SFixed32_Vectors is new Ada.Containers.Vectors (Natural, Integer_32);
+  29 .:    package SFixed64_Vectors is new Ada.Containers.Vectors (Natural, Integer_64);
+  30 .:    package Float_Vectors is new Ada.Containers.Vectors (Natural, Float32);
+  31 .:    package Double_Vectors is new Ada.Containers.Vectors (Natural, Float64);
+  32 .: 
+  33 .:    procedure Append_Byte (Target : in out Unbounded_String; Value : Unsigned_8) is
+  34 .:    begin
+  35 +:       Append (Target, Character'Val (Integer (Value)));
+  36 .:    end Append_Byte;
+  37 .: 
+  38 .:    function Read_Byte (Data : String; Position : Positive) return Unsigned_8 is
+  39 .:    begin
+  40 +:       return Unsigned_8 (Character'Pos (Data (Position)));
+  41 .:    end Read_Byte;
+  42 .: 
+  43 .:    procedure Append_Varint (Target : in out Unbounded_String; Value : Unsigned_64) is
+  44 +:       Remaining : Unsigned_64 := Value;
+  45 .:    begin
+  46 .:       loop
+  47 .:          declare
+  48 +:             Byte : Unsigned_8 := Unsigned_8 (Remaining and 16#7F#);
+  49 .:          begin
+  50 +:             Remaining := Shift_Right (Remaining, 7);
+  51 +:             if Remaining = 0 then
+  52 +:                Append_Byte (Target, Byte);
+  53 +:                exit;
+  54 .:             else
+  55 +:                Append_Byte (Target, Byte or 16#80#);
+  56 .:             end if;
+  57 .:          end;
+  58 .:       end loop;
+  59 .:    end Append_Varint;
+  60 .: 
+  61 .:    function Decode_Varint (Data : String; Cursor : in out Natural) return Unsigned_64 is
+  62 +:       Shift : Natural := 0;
+  63 +:       Value : Unsigned_64 := 0;
+  64 .:    begin
+  65 +:       while Cursor <= Data'Last loop
+  66 .:          declare
+  67 +:             Byte : constant Unsigned_8 := Read_Byte (Data, Cursor);
+  68 .:          begin
+  69 +:             Cursor := Cursor + 1;
+  70 +:             Value := Value or Shift_Left (Unsigned_64 (Byte and 16#7F#), Shift);
+  71 +:             if (Byte and 16#80#) = 0 then
+  72 +:                return Value;
+  73 .:             end if;
+  74 +:             Shift := Shift + 7;
+  75 +:             if Shift >= 64 then
+  76 +:                raise Parse_Error with "varint overflow";
+  77 .:             end if;
+  78 .:          end;
+  79 .:       end loop;
+  80 +:       raise Parse_Error with "truncated varint";
+  81 .:    end Decode_Varint;
+  82 .: 
+  83 .:    procedure Append_Fixed32 (Target : in out Unbounded_String; Value : Unsigned_32) is
+  84 +:       Tmp : Unsigned_32 := Value;
+  85 .:    begin
+  86 +:       for I in 1 .. 4 loop
+  87 +:          Append_Byte (Target, Unsigned_8 (Tmp and 16#FF#));
+  88 +:          Tmp := Shift_Right (Tmp, 8);
+  89 .:       end loop;
+  90 .:    end Append_Fixed32;
+  91 .: 
+  92 .:    procedure Append_Fixed64 (Target : in out Unbounded_String; Value : Unsigned_64) is
+  93 +:       Tmp : Unsigned_64 := Value;
+  94 .:    begin
+  95 +:       for I in 1 .. 8 loop
+  96 +:          Append_Byte (Target, Unsigned_8 (Tmp and 16#FF#));
+  97 +:          Tmp := Shift_Right (Tmp, 8);
+  98 .:       end loop;
+  99 .:    end Append_Fixed64;
+ 100 .: 
+ 101 .:    function Decode_Fixed32 (Data : String; Cursor : in out Natural) return Unsigned_32 is
+ 102 +:       Value : Unsigned_32 := 0;
+ 103 .:    begin
+ 104 +:       if Cursor + 3 > Data'Last then
+ 105 +:          raise Parse_Error with "truncated fixed32";
+ 106 .:       end if;
+ 107 +:       for I in 0 .. 3 loop
+ 108 +:          Value := Value or Shift_Left (Unsigned_32 (Read_Byte (Data, Cursor + I)), 8 * I);
+ 109 .:       end loop;
+ 110 +:       Cursor := Cursor + 4;
+ 111 +:       return Value;
+ 112 .:    end Decode_Fixed32;
+ 113 .: 
+ 114 .:    function Decode_Fixed64 (Data : String; Cursor : in out Natural) return Unsigned_64 is
+ 115 +:       Value : Unsigned_64 := 0;
+ 116 .:    begin
+ 117 +:       if Cursor + 7 > Data'Last then
+ 118 +:          raise Parse_Error with "truncated fixed64";
+ 119 .:       end if;
+ 120 +:       for I in 0 .. 7 loop
+ 121 +:          Value := Value or Shift_Left (Unsigned_64 (Read_Byte (Data, Cursor + I)), 8 * I);
+ 122 .:       end loop;
+ 123 +:       Cursor := Cursor + 8;
+ 124 +:       return Value;
+ 125 .:    end Decode_Fixed64;
+ 126 .: 
+ 127 .:    function Wire_Code (Kind : Wire_Type) return Unsigned_64 is
+ 128 .:    begin
+ 129 +:       case Kind is
+ 130 .:          when Varint_Wire =>
+ 131 +:             return 0;
+ 132 .:          when Fixed64_Wire =>
+ 133 +:             return 1;
+ 134 .:          when Length_Delimited_Wire =>
+ 135 +:             return 2;
+ 136 .:          when Fixed32_Wire =>
+ 137 +:             return 5;
+ 138 .:       end case;
+ 139 .:    end Wire_Code;
+ 140 .: 
+ 141 .:    procedure Append_Tag
+ 142 .:      (Target : in out Unbounded_String;
+ 143 .:       Number : Field_Number;
+ 144 .:       Kind   : Wire_Type) is
+ 145 +:       Tag : constant Unsigned_64 := Shift_Left (Unsigned_64 (Number), 3) or Wire_Code (Kind);
+ 146 .:    begin
+ 147 +:       Append_Varint (Target, Tag);
+ 148 .:    end Append_Tag;
+ 149 .: 
+ 150 .:    function ZigZag_Encode_32 (Value : Integer_32) return Unsigned_32 is
+ 151 +:       U : constant Unsigned_32 := To_Unsigned_32 (Value);
+ 152 .:    begin
+ 153 +:       return Shift_Left (U, 1) xor (0 - Shift_Right (U, 31));
+ 154 .:    end ZigZag_Encode_32;
+ 155 .: 
+ 156 .:    function ZigZag_Decode_32 (Value : Unsigned_32) return Integer_32 is
+ 157 +:       Sign : constant Unsigned_32 := 0 - (Value and 1);
+ 158 .:    begin
+ 159 +:       return To_Signed_32 (Shift_Right (Value, 1) xor Sign);
+ 160 .:    end ZigZag_Decode_32;
+ 161 .: 
+ 162 .:    function ZigZag_Encode_64 (Value : Integer_64) return Unsigned_64 is
+ 163 +:       U : constant Unsigned_64 := To_Unsigned_64 (Value);
+ 164 .:    begin
+ 165 +:       return Shift_Left (U, 1) xor (0 - Shift_Right (U, 63));
+ 166 .:    end ZigZag_Encode_64;
+ 167 .: 
+ 168 .:    function ZigZag_Decode_64 (Value : Unsigned_64) return Integer_64 is
+ 169 +:       Sign : constant Unsigned_64 := 0 - (Value and 1);
+ 170 .:    begin
+ 171 +:       return To_Signed_64 (Shift_Right (Value, 1) xor Sign);
+ 172 .:    end ZigZag_Decode_64;
+ 173 .: 
+ 174 .:    procedure Clear (Buffer : in out Message_Buffer) is
+ 175 .:    begin
+ 176 +:       Buffer.Data := Null_Unbounded_String;
+ 177 .:    end Clear;
+ 178 .: 
+ 179 .:    function To_String (Buffer : Message_Buffer) return String is
+ 180 .:    begin
+ 181 +:       return Ada.Strings.Unbounded.To_String (Buffer.Data);
+ 182 .:    end To_String;
+ 183 .: 
+ 184 .:    function Serialize_To_String (Buffer : Message_Buffer) return String is
+ 185 .:    begin
+ 186 +:       return To_String (Buffer);
+ 187 .:    end Serialize_To_String;
+ 188 .: 
+ 189 .:    procedure Write_To_Stream
+ 190 .:      (Buffer : Message_Buffer;
+ 191 .:       Stream : not null access Ada.Streams.Root_Stream_Type'Class) is
+ 192 +:       Data : constant String := To_String (Buffer);
+ 193 .:    begin
+ 194 +:       if Data'Length = 0 then
+ 195 +:          return;
+ 196 .:       end if;
+ 197 .: 
+ 198 .:       declare
+ 199 +:          Bytes : Ada.Streams.Stream_Element_Array
+ 200 +:            (1 .. Ada.Streams.Stream_Element_Offset (Data'Length));
+ 201 .:       begin
+ 202 +:          for I in Data'Range loop
+ 203 +:             Bytes (Ada.Streams.Stream_Element_Offset (I - Data'First + 1)) :=
+ 204 +:               Ada.Streams.Stream_Element (Character'Pos (Data (I)));
+ 205 .:          end loop;
+ 206 +:          Ada.Streams.Write (Stream.all, Bytes);
+ 207 .:       end;
+ 208 .:    end Write_To_Stream;
+ 209 .: 
+ 210 .:    procedure Add_Int32 (Buffer : in out Message_Buffer; Number : Field_Number; Value : Integer_32) is
+ 211 .:    begin
+ 212 +:       Append_Tag (Buffer.Data, Number, Varint_Wire);
+ 213 +:       Append_Varint (Buffer.Data, To_Unsigned_64 (Integer_64 (Value)));
+ 214 .:    end Add_Int32;
+ 215 .: 
+ 216 .:    procedure Add_Int64 (Buffer : in out Message_Buffer; Number : Field_Number; Value : Integer_64) is
+ 217 .:    begin
+ 218 +:       Append_Tag (Buffer.Data, Number, Varint_Wire);
+ 219 +:       Append_Varint (Buffer.Data, To_Unsigned_64 (Value));
+ 220 .:    end Add_Int64;
+ 221 .: 
+ 222 .:    procedure Add_UInt32 (Buffer : in out Message_Buffer; Number : Field_Number; Value : Unsigned_32) is
+ 223 .:    begin
+ 224 +:       Append_Tag (Buffer.Data, Number, Varint_Wire);
+ 225 +:       Append_Varint (Buffer.Data, Unsigned_64 (Value));
+ 226 .:    end Add_UInt32;
+ 227 .: 
+ 228 .:    procedure Add_UInt64 (Buffer : in out Message_Buffer; Number : Field_Number; Value : Unsigned_64) is
+ 229 .:    begin
+ 230 +:       Append_Tag (Buffer.Data, Number, Varint_Wire);
+ 231 +:       Append_Varint (Buffer.Data, Value);
+ 232 .:    end Add_UInt64;
+ 233 .: 
+ 234 .:    procedure Add_SInt32 (Buffer : in out Message_Buffer; Number : Field_Number; Value : Integer_32) is
+ 235 .:    begin
+ 236 +:       Append_Tag (Buffer.Data, Number, Varint_Wire);
+ 237 +:       Append_Varint (Buffer.Data, Unsigned_64 (ZigZag_Encode_32 (Value)));
+ 238 .:    end Add_SInt32;
+ 239 .: 
+ 240 .:    procedure Add_SInt64 (Buffer : in out Message_Buffer; Number : Field_Number; Value : Integer_64) is
+ 241 .:    begin
+ 242 +:       Append_Tag (Buffer.Data, Number, Varint_Wire);
+ 243 +:       Append_Varint (Buffer.Data, ZigZag_Encode_64 (Value));
+ 244 .:    end Add_SInt64;
+ 245 .: 
+ 246 .:    procedure Add_Bool (Buffer : in out Message_Buffer; Number : Field_Number; Value : Boolean) is
+ 247 .:    begin
+ 248 +:       Append_Tag (Buffer.Data, Number, Varint_Wire);
+ 249 +:       if Value then
+ 250 +:          Append_Byte (Buffer.Data, 1);
+ 251 .:       else
+ 252 +:          Append_Byte (Buffer.Data, 0);
+ 253 .:       end if;
+ 254 .:    end Add_Bool;
+ 255 .: 
+ 256 .:    procedure Add_Enum (Buffer : in out Message_Buffer; Number : Field_Number; Value : Integer_32) is
+ 257 .:    begin
+ 258 +:       Add_Int32 (Buffer, Number, Value);
+ 259 .:    end Add_Enum;
+ 260 .: 
+ 261 .:    procedure Add_Fixed32 (Buffer : in out Message_Buffer; Number : Field_Number; Value : Unsigned_32) is
+ 262 .:    begin
+ 263 +:       Append_Tag (Buffer.Data, Number, Fixed32_Wire);
+ 264 +:       Append_Fixed32 (Buffer.Data, Value);
+ 265 .:    end Add_Fixed32;
+ 266 .: 
+ 267 .:    procedure Add_Fixed64 (Buffer : in out Message_Buffer; Number : Field_Number; Value : Unsigned_64) is
+ 268 .:    begin
+ 269 +:       Append_Tag (Buffer.Data, Number, Fixed64_Wire);
+ 270 +:       Append_Fixed64 (Buffer.Data, Value);
+ 271 .:    end Add_Fixed64;
+ 272 .: 
+ 273 .:    procedure Add_SFixed32 (Buffer : in out Message_Buffer; Number : Field_Number; Value : Integer_32) is
+ 274 .:    begin
+ 275 +:       Add_Fixed32 (Buffer, Number, To_Unsigned_32 (Value));
+ 276 .:    end Add_SFixed32;
+ 277 .: 
+ 278 .:    procedure Add_SFixed64 (Buffer : in out Message_Buffer; Number : Field_Number; Value : Integer_64) is
+ 279 .:    begin
+ 280 +:       Add_Fixed64 (Buffer, Number, To_Unsigned_64 (Value));
+ 281 .:    end Add_SFixed64;
+ 282 .: 
+ 283 .:    procedure Add_Float (Buffer : in out Message_Buffer; Number : Field_Number; Value : Float32) is
+ 284 .:    begin
+ 285 +:       Add_Fixed32 (Buffer, Number, Float_To_Bits (Value));
+ 286 .:    end Add_Float;
+ 287 .: 
+ 288 .:    procedure Add_Double (Buffer : in out Message_Buffer; Number : Field_Number; Value : Float64) is
+ 289 .:    begin
+ 290 +:       Add_Fixed64 (Buffer, Number, Double_To_Bits (Value));
+ 291 .:    end Add_Double;
+ 292 .: 
+ 293 .:    procedure Add_String (Buffer : in out Message_Buffer; Number : Field_Number; Value : String) is
+ 294 .:    begin
+ 295 +:       Append_Tag (Buffer.Data, Number, Length_Delimited_Wire);
+ 296 +:       Append_Varint (Buffer.Data, Unsigned_64 (Value'Length));
+ 297 +:       Append (Buffer.Data, Value);
+ 298 .:    end Add_String;
+ 299 .: 
+ 300 .:    procedure Add_Bytes (Buffer : in out Message_Buffer; Number : Field_Number; Value : String) is
+ 301 .:    begin
+ 302 +:       Add_String (Buffer, Number, Value);
+ 303 .:    end Add_Bytes;
+ 304 .: 
+ 305 .:    procedure Add_Message (Buffer : in out Message_Buffer; Number : Field_Number; Encoded_Message : String) is
+ 306 .:    begin
+ 307 +:       Add_Bytes (Buffer, Number, Encoded_Message);
+ 308 .:    end Add_Message;
+ 309 .: 
+ 310 .:    procedure Add_Packed_Encoded
+ 311 .:      (Buffer : in out Message_Buffer;
+ 312 .:       Number : Field_Number;
+ 313 .:       Payload : Unbounded_String) is
+ 314 +:       Encoded : constant String := To_String (Payload);
+ 315 .:    begin
+ 316 +:       Append_Tag (Buffer.Data, Number, Length_Delimited_Wire);
+ 317 +:       Append_Varint (Buffer.Data, Unsigned_64 (Encoded'Length));
+ 318 +:       Append (Buffer.Data, Encoded);
+ 319 .:    end Add_Packed_Encoded;
+ 320 .: 
+ 321 .:    procedure Add_Packed_Int32 (Buffer : in out Message_Buffer; Number : Field_Number; Values : Int32_Array) is
+ 322 +:       Payload : Unbounded_String;
+ 323 .:    begin
+ 324 +:       for V of Values loop
+ 325 +:          Append_Varint (Payload, To_Unsigned_64 (Integer_64 (V)));
+ 326 .:       end loop;
+ 327 +:       Add_Packed_Encoded (Buffer, Number, Payload);
+ 328 .:    end Add_Packed_Int32;
+ 329 .: 
+ 330 .:    procedure Add_Packed_Int64 (Buffer : in out Message_Buffer; Number : Field_Number; Values : Int64_Array) is
+ 331 +:       Payload : Unbounded_String;
+ 332 .:    begin
+ 333 +:       for V of Values loop
+ 334 +:          Append_Varint (Payload, To_Unsigned_64 (V));
+ 335 .:       end loop;
+ 336 +:       Add_Packed_Encoded (Buffer, Number, Payload);
+ 337 .:    end Add_Packed_Int64;
+ 338 .: 
+ 339 .:    procedure Add_Packed_UInt32 (Buffer : in out Message_Buffer; Number : Field_Number; Values : UInt32_Array) is
+ 340 +:       Payload : Unbounded_String;
+ 341 .:    begin
+ 342 +:       for V of Values loop
+ 343 +:          Append_Varint (Payload, Unsigned_64 (V));
+ 344 .:       end loop;
+ 345 +:       Add_Packed_Encoded (Buffer, Number, Payload);
+ 346 .:    end Add_Packed_UInt32;
+ 347 .: 
+ 348 .:    procedure Add_Packed_UInt64 (Buffer : in out Message_Buffer; Number : Field_Number; Values : UInt64_Array) is
+ 349 +:       Payload : Unbounded_String;
+ 350 .:    begin
+ 351 +:       for V of Values loop
+ 352 +:          Append_Varint (Payload, V);
+ 353 .:       end loop;
+ 354 +:       Add_Packed_Encoded (Buffer, Number, Payload);
+ 355 .:    end Add_Packed_UInt64;
+ 356 .: 
+ 357 .:    procedure Add_Packed_SInt32 (Buffer : in out Message_Buffer; Number : Field_Number; Values : Int32_Array) is
+ 358 +:       Payload : Unbounded_String;
+ 359 .:    begin
+ 360 +:       for V of Values loop
+ 361 +:          Append_Varint (Payload, Unsigned_64 (ZigZag_Encode_32 (V)));
+ 362 .:       end loop;
+ 363 +:       Add_Packed_Encoded (Buffer, Number, Payload);
+ 364 .:    end Add_Packed_SInt32;
+ 365 .: 
+ 366 .:    procedure Add_Packed_SInt64 (Buffer : in out Message_Buffer; Number : Field_Number; Values : Int64_Array) is
+ 367 +:       Payload : Unbounded_String;
+ 368 .:    begin
+ 369 +:       for V of Values loop
+ 370 +:          Append_Varint (Payload, ZigZag_Encode_64 (V));
+ 371 .:       end loop;
+ 372 +:       Add_Packed_Encoded (Buffer, Number, Payload);
+ 373 .:    end Add_Packed_SInt64;
+ 374 .: 
+ 375 .:    procedure Add_Packed_Bool (Buffer : in out Message_Buffer; Number : Field_Number; Values : Bool_Array) is
+ 376 +:       Payload : Unbounded_String;
+ 377 .:    begin
+ 378 +:       for V of Values loop
+ 379 +:          if V then
+ 380 +:             Append_Byte (Payload, 1);
+ 381 .:          else
+ 382 +:             Append_Byte (Payload, 0);
+ 383 .:          end if;
+ 384 .:       end loop;
+ 385 +:       Add_Packed_Encoded (Buffer, Number, Payload);
+ 386 .:    end Add_Packed_Bool;
+ 387 .: 
+ 388 .:    procedure Add_Packed_Enum (Buffer : in out Message_Buffer; Number : Field_Number; Values : Int32_Array) is
+ 389 .:    begin
+ 390 -:       Add_Packed_Int32 (Buffer, Number, Values);
+ 391 .:    end Add_Packed_Enum;
+ 392 .: 
+ 393 .:    procedure Add_Packed_Fixed32 (Buffer : in out Message_Buffer; Number : Field_Number; Values : Fixed32_Array) is
+ 394 +:       Payload : Unbounded_String;
+ 395 .:    begin
+ 396 +:       for V of Values loop
+ 397 +:          Append_Fixed32 (Payload, V);
+ 398 .:       end loop;
+ 399 +:       Add_Packed_Encoded (Buffer, Number, Payload);
+ 400 .:    end Add_Packed_Fixed32;
+ 401 .: 
+ 402 .:    procedure Add_Packed_Fixed64 (Buffer : in out Message_Buffer; Number : Field_Number; Values : Fixed64_Array) is
+ 403 +:       Payload : Unbounded_String;
+ 404 .:    begin
+ 405 +:       for V of Values loop
+ 406 +:          Append_Fixed64 (Payload, V);
+ 407 .:       end loop;
+ 408 +:       Add_Packed_Encoded (Buffer, Number, Payload);
+ 409 .:    end Add_Packed_Fixed64;
+ 410 .: 
+ 411 .:    procedure Add_Packed_SFixed32 (Buffer : in out Message_Buffer; Number : Field_Number; Values : SFixed32_Array) is
+ 412 +:       Payload : Unbounded_String;
+ 413 .:    begin
+ 414 +:       for V of Values loop
+ 415 +:          Append_Fixed32 (Payload, To_Unsigned_32 (V));
+ 416 .:       end loop;
+ 417 +:       Add_Packed_Encoded (Buffer, Number, Payload);
+ 418 .:    end Add_Packed_SFixed32;
+ 419 .: 
+ 420 .:    procedure Add_Packed_SFixed64 (Buffer : in out Message_Buffer; Number : Field_Number; Values : SFixed64_Array) is
+ 421 -:       Payload : Unbounded_String;
+ 422 .:    begin
+ 423 -:       for V of Values loop
+ 424 -:          Append_Fixed64 (Payload, To_Unsigned_64 (V));
+ 425 .:       end loop;
+ 426 -:       Add_Packed_Encoded (Buffer, Number, Payload);
+ 427 .:    end Add_Packed_SFixed64;
+ 428 .: 
+ 429 .:    procedure Add_Packed_Float (Buffer : in out Message_Buffer; Number : Field_Number; Values : Float_Array) is
+ 430 +:       Payload : Unbounded_String;
+ 431 .:    begin
+ 432 +:       for V of Values loop
+ 433 +:          Append_Fixed32 (Payload, Float_To_Bits (V));
+ 434 .:       end loop;
+ 435 +:       Add_Packed_Encoded (Buffer, Number, Payload);
+ 436 .:    end Add_Packed_Float;
+ 437 .: 
+ 438 .:    procedure Add_Packed_Double (Buffer : in out Message_Buffer; Number : Field_Number; Values : Double_Array) is
+ 439 +:       Payload : Unbounded_String;
+ 440 .:    begin
+ 441 +:       for V of Values loop
+ 442 +:          Append_Fixed64 (Payload, Double_To_Bits (V));
+ 443 .:       end loop;
+ 444 +:       Add_Packed_Encoded (Buffer, Number, Payload);
+ 445 .:    end Add_Packed_Double;
+ 446 .: 
+ 447 .:    function Decode_Packed_Int32 (Bytes : String) return Int32_Array is
+ 448 +:       Cursor : Natural := Bytes'First;
+ 449 +:       Values : Int32_Vectors.Vector;
+ 450 .:    begin
+ 451 +:       while Cursor <= Bytes'Last loop
+ 452 +:          Values.Append (To_Signed_32 (Unsigned_32 (Decode_Varint (Bytes, Cursor) and 16#FFFF_FFFF#)));
+ 453 .:       end loop;
+ 454 +:       return Result : Int32_Array (1 .. Integer (Values.Length)) do
+ 455 +:          for I in Result'Range loop
+ 456 +:             Result (I) := Values (Natural (I - Result'First));
+ 457 .:          end loop;
+ 458 .:       end return;
+ 459 .:    end Decode_Packed_Int32;
+ 460 .: 
+ 461 .:    function Decode_Packed_Int64 (Bytes : String) return Int64_Array is
+ 462 +:       Cursor : Natural := Bytes'First;
+ 463 +:       Values : Int64_Vectors.Vector;
+ 464 .:    begin
+ 465 +:       while Cursor <= Bytes'Last loop
+ 466 +:          Values.Append (To_Signed_64 (Decode_Varint (Bytes, Cursor)));
+ 467 .:       end loop;
+ 468 +:       return Result : Int64_Array (1 .. Integer (Values.Length)) do
+ 469 +:          for I in Result'Range loop
+ 470 +:             Result (I) := Values (Natural (I - Result'First));
+ 471 .:          end loop;
+ 472 .:       end return;
+ 473 .:    end Decode_Packed_Int64;
+ 474 .: 
+ 475 .:    function Decode_Packed_UInt32 (Bytes : String) return UInt32_Array is
+ 476 -:       Cursor : Natural := Bytes'First;
+ 477 -:       Values : UInt32_Vectors.Vector;
+ 478 .:    begin
+ 479 -:       while Cursor <= Bytes'Last loop
+ 480 -:          Values.Append (Unsigned_32 (Decode_Varint (Bytes, Cursor) and 16#FFFF_FFFF#));
+ 481 .:       end loop;
+ 482 -:       return Result : UInt32_Array (1 .. Integer (Values.Length)) do
+ 483 -:          for I in Result'Range loop
+ 484 -:             Result (I) := Values (Natural (I - Result'First));
+ 485 .:          end loop;
+ 486 .:       end return;
+ 487 .:    end Decode_Packed_UInt32;
+ 488 .: 
+ 489 .:    function Decode_Packed_UInt64 (Bytes : String) return UInt64_Array is
+ 490 +:       Cursor : Natural := Bytes'First;
+ 491 +:       Values : UInt64_Vectors.Vector;
+ 492 .:    begin
+ 493 +:       while Cursor <= Bytes'Last loop
+ 494 +:          Values.Append (Decode_Varint (Bytes, Cursor));
+ 495 .:       end loop;
+ 496 +:       return Result : UInt64_Array (1 .. Integer (Values.Length)) do
+ 497 +:          for I in Result'Range loop
+ 498 +:             Result (I) := Values (Natural (I - Result'First));
+ 499 .:          end loop;
+ 500 .:       end return;
+ 501 .:    end Decode_Packed_UInt64;
+ 502 .: 
+ 503 .:    function Decode_Packed_SInt32 (Bytes : String) return Int32_Array is
+ 504 +:       Cursor : Natural := Bytes'First;
+ 505 +:       Values : Int32_Vectors.Vector;
+ 506 .:    begin
+ 507 +:       while Cursor <= Bytes'Last loop
+ 508 +:          Values.Append (ZigZag_Decode_32 (Unsigned_32 (Decode_Varint (Bytes, Cursor) and 16#FFFF_FFFF#)));
+ 509 .:       end loop;
+ 510 +:       return Result : Int32_Array (1 .. Integer (Values.Length)) do
+ 511 +:          for I in Result'Range loop
+ 512 +:             Result (I) := Values (Natural (I - Result'First));
+ 513 .:          end loop;
+ 514 .:       end return;
+ 515 .:    end Decode_Packed_SInt32;
+ 516 .: 
+ 517 .:    function Decode_Packed_SInt64 (Bytes : String) return Int64_Array is
+ 518 +:       Cursor : Natural := Bytes'First;
+ 519 +:       Values : Int64_Vectors.Vector;
+ 520 .:    begin
+ 521 +:       while Cursor <= Bytes'Last loop
+ 522 +:          Values.Append (ZigZag_Decode_64 (Decode_Varint (Bytes, Cursor)));
+ 523 .:       end loop;
+ 524 +:       return Result : Int64_Array (1 .. Integer (Values.Length)) do
+ 525 +:          for I in Result'Range loop
+ 526 +:             Result (I) := Values (Natural (I - Result'First));
+ 527 .:          end loop;
+ 528 .:       end return;
+ 529 .:    end Decode_Packed_SInt64;
+ 530 .: 
+ 531 .:    function Decode_Packed_Bool (Bytes : String) return Bool_Array is
+ 532 +:       Cursor : Natural := Bytes'First;
+ 533 +:       Values : Bool_Vectors.Vector;
+ 534 .:    begin
+ 535 +:       while Cursor <= Bytes'Last loop
+ 536 +:          Values.Append (Decode_Varint (Bytes, Cursor) /= 0);
+ 537 .:       end loop;
+ 538 +:       return Result : Bool_Array (1 .. Integer (Values.Length)) do
+ 539 +:          for I in Result'Range loop
+ 540 +:             Result (I) := Values (Natural (I - Result'First));
+ 541 .:          end loop;
+ 542 .:       end return;
+ 543 .:    end Decode_Packed_Bool;
+ 544 .: 
+ 545 .:    function Decode_Packed_Fixed32 (Bytes : String) return Fixed32_Array is
+ 546 -:       Cursor : Natural := Bytes'First;
+ 547 -:       Values : Fixed32_Vectors.Vector;
+ 548 .:    begin
+ 549 -:       while Cursor <= Bytes'Last loop
+ 550 -:          Values.Append (Decode_Fixed32 (Bytes, Cursor));
+ 551 .:       end loop;
+ 552 -:       return Result : Fixed32_Array (1 .. Integer (Values.Length)) do
+ 553 -:          for I in Result'Range loop
+ 554 -:             Result (I) := Values (Natural (I - Result'First));
+ 555 .:          end loop;
+ 556 .:       end return;
+ 557 .:    end Decode_Packed_Fixed32;
+ 558 .: 
+ 559 .:    function Decode_Packed_Fixed64 (Bytes : String) return Fixed64_Array is
+ 560 +:       Cursor : Natural := Bytes'First;
+ 561 +:       Values : Fixed64_Vectors.Vector;
+ 562 .:    begin
+ 563 +:       while Cursor <= Bytes'Last loop
+ 564 +:          Values.Append (Decode_Fixed64 (Bytes, Cursor));
+ 565 .:       end loop;
+ 566 +:       return Result : Fixed64_Array (1 .. Integer (Values.Length)) do
+ 567 +:          for I in Result'Range loop
+ 568 +:             Result (I) := Values (Natural (I - Result'First));
+ 569 .:          end loop;
+ 570 .:       end return;
+ 571 .:    end Decode_Packed_Fixed64;
+ 572 .: 
+ 573 .:    function Decode_Packed_SFixed32 (Bytes : String) return SFixed32_Array is
+ 574 +:       Cursor : Natural := Bytes'First;
+ 575 +:       Values : SFixed32_Vectors.Vector;
+ 576 .:    begin
+ 577 +:       while Cursor <= Bytes'Last loop
+ 578 +:          Values.Append (To_Signed_32 (Decode_Fixed32 (Bytes, Cursor)));
+ 579 .:       end loop;
+ 580 +:       return Result : SFixed32_Array (1 .. Integer (Values.Length)) do
+ 581 +:          for I in Result'Range loop
+ 582 +:             Result (I) := Values (Natural (I - Result'First));
+ 583 .:          end loop;
+ 584 .:       end return;
+ 585 .:    end Decode_Packed_SFixed32;
+ 586 .: 
+ 587 .:    function Decode_Packed_SFixed64 (Bytes : String) return SFixed64_Array is
+ 588 -:       Cursor : Natural := Bytes'First;
+ 589 -:       Values : SFixed64_Vectors.Vector;
+ 590 .:    begin
+ 591 -:       while Cursor <= Bytes'Last loop
+ 592 -:          Values.Append (To_Signed_64 (Decode_Fixed64 (Bytes, Cursor)));
+ 593 .:       end loop;
+ 594 -:       return Result : SFixed64_Array (1 .. Integer (Values.Length)) do
+ 595 -:          for I in Result'Range loop
+ 596 -:             Result (I) := Values (Natural (I - Result'First));
+ 597 .:          end loop;
+ 598 .:       end return;
+ 599 .:    end Decode_Packed_SFixed64;
+ 600 .: 
+ 601 .:    function Decode_Packed_Float (Bytes : String) return Float_Array is
+ 602 +:       Cursor : Natural := Bytes'First;
+ 603 +:       Values : Float_Vectors.Vector;
+ 604 .:    begin
+ 605 +:       while Cursor <= Bytes'Last loop
+ 606 +:          Values.Append (Bits_To_Float (Decode_Fixed32 (Bytes, Cursor)));
+ 607 .:       end loop;
+ 608 +:       return Result : Float_Array (1 .. Integer (Values.Length)) do
+ 609 +:          for I in Result'Range loop
+ 610 +:             Result (I) := Values (Natural (I - Result'First));
+ 611 .:          end loop;
+ 612 .:       end return;
+ 613 .:    end Decode_Packed_Float;
+ 614 .: 
+ 615 .:    function Decode_Packed_Double (Bytes : String) return Double_Array is
+ 616 +:       Cursor : Natural := Bytes'First;
+ 617 +:       Values : Double_Vectors.Vector;
+ 618 .:    begin
+ 619 +:       while Cursor <= Bytes'Last loop
+ 620 +:          Values.Append (Bits_To_Double (Decode_Fixed64 (Bytes, Cursor)));
+ 621 .:       end loop;
+ 622 +:       return Result : Double_Array (1 .. Integer (Values.Length)) do
+ 623 +:          for I in Result'Range loop
+ 624 +:             Result (I) := Values (Natural (I - Result'First));
+ 625 .:          end loop;
+ 626 .:       end return;
+ 627 .:    end Decode_Packed_Double;
+ 628 .: 
+ 629 .:    function Parse_From_String (Data : String) return Parsed_Field_Vectors.Vector is
+ 630 +:       Result : Parsed_Field_Vectors.Vector;
+ 631 +:       Cursor : Natural := Data'First;
+ 632 .:    begin
+ 633 +:       while Cursor <= Data'Last loop
+ 634 .:          declare
+ 635 +:             Tag : constant Unsigned_64 := Decode_Varint (Data, Cursor);
+ 636 +:             Number : constant Unsigned_64 := Shift_Right (Tag, 3);
+ 637 +:             Kind_Code : constant Unsigned_64 := Tag and 7;
+ 638 .:          begin
+ 639 +:             if Number = 0 or else Number > Unsigned_64 (Field_Number'Last) then
+ 640 +:                raise Parse_Error with "invalid field number";
+ 641 .:             end if;
+ 642 .: 
+ 643 +:             case Kind_Code is
+ 644 .:                when 0 =>
+ 645 +:                   Result.Append
+ 646 +:                     (Parsed_Field'
+ 647 +:                        (Kind => Varint_Wire,
+ 648 +:                         Number => Field_Number (Number),
+ 649 +:                         Varint_Value => Decode_Varint (Data, Cursor)));
+ 650 .:                when 1 =>
+ 651 +:                   Result.Append
+ 652 +:                     (Parsed_Field'
+ 653 +:                        (Kind => Fixed64_Wire,
+ 654 +:                         Number => Field_Number (Number),
+ 655 +:                         Fixed64_Value => Decode_Fixed64 (Data, Cursor)));
+ 656 .:                when 2 =>
+ 657 .:                   declare
+ 658 +:                      Length : constant Unsigned_64 := Decode_Varint (Data, Cursor);
+ 659 +:                      Last : Natural;
+ 660 .:                   begin
+ 661 +:                      if Length > Unsigned_64 (Natural'Last) then
+ 662 -:                         raise Parse_Error with "length too large";
+ 663 .:                      end if;
+ 664 +:                      Last := Cursor + Natural (Length) - 1;
+ 665 +:                      if Natural (Length) = 0 then
+ 666 +:                         Result.Append
+ 667 +:                           (Parsed_Field'
+ 668 +:                              (Kind => Length_Delimited_Wire,
+ 669 +:                               Number => Field_Number (Number),
+ 670 +:                               Bytes_Value => To_Unbounded_String ("")));
+ 671 .:                      else
+ 672 +:                         if Last > Data'Last then
+ 673 +:                            raise Parse_Error with "truncated length-delimited field";
+ 674 .:                         end if;
+ 675 +:                         Result.Append
+ 676 +:                           (Parsed_Field'
+ 677 +:                              (Kind => Length_Delimited_Wire,
+ 678 +:                               Number => Field_Number (Number),
+ 679 +:                               Bytes_Value => To_Unbounded_String (Data (Cursor .. Last))));
+ 680 +:                         Cursor := Last + 1;
+ 681 .:                      end if;
+ 682 .:                   end;
+ 683 .:                when 5 =>
+ 684 +:                   Result.Append
+ 685 +:                     (Parsed_Field'
+ 686 +:                        (Kind => Fixed32_Wire,
+ 687 +:                         Number => Field_Number (Number),
+ 688 +:                         Fixed32_Value => Decode_Fixed32 (Data, Cursor)));
+ 689 .:                when others =>
+ 690 +:                   raise Parse_Error with "unsupported wire type";
+ 691 .:             end case;
+ 692 .:          end;
+ 693 .:       end loop;
+ 694 +:       return Result;
+ 695 .:    end Parse_From_String;
+ 696 .: 
+ 697 .:    function Deserialize_From_String (Data : String) return Parsed_Field_Vectors.Vector is
+ 698 .:    begin
+ 699 +:       return Parse_From_String (Data);
+ 700 .:    end Deserialize_From_String;
+ 701 .: 
+ 702 .:    function Parse_From_Stream
+ 703 .:      (Stream : not null access Ada.Streams.Root_Stream_Type'Class;
+ 704 .:       Length : Natural) return Parsed_Field_Vectors.Vector is
+ 705 .:    begin
+ 706 +:       if Length = 0 then
+ 707 -:          return Parse_From_String ("");
+ 708 .:       end if;
+ 709 .: 
+ 710 .:       declare
+ 711 +:          Bytes : Ada.Streams.Stream_Element_Array
+ 712 +:            (1 .. Ada.Streams.Stream_Element_Offset (Length));
+ 713 +:          Last  : Ada.Streams.Stream_Element_Offset := 0;
+ 714 +:          Read_Up_To : Ada.Streams.Stream_Element_Offset := 0;
+ 715 .:       begin
+ 716 +:          while Read_Up_To < Bytes'Last loop
+ 717 +:             Ada.Streams.Read
+ 718 +:               (Stream.all,
+ 719 +:                Bytes (Read_Up_To + 1 .. Bytes'Last),
+ 720 +:                Last);
+ 721 +:             if Last < Read_Up_To + 1 then
+ 722 -:                raise Parse_Error with "truncated stream input";
+ 723 .:             end if;
+ 724 +:             Read_Up_To := Last;
+ 725 .:          end loop;
+ 726 .: 
+ 727 .:          declare
+ 728 +:             Data : String (1 .. Length);
+ 729 .:          begin
+ 730 +:             for I in Data'Range loop
+ 731 +:                Data (I) :=
+ 732 +:                  Character'Val
+ 733 +:                    (Bytes (Ada.Streams.Stream_Element_Offset (I)));
+ 734 .:             end loop;
+ 735 +:             return Parse_From_String (Data);
+ 736 .:          end;
+ 737 .:       end;
+ 738 .:    end Parse_From_Stream;
+ 739 .: 
+ 740 .:    function Check_Kind (Field : Parsed_Field; Expected : Wire_Type) return Parsed_Field is
+ 741 .:    begin
+ 742 +:       if Field.Kind /= Expected then
+ 743 +:          raise Parse_Error with "wire type mismatch";
+ 744 .:       end if;
+ 745 +:       return Field;
+ 746 .:    end Check_Kind;
+ 747 .: 
+ 748 .:    function As_Int32 (Field : Parsed_Field) return Integer_32 is
+ 749 +:       F : constant Parsed_Field := Check_Kind (Field, Varint_Wire);
+ 750 .:    begin
+ 751 +:       return To_Signed_32 (Unsigned_32 (F.Varint_Value and 16#FFFF_FFFF#));
+ 752 .:    end As_Int32;
+ 753 .: 
+ 754 .:    function As_Int64 (Field : Parsed_Field) return Integer_64 is
+ 755 +:       F : constant Parsed_Field := Check_Kind (Field, Varint_Wire);
+ 756 .:    begin
+ 757 +:       return To_Signed_64 (F.Varint_Value);
+ 758 .:    end As_Int64;
+ 759 .: 
+ 760 .:    function As_UInt32 (Field : Parsed_Field) return Unsigned_32 is
+ 761 +:       F : constant Parsed_Field := Check_Kind (Field, Varint_Wire);
+ 762 .:    begin
+ 763 +:       return Unsigned_32 (F.Varint_Value and 16#FFFF_FFFF#);
+ 764 .:    end As_UInt32;
+ 765 .: 
+ 766 .:    function As_UInt64 (Field : Parsed_Field) return Unsigned_64 is
+ 767 +:       F : constant Parsed_Field := Check_Kind (Field, Varint_Wire);
+ 768 .:    begin
+ 769 +:       return F.Varint_Value;
+ 770 .:    end As_UInt64;
+ 771 .: 
+ 772 .:    function As_SInt32 (Field : Parsed_Field) return Integer_32 is
+ 773 +:       F : constant Parsed_Field := Check_Kind (Field, Varint_Wire);
+ 774 .:    begin
+ 775 +:       return ZigZag_Decode_32 (Unsigned_32 (F.Varint_Value and 16#FFFF_FFFF#));
+ 776 .:    end As_SInt32;
+ 777 .: 
+ 778 .:    function As_SInt64 (Field : Parsed_Field) return Integer_64 is
+ 779 +:       F : constant Parsed_Field := Check_Kind (Field, Varint_Wire);
+ 780 .:    begin
+ 781 +:       return ZigZag_Decode_64 (F.Varint_Value);
+ 782 .:    end As_SInt64;
+ 783 .: 
+ 784 .:    function As_Bool (Field : Parsed_Field) return Boolean is
+ 785 .:    begin
+ 786 +:       return As_UInt64 (Field) /= 0;
+ 787 .:    end As_Bool;
+ 788 .: 
+ 789 .:    function As_Enum (Field : Parsed_Field) return Integer_32 is
+ 790 .:    begin
+ 791 +:       return As_Int32 (Field);
+ 792 .:    end As_Enum;
+ 793 .: 
+ 794 .:    function As_Fixed32 (Field : Parsed_Field) return Unsigned_32 is
+ 795 +:       F : constant Parsed_Field := Check_Kind (Field, Fixed32_Wire);
+ 796 .:    begin
+ 797 +:       return F.Fixed32_Value;
+ 798 .:    end As_Fixed32;
+ 799 .: 
+ 800 .:    function As_Fixed64 (Field : Parsed_Field) return Unsigned_64 is
+ 801 +:       F : constant Parsed_Field := Check_Kind (Field, Fixed64_Wire);
+ 802 .:    begin
+ 803 +:       return F.Fixed64_Value;
+ 804 .:    end As_Fixed64;
+ 805 .: 
+ 806 .:    function As_SFixed32 (Field : Parsed_Field) return Integer_32 is
+ 807 .:    begin
+ 808 +:       return To_Signed_32 (As_Fixed32 (Field));
+ 809 .:    end As_SFixed32;
+ 810 .: 
+ 811 .:    function As_SFixed64 (Field : Parsed_Field) return Integer_64 is
+ 812 .:    begin
+ 813 +:       return To_Signed_64 (As_Fixed64 (Field));
+ 814 .:    end As_SFixed64;
+ 815 .: 
+ 816 .:    function As_Float (Field : Parsed_Field) return Float32 is
+ 817 .:    begin
+ 818 +:       return Bits_To_Float (As_Fixed32 (Field));
+ 819 .:    end As_Float;
+ 820 .: 
+ 821 .:    function As_Double (Field : Parsed_Field) return Float64 is
+ 822 .:    begin
+ 823 +:       return Bits_To_Double (As_Fixed64 (Field));
+ 824 .:    end As_Double;
+ 825 .: 
+ 826 .:    function As_String (Field : Parsed_Field) return String is
+ 827 +:       F : constant Parsed_Field := Check_Kind (Field, Length_Delimited_Wire);
+ 828 .:    begin
+ 829 +:       return To_String (F.Bytes_Value);
+ 830 .:    end As_String;
+ 831 .: 
+ 832 .:    function As_Bytes (Field : Parsed_Field) return String is
+ 833 .:    begin
+ 834 +:       return As_String (Field);
+ 835 .:    end As_Bytes;
+ 836 .: 
+ 837 .:    function As_Message_Bytes (Field : Parsed_Field) return String is
+ 838 .:    begin
+ 839 +:       return As_Bytes (Field);
+ 840 .:    end As_Message_Bytes;
+ 841 .: 
+ 842 .: end Protobuf;

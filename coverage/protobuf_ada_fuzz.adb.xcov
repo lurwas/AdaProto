@@ -1,0 +1,117 @@
+/home/richard/src/Ada/protobuf-ada-best/tests/protobuf_ada_fuzz.adb:
+0% of 47 lines covered
+0% statement coverage (0 out of 47)
+
+Coverage level: stmt
+   1 .: with Ada.Command_Line;
+   2 .: with Ada.Exceptions;
+   3 .: with Ada.Streams.Stream_IO;
+   4 .: with Ada.Text_IO;
+   5 .: with Interfaces;
+   6 .: with Protobuf;
+   7 .: 
+   8 .: procedure Protobuf_Ada_Fuzz is
+   9 -:    package SIO renames Ada.Streams.Stream_IO;
+  10 .:    use type SIO.Count;
+  11 .:    use type Ada.Streams.Stream_Element_Offset;
+  12 .: 
+  13 .:    function Load_File (Path : String) return String is
+  14 -:       File : SIO.File_Type;
+  15 .:    begin
+  16 -:       SIO.Open (File, SIO.In_File, Path);
+  17 .:       declare
+  18 -:          Size : constant SIO.Count := SIO.Size (File);
+  19 -:          Data : Ada.Streams.Stream_Element_Array
+  20 -:            (1 .. Ada.Streams.Stream_Element_Offset'Max (1, Ada.Streams.Stream_Element_Offset (Size)));
+  21 -:          Last : Ada.Streams.Stream_Element_Offset := 0;
+  22 .:       begin
+  23 -:          if Size = 0 then
+  24 -:             SIO.Close (File);
+  25 -:             return "";
+  26 .:          end if;
+  27 .: 
+  28 -:          SIO.Read (File, Data, Last);
+  29 -:          SIO.Close (File);
+  30 .: 
+  31 -:          if Last /= Ada.Streams.Stream_Element_Offset (Size) then
+  32 -:             raise Constraint_Error with "short read";
+  33 .:          end if;
+  34 .: 
+  35 -:          return Result : String (1 .. Integer (Last)) do
+  36 -:             for I in Result'Range loop
+  37 -:                Result (I) := Character'Val (Data (Ada.Streams.Stream_Element_Offset (I)));
+  38 .:             end loop;
+  39 .:          end return;
+  40 .:       end;
+  41 .:    end Load_File;
+  42 .: 
+  43 .: begin
+  44 -:    if Ada.Command_Line.Argument_Count = 0 then
+  45 -:       Ada.Text_IO.Put_Line ("usage: protobuf-ada-fuzz <input-file>");
+  46 -:       Ada.Command_Line.Set_Exit_Status (Ada.Command_Line.Failure);
+  47 -:       return;
+  48 .:    end if;
+  49 .: 
+  50 .:    declare
+  51 -:       Data : constant String := Load_File (Ada.Command_Line.Argument (1));
+  52 .:    begin
+  53 .:       begin
+  54 .:          declare
+  55 -:             Parsed : constant Protobuf.Parsed_Field_Vectors.Vector :=
+  56 -:               Protobuf.Parse_From_String (Data);
+  57 .:          begin
+  58 -:             for F of Parsed loop
+  59 -:                case F.Kind is
+  60 .:                   when Protobuf.Varint_Wire =>
+  61 .:                      declare
+  62 -:                         Ignore_1 : constant Interfaces.Integer_64 := Protobuf.As_Int64 (F);
+  63 -:                         Ignore_2 : constant Interfaces.Integer_64 := Protobuf.As_SInt64 (F);
+  64 -:                         Ignore_3 : constant Interfaces.Unsigned_64 := Protobuf.As_UInt64 (F);
+  65 -:                         Ignore_4 : constant Boolean := Protobuf.As_Bool (F);
+  66 .:                      begin
+  67 -:                         null;
+  68 .:                      end;
+  69 .:                   when Protobuf.Fixed64_Wire =>
+  70 .:                      declare
+  71 -:                         Ignore_1 : constant Interfaces.Unsigned_64 := Protobuf.As_Fixed64 (F);
+  72 -:                         Ignore_2 : constant Interfaces.Integer_64 := Protobuf.As_SFixed64 (F);
+  73 -:                         Ignore_3 : constant Protobuf.Float64 := Protobuf.As_Double (F);
+  74 .:                      begin
+  75 -:                         null;
+  76 .:                      end;
+  77 .:                   when Protobuf.Length_Delimited_Wire =>
+  78 .:                      declare
+  79 -:                         Payload : constant String := Protobuf.As_Bytes (F);
+  80 .:                      begin
+  81 .:                         begin
+  82 .:                            declare
+  83 -:                               Nested : constant Protobuf.Parsed_Field_Vectors.Vector :=
+  84 -:                                 Protobuf.Parse_From_String (Payload);
+  85 .:                            begin
+  86 -:                               null;
+  87 .:                            end;
+  88 .:                         exception
+  89 .:                            when Protobuf.Parse_Error =>
+  90 -:                               null;
+  91 .:                         end;
+  92 .:                      end;
+  93 .:                   when Protobuf.Fixed32_Wire =>
+  94 .:                      declare
+  95 -:                         Ignore_1 : constant Interfaces.Unsigned_32 := Protobuf.As_Fixed32 (F);
+  96 -:                         Ignore_2 : constant Interfaces.Integer_32 := Protobuf.As_SFixed32 (F);
+  97 -:                         Ignore_3 : constant Protobuf.Float32 := Protobuf.As_Float (F);
+  98 .:                      begin
+  99 -:                         null;
+ 100 .:                      end;
+ 101 .:                end case;
+ 102 .:             end loop;
+ 103 .:          end;
+ 104 .:       exception
+ 105 .:          when Protobuf.Parse_Error =>
+ 106 -:             null;
+ 107 .:          when E : others =>
+ 108 -:             Ada.Text_IO.Put_Line ("unexpected exception: " & Ada.Exceptions.Exception_Information (E));
+ 109 -:             Ada.Command_Line.Set_Exit_Status (Ada.Command_Line.Failure);
+ 110 .:       end;
+ 111 .:    end;
+ 112 .: end Protobuf_Ada_Fuzz;

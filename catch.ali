@@ -1,0 +1,95 @@
+V "GNAT Lib v12"
+M P W=b
+A -gnat2012
+P SS ZX
+
+RN
+RV NO_ENUMERATION_MAPS
+RV NO_EXCEPTION_HANDLERS
+RV NO_EXCEPTIONS
+RV NO_IO
+RV NO_NESTED_FINALIZATION
+RV NO_SECONDARY_STACK
+RV NO_STANDARD_STORAGE_POOLS
+RV NO_DYNAMIC_SIZED_OBJECTS
+
+U catch%b		catch.adb		727f28ba NE OO SU
+W ada%s			ada.ads			ada.ali
+Z ada.exceptions%s	a-except.adb		a-except.ali
+Z ada.strings.text_buffers%s  a-sttebu.adb	a-sttebu.ali
+Z ada.tags%s		a-tags.adb		a-tags.ali
+W ada.text_io%s		a-textio.adb		a-textio.ali
+W protobuf%s		protobuf.adb		protobuf.ali
+Z system.concat_2%s	s-conca2.adb		s-conca2.ali
+Z system.secondary_stack%s  s-secsta.adb	s-secsta.ali
+Z system.soft_links%s	s-soflin.adb		s-soflin.ali
+
+D ada.ads		20240620080806 76789da1 ada%s
+D a-charac.ads		20240620080806 2d3ec45b ada.characters%s
+D a-chlat1.ads		20240620080806 e0d72e76 ada.characters.latin_1%s
+D a-contai.ads		20240620080806 61e5e089 ada.containers%s
+D a-conhel.ads		20240620080806 20298884 ada.containers.helpers%s
+D a-convec.ads		20240620080806 5d39d84a ada.containers.vectors%s
+D a-except.ads		20240620080806 2a7d8d70 ada.exceptions%s
+D a-finali.ads		20240620080806 bf4f806b ada.finalization%s
+D a-ioexce.ads		20240620080806 40018c65 ada.io_exceptions%s
+D a-iteint.ads		20240620080806 49a8bee2 ada.iterator_interfaces%s
+D a-stream.ads		20240620080806 119b8fb3 ada.streams%s
+D a-string.ads		20240620080806 90ac6797 ada.strings%s
+D a-strmap.ads		20240620080806 233229cd ada.strings.maps%s
+D a-sttebu.ads		20240620080806 18209c64 ada.strings.text_buffers%s
+D a-strunb.ads		20240620080806 5837d881 ada.strings.unbounded%s
+D a-stuten.ads		20240620080806 33c54060 ada.strings.utf_encoding%s
+D a-tags.ads		20240620080806 9eaa38c6 ada.tags%s
+D a-textio.ads		20240620080806 deada98a ada.text_io%s
+D a-unccon.ads		20240620080806 0e9b276f ada.unchecked_conversion%s
+D catch.adb		20260309151817 10f9ae8f catch%b
+D interfac.ads		20240620080806 edec285f interfaces%s
+D i-cstrea.ads		20240620080806 e53d8b8e interfaces.c_streams%s
+D protobuf.ads		20260309151339 bc2b2fbf protobuf%s
+D system.ads		20240620080806 a2da961d system%s
+D s-atocou.ads		20240620080806 dc18efc3 system.atomic_counters%s
+D s-conca2.ads		20240620080806 3d460502 system.concat_2%s
+D s-crtl.ads		20240620080806 8a0692f8 system.crtl%s
+D s-exctab.ads		20240620080806 91bef6ef system.exception_table%s
+D s-ficobl.ads		20240620080806 dc5161d4 system.file_control_block%s
+D s-finmas.ads		20240620080806 bd688734 system.finalization_masters%s
+D s-finroo.ads		20240620080806 4ff27390 system.finalization_root%s
+D s-parame.ads		20240620080806 d494a4a6 system.parameters%s
+D s-pooglo.ads		20240620080806 91708d21 system.pool_global%s
+D s-putima.ads		20240620080806 4e095881 system.put_images%s
+D s-secsta.ads		20240620080806 62cd9202 system.secondary_stack%s
+D s-soflin.ads		20240620080806 df77073e system.soft_links%s
+D s-stache.ads		20240620080806 0b81c1fe system.stack_checking%s
+D s-stalib.ads		20240620080806 1c9580f6 system.standard_library%s
+D s-stoele.ads		20240620080806 6d8e1ff4 system.storage_elements%s
+D s-stoele.adb		20240620080806 8f5a9db6 system.storage_elements%b
+D s-stopoo.ads		20240620080806 e9fa2dd8 system.storage_pools%s
+D s-stratt.ads		20240620080806 f7dfd786 system.stream_attributes%s
+D s-traent.ads		20240620080806 c81cbf8c system.traceback_entries%s
+D s-unstyp.ads		20240620080806 fa2a7f59 system.unsigned_types%s
+D s-wchcon.ads		20240620080806 d9032363 system.wch_con%s
+D unchconv.ads		20240620080806 ca2f9e18 unchecked_conversion%s
+G a e
+G c Z b b [catch standard 4 11 none]
+G r c none [catch standard 4 11 none] [parse_from_string protobuf 95 13 none]
+X 1 ada.ads
+16K9*Ada 20e8 20|1r6 17r4
+X 6 a-convec.ads
+91R9*Vector<8|43R9> 20|8r55[23|34]
+X 10 a-iteint.ads
+24h9 Forward_Iterator
+32h9 Reversible_Iterator<24R9[6|119]>
+X 18 a-textio.ads
+58K13*Text_IO 727e16 20|1w10 17r8
+507U14*Put_Line 20|17s16
+X 20 catch.adb
+4U11*Catch 4b11 18l5 18t10
+5b4 Failed{boolean} 14m10 17r53
+8r7 Ignore{6|91R9[23|34]}
+X 23 protobuf.ads
+6K9*Protobuf 20|2w6 8r25 9r9 13r12 23|122e13
+9X4*Parse_Error 20|13r21
+34K12*Parsed_Field_Vectors[6|74] 20|8r34
+95V13*Parse_From_String{6|91R9[34]} 20|9s18
+

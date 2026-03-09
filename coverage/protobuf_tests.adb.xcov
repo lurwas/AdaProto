@@ -1,0 +1,1113 @@
+/home/richard/src/Ada/protobuf-ada-best/tests/protobuf_tests.adb:
+98% of 630 lines covered
+98% statement coverage (620 out of 630)
+
+Coverage level: stmt
+   1 .: with Ada.Containers;
+   2 .: with Ada.Calendar;
+   3 .: with Ada.Directories;
+   4 .: with Ada.Strings.Fixed;
+   5 .: with Ada.Strings.Unbounded;
+   6 .: with Ada.Streams.Stream_IO;
+   7 .: with Ada.Unchecked_Conversion;
+   8 .: with AUnit;
+   9 .: with AUnit.Assertions;
+  10 .: with AUnit.Simple_Test_Cases;
+  11 .: with AUnit.Test_Suites;
+  12 .: with Fixture_Loader;
+  13 .: with Interfaces;
+  14 .: with Protobuf;
+  15 .: 
+  16 .: package body Protobuf_Tests is
+  17 .:    use AUnit.Assertions;
+  18 .:    use Interfaces;
+  19 .:    use type Ada.Containers.Count_Type;
+  20 .:    use type Ada.Streams.Stream_Element_Offset;
+  21 .:    use type AUnit.Message_String;
+  22 .:    use type AUnit.Simple_Test_Cases.Test_Case_Access;
+  23 .:    use type AUnit.Test_Suites.Access_Test_Suite;
+  24 .: 
+  25 +:    type Test_Proc is access procedure;
+  26 .: 
+  27 +:    type Callback_Case is new AUnit.Simple_Test_Cases.Test_Case with record
+  28 +:       Test_Name : AUnit.Message_String;
+  29 +:       Proc : Test_Proc;
+  30 +:    end record;
+  31 .: 
+  32 +:    Max_Tests : constant Positive := 64;
+  33 +:    type Test_Case_Array is array (Positive range <>) of AUnit.Simple_Test_Cases.Test_Case_Access;
+  34 +:    Registered_Cases : Test_Case_Array (1 .. Max_Tests) := (others => null);
+  35 +:    Registered_Count : Natural := 0;
+  36 +:    Registered_Suite : AUnit.Test_Suites.Access_Test_Suite := null;
+  37 .: 
+  38 .:    overriding function Name (Test : Callback_Case) return AUnit.Message_String;
+  39 .:    overriding procedure Run_Test (Test : in out Callback_Case);
+  40 .: 
+  41 .:    function Name (Test : Callback_Case) return AUnit.Message_String is
+  42 .:    begin
+  43 +:       return Test.Test_Name;
+  44 .:    end Name;
+  45 .: 
+  46 .:    procedure Run_Test (Test : in out Callback_Case) is
+  47 .:    begin
+  48 +:       Test.Proc.all;
+  49 .:    end Run_Test;
+  50 .: 
+  51 .:    function New_Case (Test_Name : String; Proc : Test_Proc) return AUnit.Simple_Test_Cases.Test_Case_Access is
+  52 +:       Case_Ptr : constant AUnit.Simple_Test_Cases.Test_Case_Access :=
+  53 +:         new Callback_Case'
+  54 +:           (AUnit.Simple_Test_Cases.Test_Case with
+  55 +:            Test_Name => AUnit.Format (Test_Name),
+  56 +:            Proc => Proc);
+  57 .:    begin
+  58 +:       if Registered_Count = Max_Tests then
+  59 -:          raise Constraint_Error with "too many tests registered";
+  60 .:       end if;
+  61 +:       Registered_Count := Registered_Count + 1;
+  62 +:       Registered_Cases (Registered_Count) := Case_Ptr;
+  63 +:       return Case_Ptr;
+  64 .:    end New_Case;
+  65 .: 
+  66 +:    function To_Signed_32 is new Ada.Unchecked_Conversion (Unsigned_32, Integer_32);
+  67 +:    function To_Signed_64 is new Ada.Unchecked_Conversion (Unsigned_64, Integer_64);
+  68 .: 
+  69 .:    function Find_Field
+  70 .:      (Fields : Protobuf.Parsed_Field_Vectors.Vector;
+  71 .:       Number : Protobuf.Field_Number;
+  72 .:       Occurrence : Positive := 1) return Protobuf.Parsed_Field is
+  73 +:       Seen : Natural := 0;
+  74 .:    begin
+  75 +:       for F of Fields loop
+  76 +:          if F.Number = Number then
+  77 +:             Seen := Seen + 1;
+  78 +:             if Seen = Occurrence then
+  79 +:                return F;
+  80 .:             end if;
+  81 .:          end if;
+  82 .:       end loop;
+  83 +:       raise Protobuf.Parse_Error with "field not found";
+  84 .:    end Find_Field;
+  85 .: 
+  86 .:    function Count_Field
+  87 .:      (Fields : Protobuf.Parsed_Field_Vectors.Vector;
+  88 .:       Number : Protobuf.Field_Number) return Natural is
+  89 +:       Count : Natural := 0;
+  90 .:    begin
+  91 +:       for F of Fields loop
+  92 +:          if F.Number = Number then
+  93 +:             Count := Count + 1;
+  94 .:          end if;
+  95 .:       end loop;
+  96 +:       return Count;
+  97 .:    end Count_Field;
+  98 .: 
+  99 .:    function Decode_Fixed64_LE (Bytes : String; Offset : Positive) return Unsigned_64 is
+ 100 +:       Value : Unsigned_64 := 0;
+ 101 .:    begin
+ 102 +:       for I in 0 .. 7 loop
+ 103 +:          Value :=
+ 104 +:            Value or
+ 105 +:            Shift_Left
+ 106 +:              (Unsigned_64 (Character'Pos (Bytes (Offset + I))),
+ 107 +:               8 * I);
+ 108 .:       end loop;
+ 109 +:       return Value;
+ 110 .:    end Decode_Fixed64_LE;
+ 111 .: 
+ 112 .:    function Hex_Nibble (C : Character) return Unsigned_8 is
+ 113 .:    begin
+ 114 +:       case C is
+ 115 .:          when '0' .. '9' =>
+ 116 +:             return Unsigned_8 (Character'Pos (C) - Character'Pos ('0'));
+ 117 .:          when 'a' .. 'f' =>
+ 118 +:             return Unsigned_8 (10 + Character'Pos (C) - Character'Pos ('a'));
+ 119 .:          when 'A' .. 'F' =>
+ 120 -:             return Unsigned_8 (10 + Character'Pos (C) - Character'Pos ('A'));
+ 121 .:          when others =>
+ 122 +:             raise Constraint_Error with "invalid hex digit";
+ 123 .:       end case;
+ 124 .:    end Hex_Nibble;
+ 125 .: 
+ 126 .:    function Decode_Hex (Hex : String) return String is
+ 127 .:    begin
+ 128 +:       if Hex'Length = 0 then
+ 129 -:          return "";
+ 130 .:       end if;
+ 131 +:       if Hex'Length mod 2 /= 0 then
+ 132 +:          raise Constraint_Error with "hex length must be even";
+ 133 .:       end if;
+ 134 .:       declare
+ 135 +:          Bytes : String (1 .. Hex'Length / 2);
+ 136 +:          J : Positive := Hex'First;
+ 137 .:       begin
+ 138 +:          for I in Bytes'Range loop
+ 139 +:             Bytes (I) := Character'Val
+ 140 +:               (Integer (Shift_Left (Hex_Nibble (Hex (J)), 4) or Hex_Nibble (Hex (J + 1))));
+ 141 +:             J := J + 2;
+ 142 .:          end loop;
+ 143 +:          return Bytes;
+ 144 .:       end;
+ 145 .:    end Decode_Hex;
+ 146 .: 
+ 147 .:    function Next_Rand (State : in out Unsigned_64) return Unsigned_64 is
+ 148 .:    begin
+ 149 +:       State := State * 6364136223846793005 + 1442695040888963407;
+ 150 +:       return State;
+ 151 .:    end Next_Rand;
+ 152 .: 
+ 153 .:    function Rand_I32 (State : in out Unsigned_64) return Integer_32 is
+ 154 .:    begin
+ 155 +:       return To_Signed_32 (Unsigned_32 (Next_Rand (State) and 16#FFFF_FFFF#));
+ 156 .:    end Rand_I32;
+ 157 .: 
+ 158 .:    function Rand_I64 (State : in out Unsigned_64) return Integer_64 is
+ 159 .:    begin
+ 160 +:       return To_Signed_64 (Next_Rand (State));
+ 161 .:    end Rand_I64;
+ 162 .: 
+ 163 .:    function Rand_U32 (State : in out Unsigned_64) return Unsigned_32 is
+ 164 .:    begin
+ 165 +:       return Unsigned_32 (Next_Rand (State) and 16#FFFF_FFFF#);
+ 166 .:    end Rand_U32;
+ 167 .: 
+ 168 .:    function Rand_U64 (State : in out Unsigned_64) return Unsigned_64 is
+ 169 .:    begin
+ 170 +:       return Next_Rand (State);
+ 171 .:    end Rand_U64;
+ 172 .: 
+ 173 .:    function Rand_Bool (State : in out Unsigned_64) return Boolean is
+ 174 .:    begin
+ 175 +:       return (Next_Rand (State) and 1) = 1;
+ 176 .:    end Rand_Bool;
+ 177 .: 
+ 178 .:    function Rand_Ascii (State : in out Unsigned_64; Length : Positive) return String is
+ 179 +:       S : String (1 .. Length);
+ 180 .:    begin
+ 181 +:       for I in S'Range loop
+ 182 +:          S (I) := Character'Val (Character'Pos ('a') + Integer (Next_Rand (State) mod 26));
+ 183 .:       end loop;
+ 184 +:       return S;
+ 185 .:    end Rand_Ascii;
+ 186 .: 
+ 187 .:    function Img_U64 (Value : Unsigned_64) return String is
+ 188 .:    begin
+ 189 +:       return Ada.Strings.Fixed.Trim (Unsigned_64'Image (Value), Ada.Strings.Both);
+ 190 .:    end Img_U64;
+ 191 .: 
+ 192 .:    procedure Populate_Diff_Case_From_Seed
+ 193 .:      (B : in out Protobuf.Message_Buffer;
+ 194 .:       Seed : Unsigned_64) is
+ 195 +:       I32 : constant Integer_32 :=
+ 196 +:         Integer_32 ((Seed * 1103515245 + 12345) mod 2_000_001) - 1_000_000;
+ 197 +:       U64 : constant Unsigned_64 :=
+ 198 +:         Seed * 6364136223846793005 + 1442695040888963407;
+ 199 +:       S32 : constant Integer_32 :=
+ 200 +:         Integer_32 ((Seed * 214013 + 2531011) mod 200_001) - 100_000;
+ 201 +:       S64 : constant Integer_64 :=
+ 202 +:         To_Signed_64 ((Seed * 11400714819323198485) xor 16#A5A5_A5A5_A5A5_A5A5#);
+ 203 +:       B0 : constant Character := Character'Val (Integer (Seed and 16#FF#));
+ 204 +:       B1 : constant Character := Character'Val (Integer (Shift_Right (Seed and 16#FF00#, 8)));
+ 205 .:    begin
+ 206 +:       Protobuf.Add_Int32 (B, 1, I32);
+ 207 +:       Protobuf.Add_UInt64 (B, 4, U64);
+ 208 +:       Protobuf.Add_SInt32 (B, 5, S32);
+ 209 +:       Protobuf.Add_SInt64 (B, 6, S64);
+ 210 +:       Protobuf.Add_String (B, 14, "seed-" & Img_U64 (Seed));
+ 211 +:       Protobuf.Add_Bytes (B, 15, B0 & B1 & Character'Val (16#AA#));
+ 212 .:       declare
+ 213 +:          Nested : Protobuf.Message_Buffer;
+ 214 .:       begin
+ 215 +:          Protobuf.Add_Int32 (Nested, 1, Integer_32 (Seed mod 10_000) - 5_000);
+ 216 +:          Protobuf.Add_String (Nested, 2, "n-" & Img_U64 (Seed mod 97));
+ 217 +:          Protobuf.Add_Message (B, 16, Protobuf.To_String (Nested));
+ 218 .:       end;
+ 219 +:       Protobuf.Add_Int32 (B, 17, I32);
+ 220 +:       Protobuf.Add_Int32 (B, 17, -I32);
+ 221 +:       Protobuf.Add_Int32 (B, 17, Integer_32 (Seed mod 1000));
+ 222 +:       Protobuf.Add_Packed_SInt32 (B, 18, (S32, -S32, Integer_32 (Seed mod 101) - 50));
+ 223 .:    end Populate_Diff_Case_From_Seed;
+ 224 .: 
+ 225 +:    type Chunked_Input_Stream is new Ada.Streams.Root_Stream_Type with record
+ 226 +:       Data : Ada.Strings.Unbounded.Unbounded_String;
+ 227 +:       Pos  : Natural := 1;
+ 228 +:       Chunk_Size : Positive := 1;
+ 229 +:    end record;
+ 230 .: 
+ 231 .:    overriding procedure Read
+ 232 .:      (Stream : in out Chunked_Input_Stream;
+ 233 .:       Item   : out Ada.Streams.Stream_Element_Array;
+ 234 .:       Last   : out Ada.Streams.Stream_Element_Offset);
+ 235 .: 
+ 236 .:    overriding procedure Write
+ 237 .:      (Stream : in out Chunked_Input_Stream;
+ 238 .:       Item   : Ada.Streams.Stream_Element_Array);
+ 239 .: 
+ 240 .:    procedure Read
+ 241 .:      (Stream : in out Chunked_Input_Stream;
+ 242 .:       Item   : out Ada.Streams.Stream_Element_Array;
+ 243 .:       Last   : out Ada.Streams.Stream_Element_Offset) is
+ 244 +:       Source : constant String := Ada.Strings.Unbounded.To_String (Stream.Data);
+ 245 +:       Remaining : Natural := 0;
+ 246 +:       To_Copy : Natural := 0;
+ 247 .:    begin
+ 248 +:       if Stream.Pos > Source'Length then
+ 249 +:          Last := Item'First - 1;
+ 250 +:          return;
+ 251 .:       end if;
+ 252 +:       Remaining := Source'Length - Stream.Pos + 1;
+ 253 +:       To_Copy := Natural'Min (Natural (Item'Length), Natural'Min (Stream.Chunk_Size, Remaining));
+ 254 +:       for I in 0 .. To_Copy - 1 loop
+ 255 +:          Item (Item'First + Ada.Streams.Stream_Element_Offset (I)) :=
+ 256 +:            Ada.Streams.Stream_Element (Character'Pos (Source (Stream.Pos + I)));
+ 257 .:       end loop;
+ 258 +:       Stream.Pos := Stream.Pos + To_Copy;
+ 259 +:       Last := Item'First + Ada.Streams.Stream_Element_Offset (To_Copy) - 1;
+ 260 .:    end Read;
+ 261 .: 
+ 262 .:    procedure Write
+ 263 .:      (Stream : in out Chunked_Input_Stream;
+ 264 .:       Item   : Ada.Streams.Stream_Element_Array) is
+ 265 .:       pragma Unreferenced (Stream, Item);
+ 266 .:    begin
+ 267 -:       raise Program_Error with "write not supported";
+ 268 .:    end Write;
+ 269 .: 
+ 270 .:    procedure Populate_All_Types (B : in out Protobuf.Message_Buffer) is
+ 271 .:    begin
+ 272 +:       Protobuf.Add_Int32 (B, 1, -123);
+ 273 +:       Protobuf.Add_Int64 (B, 2, -4_567_890_123);
+ 274 +:       Protobuf.Add_UInt32 (B, 3, 3_000_000_000);
+ 275 +:       Protobuf.Add_UInt64 (B, 4, 1_234_567_890_123_456_789);
+ 276 +:       Protobuf.Add_SInt32 (B, 5, -321);
+ 277 +:       Protobuf.Add_SInt64 (B, 6, -6_543_219_876_543);
+ 278 +:       Protobuf.Add_Bool (B, 7, True);
+ 279 +:       Protobuf.Add_Fixed32 (B, 8, 16#DEAD_BEEF#);
+ 280 +:       Protobuf.Add_Fixed64 (B, 9, 16#0123_4567_89AB_CDEF#);
+ 281 +:       Protobuf.Add_SFixed32 (B, 10, -2_222);
+ 282 +:       Protobuf.Add_SFixed64 (B, 11, -3_333_333_333);
+ 283 +:       Protobuf.Add_Float (B, 12, 3.5);
+ 284 +:       Protobuf.Add_Double (B, 13, -12_345.6789);
+ 285 +:       Protobuf.Add_String (B, 14, "hello ada");
+ 286 +:       Protobuf.Add_Bytes (B, 15, Character'Val (0) & Character'Val (1) & Character'Val (16#FE#));
+ 287 .: 
+ 288 .:       declare
+ 289 +:          Nested : Protobuf.Message_Buffer;
+ 290 .:       begin
+ 291 +:          Protobuf.Add_Int32 (Nested, 1, 7);
+ 292 +:          Protobuf.Add_String (Nested, 2, "nested");
+ 293 +:          Protobuf.Add_Message (B, 16, Protobuf.To_String (Nested));
+ 294 .:       end;
+ 295 .: 
+ 296 +:       Protobuf.Add_Int32 (B, 17, 1);
+ 297 +:       Protobuf.Add_Int32 (B, 17, -1);
+ 298 +:       Protobuf.Add_Int32 (B, 17, 150);
+ 299 +:       Protobuf.Add_Packed_SInt32 (B, 18, (-1, 0, 1, 150, -150));
+ 300 .:    end Populate_All_Types;
+ 301 .: 
+ 302 .:    procedure Populate_Advanced_Types (B : in out Protobuf.Message_Buffer) is
+ 303 .:    begin
+ 304 +:       Protobuf.Add_String (B, 2, "selected");
+ 305 +:       Protobuf.Add_Packed_Fixed64
+ 306 +:         (B,
+ 307 +:          3,
+ 308 +:          (16#1122_3344_5566_7788#,
+ 309 +:           16#FFEE_DDCC_BBAA_0099#));
+ 310 +:       Protobuf.Add_Bytes (B, 4, "");
+ 311 +:       Protobuf.Add_Bytes (B, 4, Character'Val (0) & Character'Val (16#AB#) & Character'Val (16#CD#));
+ 312 +:       Protobuf.Add_Bool (B, 5, True);
+ 313 +:       Protobuf.Add_String (B, 6, "hello-advanced");
+ 314 +:       Protobuf.Add_Bytes (B, 7, Character'Val (0) & Character'Val (16#7F#) & Character'Val (16#80#) & Character'Val (16#FF#));
+ 315 .:       declare
+ 316 +:          Nested : Protobuf.Message_Buffer;
+ 317 .:       begin
+ 318 +:          Protobuf.Add_Int32 (Nested, 1, -42);
+ 319 +:          Protobuf.Add_String (Nested, 2, "edge");
+ 320 +:          Protobuf.Add_Message (B, 8, Protobuf.To_String (Nested));
+ 321 .:       end;
+ 322 .:    end Populate_Advanced_Types;
+ 323 .: 
+ 324 .:    procedure Assert_All_Types_Fields (Fields : Protobuf.Parsed_Field_Vectors.Vector) is
+ 325 .:    begin
+ 326 +:       Assert (Protobuf.As_Int32 (Find_Field (Fields, 1)) = -123, "int32");
+ 327 +:       Assert (Protobuf.As_Int64 (Find_Field (Fields, 2)) = -4_567_890_123, "int64");
+ 328 +:       Assert (Protobuf.As_UInt32 (Find_Field (Fields, 3)) = 3_000_000_000, "uint32");
+ 329 +:       Assert (Protobuf.As_UInt64 (Find_Field (Fields, 4)) = 1_234_567_890_123_456_789, "uint64");
+ 330 +:       Assert (Protobuf.As_SInt32 (Find_Field (Fields, 5)) = -321, "sint32");
+ 331 +:       Assert (Protobuf.As_SInt64 (Find_Field (Fields, 6)) = -6_543_219_876_543, "sint64");
+ 332 +:       Assert (Protobuf.As_Bool (Find_Field (Fields, 7)), "bool");
+ 333 +:       Assert (Protobuf.As_Fixed32 (Find_Field (Fields, 8)) = 16#DEAD_BEEF#, "fixed32");
+ 334 +:       Assert (Protobuf.As_Fixed64 (Find_Field (Fields, 9)) = 16#0123_4567_89AB_CDEF#, "fixed64");
+ 335 +:       Assert (Protobuf.As_SFixed32 (Find_Field (Fields, 10)) = -2_222, "sfixed32");
+ 336 +:       Assert (Protobuf.As_SFixed64 (Find_Field (Fields, 11)) = -3_333_333_333, "sfixed64");
+ 337 +:       Assert (abs (Protobuf.As_Float (Find_Field (Fields, 12)) - 3.5) < 0.0001, "float");
+ 338 +:       Assert (abs (Protobuf.As_Double (Find_Field (Fields, 13)) - (-12_345.6789)) < 0.000001, "double");
+ 339 +:       Assert (Protobuf.As_String (Find_Field (Fields, 14)) = "hello ada", "string");
+ 340 +:       Assert (Protobuf.As_Bytes (Find_Field (Fields, 15)) =
+ 341 +:               Character'Val (0) & Character'Val (1) & Character'Val (16#FE#),
+ 342 +:               "bytes");
+ 343 .: 
+ 344 .:       declare
+ 345 +:          Nested_Bytes : constant String := Protobuf.As_Message_Bytes (Find_Field (Fields, 16));
+ 346 +:          Nested_Fields : constant Protobuf.Parsed_Field_Vectors.Vector := Protobuf.Parse_From_String (Nested_Bytes);
+ 347 .:       begin
+ 348 +:          Assert (Protobuf.As_Int32 (Find_Field (Nested_Fields, 1)) = 7, "nested int32");
+ 349 +:          Assert (Protobuf.As_String (Find_Field (Nested_Fields, 2)) = "nested", "nested string");
+ 350 .:       end;
+ 351 .: 
+ 352 +:       Assert (Count_Field (Fields, 17) = 3, "repeated int32 count");
+ 353 +:       Assert (Protobuf.As_Int32 (Find_Field (Fields, 17, 1)) = 1, "repeated #1");
+ 354 +:       Assert (Protobuf.As_Int32 (Find_Field (Fields, 17, 2)) = -1, "repeated #2");
+ 355 +:       Assert (Protobuf.As_Int32 (Find_Field (Fields, 17, 3)) = 150, "repeated #3");
+ 356 .: 
+ 357 .:       declare
+ 358 +:          Packed : constant Protobuf.Int32_Array := Protobuf.Decode_Packed_SInt32 (Protobuf.As_Bytes (Find_Field (Fields, 18)));
+ 359 .:       begin
+ 360 +:          Assert (Packed'Length = 5, "packed length");
+ 361 +:          Assert (Packed (1) = -1 and Packed (2) = 0 and Packed (3) = 1 and Packed (4) = 150 and Packed (5) = -150,
+ 362 +:                  "packed sint32 values");
+ 363 .:       end;
+ 364 .:    end Assert_All_Types_Fields;
+ 365 .: 
+ 366 .:    procedure Assert_Advanced_Types_Fields (Fields : Protobuf.Parsed_Field_Vectors.Vector) is
+ 367 .:    begin
+ 368 +:       Assert (Count_Field (Fields, 1) = 0, "oneof int32 branch should not be present");
+ 369 +:       Assert (Protobuf.As_String (Find_Field (Fields, 2)) = "selected", "oneof text");
+ 370 .:       declare
+ 371 +:          Packed : constant String := Protobuf.As_Bytes (Find_Field (Fields, 3));
+ 372 .:       begin
+ 373 +:          Assert (Packed'Length = 16, "packed fixed64 payload length");
+ 374 +:          Assert (Decode_Fixed64_LE (Packed, Packed'First) = 16#1122_3344_5566_7788#, "packed fixed64 #1");
+ 375 +:          Assert (Decode_Fixed64_LE (Packed, Packed'First + 8) = 16#FFEE_DDCC_BBAA_0099#, "packed fixed64 #2");
+ 376 .:       end;
+ 377 +:       Assert (Count_Field (Fields, 4) = 2, "chunks count");
+ 378 +:       Assert (Protobuf.As_Bytes (Find_Field (Fields, 4, 1)) = "", "empty chunk");
+ 379 +:       Assert (Protobuf.As_Bytes (Find_Field (Fields, 4, 2)) =
+ 380 +:                 Character'Val (0) & Character'Val (16#AB#) & Character'Val (16#CD#),
+ 381 +:               "binary chunk");
+ 382 +:       Assert (Protobuf.As_Bool (Find_Field (Fields, 5)), "flag");
+ 383 +:       Assert (Protobuf.As_String (Find_Field (Fields, 6)) = "hello-advanced", "utf8/ascii");
+ 384 +:       Assert (Protobuf.As_Bytes (Find_Field (Fields, 7)) =
+ 385 +:                 Character'Val (0) & Character'Val (16#7F#) & Character'Val (16#80#) & Character'Val (16#FF#),
+ 386 +:               "blob");
+ 387 .:       declare
+ 388 +:          Nested_Bytes : constant String := Protobuf.As_Message_Bytes (Find_Field (Fields, 8));
+ 389 +:          Nested_Fields : constant Protobuf.Parsed_Field_Vectors.Vector := Protobuf.Parse_From_String (Nested_Bytes);
+ 390 .:       begin
+ 391 +:          Assert (Protobuf.As_Int32 (Find_Field (Nested_Fields, 1)) = -42, "advanced nested int32");
+ 392 +:          Assert (Protobuf.As_String (Find_Field (Nested_Fields, 2)) = "edge", "advanced nested string");
+ 393 .:       end;
+ 394 .:    end Assert_Advanced_Types_Fields;
+ 395 .: 
+ 396 .:    procedure Test_Empty_Message_Encodes_Empty is
+ 397 +:       B : Protobuf.Message_Buffer;
+ 398 .:    begin
+ 399 +:       Assert (Protobuf.To_String (B) = "", "empty message must serialize to empty string");
+ 400 .:    end Test_Empty_Message_Encodes_Empty;
+ 401 .: 
+ 402 .:    procedure Test_All_Scalar_Encodings is
+ 403 +:       B : Protobuf.Message_Buffer;
+ 404 +:       Fields : Protobuf.Parsed_Field_Vectors.Vector;
+ 405 .:    begin
+ 406 +:       Populate_All_Types (B);
+ 407 +:       Fields := Protobuf.Parse_From_String (Protobuf.To_String (B));
+ 408 +:       Assert_All_Types_Fields (Fields);
+ 409 .:    end Test_All_Scalar_Encodings;
+ 410 .: 
+ 411 .:    procedure Test_Serialize_Deserialize_String_Aliases is
+ 412 +:       B : Protobuf.Message_Buffer;
+ 413 +:       Parsed : Protobuf.Parsed_Field_Vectors.Vector;
+ 414 .:    begin
+ 415 +:       Protobuf.Add_Int32 (B, 1, 12345);
+ 416 +:       Protobuf.Add_String (B, 2, "alias-check");
+ 417 .: 
+ 418 .:       declare
+ 419 +:          Encoded_A : constant String := Protobuf.To_String (B);
+ 420 +:          Encoded_B : constant String := Protobuf.Serialize_To_String (B);
+ 421 .:       begin
+ 422 +:          Assert (Encoded_A = Encoded_B, "Serialize_To_String must match To_String");
+ 423 +:          Parsed := Protobuf.Deserialize_From_String (Encoded_B);
+ 424 .:       end;
+ 425 +:       Assert (Protobuf.As_Int32 (Find_Field (Parsed, 1)) = 12345, "Deserialize_From_String int32");
+ 426 +:       Assert (Protobuf.As_String (Find_Field (Parsed, 2)) = "alias-check", "Deserialize_From_String string");
+ 427 .:    end Test_Serialize_Deserialize_String_Aliases;
+ 428 .: 
+ 429 .:    procedure Test_Randomized_Roundtrip is
+ 430 +:       State : Unsigned_64 := 16#C0DE_CAFE_1234_5678#;
+ 431 .:    begin
+ 432 +:       for I in 1 .. 300 loop
+ 433 .:          declare
+ 434 +:             B : Protobuf.Message_Buffer;
+ 435 +:             V_I32 : constant Integer_32 := Rand_I32 (State);
+ 436 +:             V_I64 : constant Integer_64 := Rand_I64 (State);
+ 437 +:             V_U32 : constant Unsigned_32 := Rand_U32 (State);
+ 438 +:             V_U64 : constant Unsigned_64 := Rand_U64 (State);
+ 439 +:             V_S32 : constant Integer_32 := Rand_I32 (State);
+ 440 +:             V_S64 : constant Integer_64 := Rand_I64 (State);
+ 441 +:             V_Bool : constant Boolean := Rand_Bool (State);
+ 442 +:             V_Str : constant String := Rand_Ascii (State, 8);
+ 443 +:             Parsed : Protobuf.Parsed_Field_Vectors.Vector;
+ 444 .:          begin
+ 445 +:             Protobuf.Add_Int32 (B, 1, V_I32);
+ 446 +:             Protobuf.Add_Int64 (B, 2, V_I64);
+ 447 +:             Protobuf.Add_UInt32 (B, 3, V_U32);
+ 448 +:             Protobuf.Add_UInt64 (B, 4, V_U64);
+ 449 +:             Protobuf.Add_SInt32 (B, 5, V_S32);
+ 450 +:             Protobuf.Add_SInt64 (B, 6, V_S64);
+ 451 +:             Protobuf.Add_Bool (B, 7, V_Bool);
+ 452 +:             Protobuf.Add_String (B, 8, V_Str);
+ 453 +:             Protobuf.Add_Packed_SInt32 (B, 9, (V_S32, -V_S32, Integer_32 (I)));
+ 454 .: 
+ 455 +:             Parsed := Protobuf.Deserialize_From_String (Protobuf.Serialize_To_String (B));
+ 456 +:             Assert (Protobuf.As_Int32 (Find_Field (Parsed, 1)) = V_I32, "random int32");
+ 457 +:             Assert (Protobuf.As_Int64 (Find_Field (Parsed, 2)) = V_I64, "random int64");
+ 458 +:             Assert (Protobuf.As_UInt32 (Find_Field (Parsed, 3)) = V_U32, "random uint32");
+ 459 +:             Assert (Protobuf.As_UInt64 (Find_Field (Parsed, 4)) = V_U64, "random uint64");
+ 460 +:             Assert (Protobuf.As_SInt32 (Find_Field (Parsed, 5)) = V_S32, "random sint32");
+ 461 +:             Assert (Protobuf.As_SInt64 (Find_Field (Parsed, 6)) = V_S64, "random sint64");
+ 462 +:             Assert (Protobuf.As_Bool (Find_Field (Parsed, 7)) = V_Bool, "random bool");
+ 463 +:             Assert (Protobuf.As_String (Find_Field (Parsed, 8)) = V_Str, "random string");
+ 464 .:          end;
+ 465 .:       end loop;
+ 466 .:    end Test_Randomized_Roundtrip;
+ 467 .: 
+ 468 .:    procedure Test_Boundary_Value_Matrix is
+ 469 +:       B : Protobuf.Message_Buffer;
+ 470 +:       Parsed : Protobuf.Parsed_Field_Vectors.Vector;
+ 471 .:    begin
+ 472 +:       Protobuf.Add_Int32 (B, 1, Integer_32'First);
+ 473 +:       Protobuf.Add_Int32 (B, 1, Integer_32'Last);
+ 474 +:       Protobuf.Add_Int64 (B, 2, Integer_64'First);
+ 475 +:       Protobuf.Add_Int64 (B, 2, Integer_64'Last);
+ 476 +:       Protobuf.Add_UInt32 (B, 3, Unsigned_32'First);
+ 477 +:       Protobuf.Add_UInt32 (B, 3, Unsigned_32'Last);
+ 478 +:       Protobuf.Add_UInt64 (B, 4, Unsigned_64'First);
+ 479 +:       Protobuf.Add_UInt64 (B, 4, Unsigned_64'Last);
+ 480 +:       Protobuf.Add_SInt32 (B, 5, Integer_32'First);
+ 481 +:       Protobuf.Add_SInt32 (B, 5, Integer_32'Last);
+ 482 +:       Protobuf.Add_SInt64 (B, 6, Integer_64'First);
+ 483 +:       Protobuf.Add_SInt64 (B, 6, Integer_64'Last);
+ 484 +:       Protobuf.Add_Float (B, 7, Protobuf.Float32'First);
+ 485 +:       Protobuf.Add_Float (B, 7, Protobuf.Float32'Last);
+ 486 +:       Protobuf.Add_Double (B, 8, Protobuf.Float64'First);
+ 487 +:       Protobuf.Add_Double (B, 8, Protobuf.Float64'Last);
+ 488 .: 
+ 489 +:       Parsed := Protobuf.Parse_From_String (Protobuf.To_String (B));
+ 490 +:       Assert (Protobuf.As_Int32 (Find_Field (Parsed, 1, 1)) = Integer_32'First, "boundary int32 first");
+ 491 +:       Assert (Protobuf.As_Int32 (Find_Field (Parsed, 1, 2)) = Integer_32'Last, "boundary int32 last");
+ 492 +:       Assert (Protobuf.As_Int64 (Find_Field (Parsed, 2, 1)) = Integer_64'First, "boundary int64 first");
+ 493 +:       Assert (Protobuf.As_Int64 (Find_Field (Parsed, 2, 2)) = Integer_64'Last, "boundary int64 last");
+ 494 +:       Assert (Protobuf.As_UInt32 (Find_Field (Parsed, 3, 1)) = Unsigned_32'First, "boundary uint32 first");
+ 495 +:       Assert (Protobuf.As_UInt32 (Find_Field (Parsed, 3, 2)) = Unsigned_32'Last, "boundary uint32 last");
+ 496 +:       Assert (Protobuf.As_UInt64 (Find_Field (Parsed, 4, 1)) = Unsigned_64'First, "boundary uint64 first");
+ 497 +:       Assert (Protobuf.As_UInt64 (Find_Field (Parsed, 4, 2)) = Unsigned_64'Last, "boundary uint64 last");
+ 498 .:    end Test_Boundary_Value_Matrix;
+ 499 .: 
+ 500 .:    procedure Test_Large_Payload_Stress is
+ 501 +:       Large : String (1 .. 1_000_000);
+ 502 +:       B : Protobuf.Message_Buffer;
+ 503 +:       Parsed : Protobuf.Parsed_Field_Vectors.Vector;
+ 504 .:    begin
+ 505 +:       for I in Large'Range loop
+ 506 +:          Large (I) := Character'Val (Character'Pos ('a') + (I mod 26));
+ 507 .:       end loop;
+ 508 +:       Protobuf.Add_String (B, 1, Large);
+ 509 +:       Protobuf.Add_Packed_UInt32
+ 510 +:         (B,
+ 511 +:          2,
+ 512 +:          (1 => 1, 2 => 2, 3 => 3, 4 => 4, 5 => 5, 6 => 6, 7 => 7, 8 => 8, 9 => 9, 10 => 10));
+ 513 +:       Parsed := Protobuf.Parse_From_String (Protobuf.To_String (B));
+ 514 +:       Assert (Protobuf.As_String (Find_Field (Parsed, 1)) = Large, "large string roundtrip");
+ 515 .:    end Test_Large_Payload_Stress;
+ 516 .: 
+ 517 .:    procedure Test_Malformed_Fuzz_Corpus is
+ 518 +:       State : Unsigned_64 := 16#1234_5678_9ABC_DEF0#;
+ 519 .:    begin
+ 520 +:       for I in 1 .. 500 loop
+ 521 .:          declare
+ 522 +:             Len : constant Natural := Natural (Next_Rand (State) mod 64);
+ 523 +:             S : String (1 .. (if Len = 0 then 1 else Len));
+ 524 +:             Failed_Ok : Boolean := False;
+ 525 .:          begin
+ 526 +:             if Len = 0 then
+ 527 -:                S (1) := Character'Val (0);
+ 528 .:             else
+ 529 +:                for J in 1 .. Len loop
+ 530 +:                   S (J) := Character'Val (Integer (Next_Rand (State) and 16#FF#));
+ 531 .:                end loop;
+ 532 .:             end if;
+ 533 .:             begin
+ 534 .:                declare
+ 535 +:                   Ignore : constant Protobuf.Parsed_Field_Vectors.Vector :=
+ 536 +:                     Protobuf.Parse_From_String (if Len = 0 then "" else S (1 .. Len));
+ 537 .:                begin
+ 538 -:                   null;
+ 539 .:                end;
+ 540 .:             exception
+ 541 .:                when Protobuf.Parse_Error =>
+ 542 +:                   Failed_Ok := True;
+ 543 .:                when others =>
+ 544 -:                   Assert (False, "unexpected exception in fuzz corpus");
+ 545 .:             end;
+ 546 .:             pragma Unreferenced (Failed_Ok);
+ 547 .:          end;
+ 548 .:       end loop;
+ 549 .:    end Test_Malformed_Fuzz_Corpus;
+ 550 .: 
+ 551 .:    procedure Test_Malformed_Corpus_Fixture is
+ 552 +:       Corpus : constant String := Fixture_Loader.Read_Fixture ("malformed_corpus.hex");
+ 553 +:       Line_Start : Positive := Corpus'First;
+ 554 .:    begin
+ 555 +:       for I in Corpus'Range loop
+ 556 +:          if Corpus (I) = ASCII.LF then
+ 557 +:             if I > Line_Start then
+ 558 .:                declare
+ 559 +:                   Line : constant String := Corpus (Line_Start .. I - 1);
+ 560 +:                   Data : constant String := Decode_Hex (Line);
+ 561 .:                begin
+ 562 .:                   begin
+ 563 .:                      declare
+ 564 +:                         Ignore : constant Protobuf.Parsed_Field_Vectors.Vector :=
+ 565 +:                           Protobuf.Parse_From_String (Data);
+ 566 .:                      begin
+ 567 -:                         null;
+ 568 .:                      end;
+ 569 .:                   exception
+ 570 .:                      when Protobuf.Parse_Error =>
+ 571 +:                         null;
+ 572 .:                      when others =>
+ 573 -:                         Assert (False, "unexpected exception in malformed corpus fixture");
+ 574 .:                   end;
+ 575 .:                end;
+ 576 .:             end if;
+ 577 +:             if I < Corpus'Last then
+ 578 +:                Line_Start := I + 1;
+ 579 .:             end if;
+ 580 .:          end if;
+ 581 .:       end loop;
+ 582 .:    end Test_Malformed_Corpus_Fixture;
+ 583 .: 
+ 584 .:    procedure Test_Cpp_Differential_Corpus is
+ 585 +:       Corpus : constant String := Fixture_Loader.Read_Fixture ("all_types_corpus.hex");
+ 586 +:       Line_Start : Positive := Corpus'First;
+ 587 +:       Seed : Unsigned_64 := 1;
+ 588 .:    begin
+ 589 +:       for I in Corpus'Range loop
+ 590 +:          if Corpus (I) = ASCII.LF then
+ 591 +:             if I > Line_Start then
+ 592 .:                declare
+ 593 +:                   Line : constant String := Corpus (Line_Start .. I - 1);
+ 594 +:                   Expected : constant String := Decode_Hex (Line);
+ 595 +:                   B : Protobuf.Message_Buffer;
+ 596 .:                begin
+ 597 +:                   Populate_Diff_Case_From_Seed (B, Seed);
+ 598 +:                   Assert (Protobuf.To_String (B) = Expected, "cpp differential mismatch seed=" & Img_U64 (Seed));
+ 599 +:                   Seed := Seed + 1;
+ 600 .:                end;
+ 601 .:             end if;
+ 602 +:             if I < Corpus'Last then
+ 603 +:                Line_Start := I + 1;
+ 604 .:             end if;
+ 605 .:          end if;
+ 606 .:       end loop;
+ 607 +:       Assert (Seed = 129, "corpus should contain 128 lines");
+ 608 .:    end Test_Cpp_Differential_Corpus;
+ 609 .: 
+ 610 .:    procedure Test_Unknown_Fields_Stability is
+ 611 +:       B : Protobuf.Message_Buffer;
+ 612 +:       Parsed : Protobuf.Parsed_Field_Vectors.Vector;
+ 613 .:    begin
+ 614 +:       Protobuf.Add_Int32 (B, 1, 10);
+ 615 +:       Protobuf.Add_Fixed32 (B, 19_000, 16#DEAD_BEEF#);
+ 616 +:       Protobuf.Add_String (B, 2, "known");
+ 617 +:       Protobuf.Add_UInt64 (B, 29_000, 123456789);
+ 618 +:       Parsed := Protobuf.Parse_From_String (Protobuf.To_String (B));
+ 619 +:       Assert (Protobuf.As_Int32 (Find_Field (Parsed, 1)) = 10, "known field #1");
+ 620 +:       Assert (Protobuf.As_String (Find_Field (Parsed, 2)) = "known", "known field #2");
+ 621 +:       Assert (Count_Field (Parsed, 19_000) = 1, "unknown fixed field preserved");
+ 622 +:       Assert (Count_Field (Parsed, 29_000) = 1, "unknown varint field preserved");
+ 623 .:    end Test_Unknown_Fields_Stability;
+ 624 .: 
+ 625 .:    procedure Test_Packed_Unpacked_Equivalence is
+ 626 +:       Packed_B : Protobuf.Message_Buffer;
+ 627 +:       Unpacked_B : Protobuf.Message_Buffer;
+ 628 +:       Packed_Parsed : Protobuf.Parsed_Field_Vectors.Vector;
+ 629 +:       Unpacked_Parsed : Protobuf.Parsed_Field_Vectors.Vector;
+ 630 +:       Packed_Values : Protobuf.Int32_Array (1 .. 3) := (-10, 0, 25);
+ 631 .:    begin
+ 632 +:       Protobuf.Add_Packed_Int32 (Packed_B, 1, Packed_Values);
+ 633 +:       Protobuf.Add_Int32 (Unpacked_B, 1, -10);
+ 634 +:       Protobuf.Add_Int32 (Unpacked_B, 1, 0);
+ 635 +:       Protobuf.Add_Int32 (Unpacked_B, 1, 25);
+ 636 .: 
+ 637 +:       Packed_Parsed := Protobuf.Parse_From_String (Protobuf.To_String (Packed_B));
+ 638 +:       Unpacked_Parsed := Protobuf.Parse_From_String (Protobuf.To_String (Unpacked_B));
+ 639 .: 
+ 640 .:       declare
+ 641 +:          Decoded_Packed : constant Protobuf.Int32_Array :=
+ 642 +:            Protobuf.Decode_Packed_Int32 (Protobuf.As_Bytes (Find_Field (Packed_Parsed, 1)));
+ 643 .:       begin
+ 644 +:          Assert (Decoded_Packed'Length = 3, "packed len");
+ 645 +:          Assert (Decoded_Packed (1) = Protobuf.As_Int32 (Find_Field (Unpacked_Parsed, 1, 1)), "eq #1");
+ 646 +:          Assert (Decoded_Packed (2) = Protobuf.As_Int32 (Find_Field (Unpacked_Parsed, 1, 2)), "eq #2");
+ 647 +:          Assert (Decoded_Packed (3) = Protobuf.As_Int32 (Find_Field (Unpacked_Parsed, 1, 3)), "eq #3");
+ 648 .:       end;
+ 649 .:    end Test_Packed_Unpacked_Equivalence;
+ 650 .: 
+ 651 .:    procedure Test_Public_Packed_Decode_Helpers is
+ 652 +:       B : Protobuf.Message_Buffer;
+ 653 +:       Parsed : Protobuf.Parsed_Field_Vectors.Vector;
+ 654 .:    begin
+ 655 +:       Protobuf.Add_Packed_Bool (B, 1, (True, False, True));
+ 656 +:       Protobuf.Add_Packed_Fixed64 (B, 2, (16#0102_0304_0506_0708#, 16#F0E0_D0C0_B0A0_9080#));
+ 657 +:       Protobuf.Add_Packed_SFixed32 (B, 3, (-1, 0, 1));
+ 658 +:       Protobuf.Add_Packed_Float (B, 4, (1.25, -2.5));
+ 659 +:       Protobuf.Add_Packed_Double (B, 5, (3.25, -9.5));
+ 660 .: 
+ 661 +:       Parsed := Protobuf.Parse_From_String (Protobuf.To_String (B));
+ 662 .: 
+ 663 .:       declare
+ 664 +:          V1 : constant Protobuf.Bool_Array := Protobuf.Decode_Packed_Bool (Protobuf.As_Bytes (Find_Field (Parsed, 1)));
+ 665 +:          V2 : constant Protobuf.Fixed64_Array := Protobuf.Decode_Packed_Fixed64 (Protobuf.As_Bytes (Find_Field (Parsed, 2)));
+ 666 +:          V3 : constant Protobuf.SFixed32_Array := Protobuf.Decode_Packed_SFixed32 (Protobuf.As_Bytes (Find_Field (Parsed, 3)));
+ 667 +:          V4 : constant Protobuf.Float_Array := Protobuf.Decode_Packed_Float (Protobuf.As_Bytes (Find_Field (Parsed, 4)));
+ 668 +:          V5 : constant Protobuf.Double_Array := Protobuf.Decode_Packed_Double (Protobuf.As_Bytes (Find_Field (Parsed, 5)));
+ 669 .:       begin
+ 670 +:          Assert (V1'Length = 3 and V1 (1) and (not V1 (2)) and V1 (3), "decode packed bool");
+ 671 +:          Assert (V2'Length = 2 and V2 (1) = 16#0102_0304_0506_0708# and V2 (2) = 16#F0E0_D0C0_B0A0_9080#, "decode packed fixed64");
+ 672 +:          Assert (V3'Length = 3 and V3 (1) = -1 and V3 (2) = 0 and V3 (3) = 1, "decode packed sfixed32");
+ 673 +:          Assert (V4'Length = 2 and abs (V4 (1) - 1.25) < 0.0001 and abs (V4 (2) - (-2.5)) < 0.0001, "decode packed float");
+ 674 +:          Assert (V5'Length = 2 and abs (V5 (1) - 3.25) < 0.0000001 and abs (V5 (2) - (-9.5)) < 0.0000001, "decode packed double");
+ 675 .:       end;
+ 676 .:    end Test_Public_Packed_Decode_Helpers;
+ 677 .: 
+ 678 .:    procedure Test_Stream_Chunking is
+ 679 +:       B : Protobuf.Message_Buffer;
+ 680 +:       Parsed : Protobuf.Parsed_Field_Vectors.Vector;
+ 681 +:       S : aliased Chunked_Input_Stream;
+ 682 .:    begin
+ 683 +:       Populate_All_Types (B);
+ 684 .:       declare
+ 685 +:          Encoded : constant String := Protobuf.To_String (B);
+ 686 .:       begin
+ 687 +:          S.Data := Ada.Strings.Unbounded.To_Unbounded_String (Encoded);
+ 688 +:          S.Pos := 1;
+ 689 +:          S.Chunk_Size := 3;
+ 690 +:          Parsed := Protobuf.Parse_From_Stream (S'Access, Encoded'Length);
+ 691 .:       end;
+ 692 +:       Assert_All_Types_Fields (Parsed);
+ 693 .:    end Test_Stream_Chunking;
+ 694 .: 
+ 695 .:    procedure Test_Benchmark_Regression_Guard is
+ 696 .:       use Ada.Calendar;
+ 697 +:       Start_Time : Time;
+ 698 +:       End_Time : Time;
+ 699 +:       Iterations : constant Positive := 20_000;
+ 700 .:    begin
+ 701 +:       Start_Time := Clock;
+ 702 +:       for I in 1 .. Iterations loop
+ 703 .:          declare
+ 704 +:             B : Protobuf.Message_Buffer;
+ 705 +:             Parsed : Protobuf.Parsed_Field_Vectors.Vector;
+ 706 .:          begin
+ 707 +:             Protobuf.Add_Int32 (B, 1, Integer_32 (I));
+ 708 +:             Protobuf.Add_UInt64 (B, 2, Unsigned_64 (I) * 17);
+ 709 +:             Protobuf.Add_String (B, 3, "bench");
+ 710 +:             Parsed := Protobuf.Parse_From_String (Protobuf.To_String (B));
+ 711 +:             Assert (Protobuf.As_Int32 (Find_Field (Parsed, 1)) = Integer_32 (I), "bench guard parse");
+ 712 .:          end;
+ 713 .:       end loop;
+ 714 +:       End_Time := Clock;
+ 715 +:       Assert (End_Time - Start_Time < 30.0, "benchmark guard exceeded threshold");
+ 716 .:    end Test_Benchmark_Regression_Guard;
+ 717 .: 
+ 718 .:    procedure Test_Stream_Serialization is
+ 719 +:       package SIO renames Ada.Streams.Stream_IO;
+ 720 +:       Tmp : constant String := "tests/.tmp-stream.bin";
+ 721 +:       File : SIO.File_Type;
+ 722 +:       B : Protobuf.Message_Buffer;
+ 723 +:       Parsed : Protobuf.Parsed_Field_Vectors.Vector;
+ 724 .:    begin
+ 725 +:       Protobuf.Add_String (B, 1, "stream");
+ 726 +:       Protobuf.Add_Int32 (B, 2, 42);
+ 727 .: 
+ 728 +:       SIO.Create (File, SIO.Out_File, Tmp);
+ 729 +:       Protobuf.Write_To_Stream (B, SIO.Stream (File));
+ 730 +:       SIO.Close (File);
+ 731 .: 
+ 732 +:       SIO.Open (File, SIO.In_File, Tmp);
+ 733 +:       Parsed := Protobuf.Parse_From_Stream (SIO.Stream (File), Natural (SIO.Size (File)));
+ 734 +:       SIO.Close (File);
+ 735 +:       Ada.Directories.Delete_File (Tmp);
+ 736 .: 
+ 737 +:       Assert (Protobuf.As_String (Find_Field (Parsed, 1)) = "stream", "stream string");
+ 738 +:       Assert (Protobuf.As_Int32 (Find_Field (Parsed, 2)) = 42, "stream int");
+ 739 .:    end Test_Stream_Serialization;
+ 740 .: 
+ 741 .:    procedure Test_Fixture_Empty is
+ 742 +:       Data : constant String := Fixture_Loader.Read_Fixture ("empty.bin");
+ 743 +:       Parsed : constant Protobuf.Parsed_Field_Vectors.Vector := Protobuf.Parse_From_String (Data);
+ 744 .:    begin
+ 745 +:       Assert (Data'Length = 0, "empty fixture should be empty bytes");
+ 746 +:       Assert (Parsed.Length = 0, "empty fixture should parse as no fields");
+ 747 .:    end Test_Fixture_Empty;
+ 748 .: 
+ 749 .:    procedure Test_Fixture_All_Types_Compatibility is
+ 750 +:       Data : constant String := Fixture_Loader.Read_Fixture ("all_types.bin");
+ 751 +:       Parsed : constant Protobuf.Parsed_Field_Vectors.Vector := Protobuf.Parse_From_String (Data);
+ 752 .:    begin
+ 753 +:       Assert_All_Types_Fields (Parsed);
+ 754 .:    end Test_Fixture_All_Types_Compatibility;
+ 755 .: 
+ 756 .:    procedure Test_Ada_Encoding_Matches_Golden is
+ 757 +:       Golden : constant String := Fixture_Loader.Read_Fixture ("all_types.bin");
+ 758 +:       B : Protobuf.Message_Buffer;
+ 759 .:    begin
+ 760 +:       Populate_All_Types (B);
+ 761 +:       Assert (Protobuf.To_String (B) = Golden, "encoded bytes must match C++ fixture");
+ 762 .:    end Test_Ada_Encoding_Matches_Golden;
+ 763 .: 
+ 764 .:    procedure Test_Fixture_Advanced_Types_Compatibility is
+ 765 +:       Data : constant String := Fixture_Loader.Read_Fixture ("advanced_types.bin");
+ 766 +:       Parsed : constant Protobuf.Parsed_Field_Vectors.Vector := Protobuf.Parse_From_String (Data);
+ 767 .:    begin
+ 768 +:       Assert_Advanced_Types_Fields (Parsed);
+ 769 .:    end Test_Fixture_Advanced_Types_Compatibility;
+ 770 .: 
+ 771 .:    procedure Test_Ada_Encoding_Matches_Advanced_Golden is
+ 772 +:       Golden : constant String := Fixture_Loader.Read_Fixture ("advanced_types.bin");
+ 773 +:       B : Protobuf.Message_Buffer;
+ 774 .:    begin
+ 775 +:       Populate_Advanced_Types (B);
+ 776 +:       Assert (Protobuf.To_String (B) = Golden, "advanced encoded bytes must match C++ fixture");
+ 777 .:    end Test_Ada_Encoding_Matches_Advanced_Golden;
+ 778 .: 
+ 779 .:    procedure Test_Truncated_Varint_Fails is
+ 780 +:       Failed : Boolean := False;
+ 781 +:       Ignore : Protobuf.Parsed_Field_Vectors.Vector;
+ 782 .:    begin
+ 783 .:       begin
+ 784 +:          Ignore := Protobuf.Parse_From_String (Character'Val (8) & Character'Val (16#80#));
+ 785 .:       exception
+ 786 .:          when Protobuf.Parse_Error =>
+ 787 +:             Failed := True;
+ 788 .:       end;
+ 789 +:       Assert (Failed, "truncated varint should fail");
+ 790 .:    end Test_Truncated_Varint_Fails;
+ 791 .: 
+ 792 .:    procedure Test_Unsupported_Group_Wire_Fails is
+ 793 +:       Failed : Boolean := False;
+ 794 +:       Ignore : Protobuf.Parsed_Field_Vectors.Vector;
+ 795 .:    begin
+ 796 .:       begin
+ 797 +:          Ignore := Protobuf.Parse_From_String ("" & Character'Val (11));
+ 798 .:       exception
+ 799 .:          when Protobuf.Parse_Error =>
+ 800 +:             Failed := True;
+ 801 .:       end;
+ 802 +:       Assert (Failed, "group wire should fail");
+ 803 .:    end Test_Unsupported_Group_Wire_Fails;
+ 804 .: 
+ 805 .:    procedure Test_Wire_Mismatch_Fails is
+ 806 +:       Failed : Boolean := False;
+ 807 +:       B : Protobuf.Message_Buffer;
+ 808 +:       Parsed : Protobuf.Parsed_Field_Vectors.Vector;
+ 809 .:    begin
+ 810 +:       Protobuf.Add_Fixed32 (B, 1, 123);
+ 811 +:       Parsed := Protobuf.Parse_From_String (Protobuf.To_String (B));
+ 812 .:       begin
+ 813 .:          declare
+ 814 +:             Ignore : constant Integer_32 := Protobuf.As_Int32 (Find_Field (Parsed, 1));
+ 815 .:          begin
+ 816 -:             null;
+ 817 .:          end;
+ 818 .:       exception
+ 819 .:          when Protobuf.Parse_Error =>
+ 820 +:             Failed := True;
+ 821 .:       end;
+ 822 +:       Assert (Failed, "wire mismatch should fail");
+ 823 .:    end Test_Wire_Mismatch_Fails;
+ 824 .: 
+ 825 .:    procedure Test_Clear_Buffer is
+ 826 +:       B : Protobuf.Message_Buffer;
+ 827 .:    begin
+ 828 +:       Protobuf.Add_Int32 (B, 1, 1);
+ 829 +:       Assert (Protobuf.To_String (B)'Length > 0, "buffer has content");
+ 830 +:       Protobuf.Clear (B);
+ 831 +:       Assert (Protobuf.To_String (B) = "", "buffer cleared");
+ 832 .:    end Test_Clear_Buffer;
+ 833 .: 
+ 834 .:    procedure Test_Packed_Fixed32 is
+ 835 +:       B : Protobuf.Message_Buffer;
+ 836 +:       Fields : Protobuf.Parsed_Field_Vectors.Vector;
+ 837 .:    begin
+ 838 +:       Protobuf.Add_Packed_Fixed32 (B, 1, (16#0102_0304#, 16#DEAD_BEEF#));
+ 839 +:       Fields := Protobuf.Parse_From_String (Protobuf.To_String (B));
+ 840 .:       declare
+ 841 +:          Payload : constant String := Protobuf.As_Bytes (Find_Field (Fields, 1));
+ 842 .:       begin
+ 843 +:          Assert (Payload'Length = 8, "packed fixed32 payload length");
+ 844 +:          Assert (Character'Pos (Payload (1)) = 16#04# and Character'Pos (Payload (4)) = 16#01#, "little endian #1");
+ 845 +:          Assert (Character'Pos (Payload (5)) = 16#EF# and Character'Pos (Payload (8)) = 16#DE#, "little endian #2");
+ 846 .:       end;
+ 847 .:    end Test_Packed_Fixed32;
+ 848 .: 
+ 849 .:    procedure Test_Zero_Field_Number_Fails is
+ 850 +:       Failed : Boolean := False;
+ 851 +:       Ignore : Protobuf.Parsed_Field_Vectors.Vector;
+ 852 .:    begin
+ 853 .:       begin
+ 854 +:          Ignore := Protobuf.Parse_From_String ("" & Character'Val (0));
+ 855 .:       exception
+ 856 .:          when Protobuf.Parse_Error =>
+ 857 +:             Failed := True;
+ 858 .:       end;
+ 859 +:       Assert (Failed, "field number zero must fail");
+ 860 .:    end Test_Zero_Field_Number_Fails;
+ 861 .: 
+ 862 .:    procedure Test_Truncated_Length_Field_Fails is
+ 863 +:       Failed : Boolean := False;
+ 864 +:       Ignore : Protobuf.Parsed_Field_Vectors.Vector;
+ 865 .:    begin
+ 866 .:       begin
+ 867 +:          Ignore := Protobuf.Parse_From_String (Character'Val (10) & Character'Val (3) & "ab");
+ 868 .:       exception
+ 869 .:          when Protobuf.Parse_Error =>
+ 870 +:             Failed := True;
+ 871 .:       end;
+ 872 +:       Assert (Failed, "truncated length-delimited field must fail");
+ 873 .:    end Test_Truncated_Length_Field_Fails;
+ 874 .: 
+ 875 .:    procedure Test_Empty_Length_Field is
+ 876 +:       Parsed : constant Protobuf.Parsed_Field_Vectors.Vector :=
+ 877 +:         Protobuf.Parse_From_String (Character'Val (10) & Character'Val (0));
+ 878 .:    begin
+ 879 +:       Assert (Parsed.Length = 1, "single empty field parsed");
+ 880 +:       Assert (Protobuf.As_String (Find_Field (Parsed, 1)) = "", "empty bytes/string value");
+ 881 .:    end Test_Empty_Length_Field;
+ 882 .: 
+ 883 .:    procedure Test_Truncated_Fixed32_Fails is
+ 884 +:       Failed : Boolean := False;
+ 885 +:       Ignore : Protobuf.Parsed_Field_Vectors.Vector;
+ 886 .:    begin
+ 887 .:       begin
+ 888 +:          Ignore :=
+ 889 +:            Protobuf.Parse_From_String
+ 890 +:              (Character'Val (16#0D#) &
+ 891 +:               Character'Val (16#11#) &
+ 892 +:               Character'Val (16#22#) &
+ 893 +:               Character'Val (16#33#));
+ 894 .:       exception
+ 895 .:          when Protobuf.Parse_Error =>
+ 896 +:             Failed := True;
+ 897 .:       end;
+ 898 +:       Assert (Failed, "truncated fixed32 must fail");
+ 899 .:    end Test_Truncated_Fixed32_Fails;
+ 900 .: 
+ 901 .:    procedure Test_Truncated_Fixed64_Fails is
+ 902 +:       Failed : Boolean := False;
+ 903 +:       Ignore : Protobuf.Parsed_Field_Vectors.Vector;
+ 904 .:    begin
+ 905 .:       begin
+ 906 +:          Ignore :=
+ 907 +:            Protobuf.Parse_From_String
+ 908 +:              (Character'Val (16#09#) &
+ 909 +:               Character'Val (16#11#) &
+ 910 +:               Character'Val (16#22#) &
+ 911 +:               Character'Val (16#33#) &
+ 912 +:               Character'Val (16#44#) &
+ 913 +:               Character'Val (16#55#) &
+ 914 +:               Character'Val (16#66#) &
+ 915 +:               Character'Val (16#77#));
+ 916 .:       exception
+ 917 .:          when Protobuf.Parse_Error =>
+ 918 +:             Failed := True;
+ 919 .:       end;
+ 920 +:       Assert (Failed, "truncated fixed64 must fail");
+ 921 .:    end Test_Truncated_Fixed64_Fails;
+ 922 .: 
+ 923 .:    procedure Test_Find_Field_Not_Found_Fails is
+ 924 +:       Failed : Boolean := False;
+ 925 +:       Empty  : Protobuf.Parsed_Field_Vectors.Vector;
+ 926 +:       Ignore : Protobuf.Parsed_Field;
+ 927 .:    begin
+ 928 .:       begin
+ 929 +:          Ignore := Find_Field (Empty, 1);
+ 930 .:       exception
+ 931 .:          when Protobuf.Parse_Error =>
+ 932 +:             Failed := True;
+ 933 .:       end;
+ 934 +:       Assert (Failed, "Find_Field should fail when field is absent");
+ 935 .:    end Test_Find_Field_Not_Found_Fails;
+ 936 .: 
+ 937 .:    procedure Test_Decode_Hex_Invalid_Digit_Fails is
+ 938 +:       Failed : Boolean := False;
+ 939 +:       Ignore : String := "";
+ 940 .:    begin
+ 941 .:       begin
+ 942 +:          Ignore := Decode_Hex ("GG");
+ 943 .:       exception
+ 944 .:          when Constraint_Error =>
+ 945 +:             Failed := True;
+ 946 .:       end;
+ 947 +:       Assert (Failed, "invalid hex digit should raise Constraint_Error");
+ 948 .:    end Test_Decode_Hex_Invalid_Digit_Fails;
+ 949 .: 
+ 950 .:    procedure Test_Decode_Hex_Odd_Length_Fails is
+ 951 +:       Failed : Boolean := False;
+ 952 +:       Ignore : String := "";
+ 953 .:    begin
+ 954 .:       begin
+ 955 +:          Ignore := Decode_Hex ("ABC");
+ 956 .:       exception
+ 957 .:          when Constraint_Error =>
+ 958 +:             Failed := True;
+ 959 .:       end;
+ 960 +:       Assert (Failed, "odd-length hex should raise Constraint_Error");
+ 961 .:    end Test_Decode_Hex_Odd_Length_Fails;
+ 962 .: 
+ 963 .:    procedure Test_Chunked_Read_EOF is
+ 964 +:       S : Chunked_Input_Stream;
+ 965 +:       Item : Ada.Streams.Stream_Element_Array (1 .. 4);
+ 966 +:       Last : Ada.Streams.Stream_Element_Offset;
+ 967 .:    begin
+ 968 +:       S.Data := Ada.Strings.Unbounded.To_Unbounded_String ("");
+ 969 +:       S.Pos := 1;
+ 970 +:       S.Chunk_Size := 1;
+ 971 +:       Read (S, Item, Last);
+ 972 +:       Assert (Last = Item'First - 1, "empty stream read should report EOF");
+ 973 .:    end Test_Chunked_Read_EOF;
+ 974 .: 
+ 975 .:    procedure Test_Enum_And_Packed_Int64 is
+ 976 +:       B : Protobuf.Message_Buffer;
+ 977 +:       Parsed : Protobuf.Parsed_Field_Vectors.Vector;
+ 978 .:    begin
+ 979 +:       Protobuf.Add_Enum (B, 1, -42);
+ 980 +:       Protobuf.Add_Packed_Int64 (B, 2, (-9_223_372_036_854_775_808, -1, 0, 1, 9_223_372_036_854_775_807));
+ 981 +:       Parsed := Protobuf.Parse_From_String (Protobuf.To_String (B));
+ 982 .: 
+ 983 +:       Assert (Protobuf.As_Enum (Find_Field (Parsed, 1)) = -42, "enum value");
+ 984 .:       declare
+ 985 +:          Decoded : constant Protobuf.Int64_Array :=
+ 986 +:            Protobuf.Decode_Packed_Int64 (Protobuf.As_Bytes (Find_Field (Parsed, 2)));
+ 987 .:       begin
+ 988 +:          Assert (Decoded'Length = 5, "packed int64 size");
+ 989 +:          Assert (Decoded (1) = -9_223_372_036_854_775_808, "packed int64 #1");
+ 990 +:          Assert (Decoded (2) = -1, "packed int64 #2");
+ 991 +:          Assert (Decoded (3) = 0, "packed int64 #3");
+ 992 +:          Assert (Decoded (4) = 1, "packed int64 #4");
+ 993 +:          Assert (Decoded (5) = 9_223_372_036_854_775_807, "packed int64 #5");
+ 994 .:       end;
+ 995 .:    end Test_Enum_And_Packed_Int64;
+ 996 .: 
+ 997 .:    procedure Test_Stream_Serialization_Empty_Buffer is
+ 998 +:       package SIO renames Ada.Streams.Stream_IO;
+ 999 +:       Tmp : constant String := "tests/.tmp-stream-empty.bin";
+1000 +:       File : SIO.File_Type;
+1001 +:       B : Protobuf.Message_Buffer;
+1002 .:    begin
+1003 +:       SIO.Create (File, SIO.Out_File, Tmp);
+1004 +:       Protobuf.Write_To_Stream (B, SIO.Stream (File));
+1005 +:       SIO.Close (File);
+1006 .: 
+1007 +:       SIO.Open (File, SIO.In_File, Tmp);
+1008 +:       Assert (Natural (SIO.Size (File)) = 0, "empty buffer should write zero bytes");
+1009 +:       SIO.Close (File);
+1010 +:       Ada.Directories.Delete_File (Tmp);
+1011 .:    end Test_Stream_Serialization_Empty_Buffer;
+1012 .: 
+1013 .:    procedure Test_Packed_UInt64_And_SInt64 is
+1014 +:       B : Protobuf.Message_Buffer;
+1015 +:       Parsed : Protobuf.Parsed_Field_Vectors.Vector;
+1016 .:    begin
+1017 +:       Protobuf.Add_Packed_UInt64
+1018 +:         (B,
+1019 +:          1,
+1020 +:          (0,
+1021 +:           1,
+1022 +:           127,
+1023 +:           128,
+1024 +:           16#FFFF_FFFF_FFFF_FFFF#));
+1025 +:       Protobuf.Add_Packed_SInt64
+1026 +:         (B,
+1027 +:          2,
+1028 +:          (-9_223_372_036_854_775_808,
+1029 +:           -1,
+1030 +:           0,
+1031 +:           1,
+1032 +:           9_223_372_036_854_775_807));
+1033 .: 
+1034 +:       Parsed := Protobuf.Parse_From_String (Protobuf.To_String (B));
+1035 .: 
+1036 .:       declare
+1037 +:          U : constant Protobuf.UInt64_Array :=
+1038 +:            Protobuf.Decode_Packed_UInt64 (Protobuf.As_Bytes (Find_Field (Parsed, 1)));
+1039 +:          S : constant Protobuf.Int64_Array :=
+1040 +:            Protobuf.Decode_Packed_SInt64 (Protobuf.As_Bytes (Find_Field (Parsed, 2)));
+1041 .:       begin
+1042 +:          Assert (U'Length = 5, "packed uint64 size");
+1043 +:          Assert (U (1) = 0, "packed uint64 #1");
+1044 +:          Assert (U (2) = 1, "packed uint64 #2");
+1045 +:          Assert (U (3) = 127, "packed uint64 #3");
+1046 +:          Assert (U (4) = 128, "packed uint64 #4");
+1047 +:          Assert (U (5) = 16#FFFF_FFFF_FFFF_FFFF#, "packed uint64 #5");
+1048 .: 
+1049 +:          Assert (S'Length = 5, "packed sint64 size");
+1050 +:          Assert (S (1) = -9_223_372_036_854_775_808, "packed sint64 #1");
+1051 +:          Assert (S (2) = -1, "packed sint64 #2");
+1052 +:          Assert (S (3) = 0, "packed sint64 #3");
+1053 +:          Assert (S (4) = 1, "packed sint64 #4");
+1054 +:          Assert (S (5) = 9_223_372_036_854_775_807, "packed sint64 #5");
+1055 .:       end;
+1056 .:    end Test_Packed_UInt64_And_SInt64;
+1057 .: 
+1058 .:    function Suite return AUnit.Test_Suites.Access_Test_Suite is
+1059 .:    begin
+1060 +:       if Registered_Suite = null then
+1061 +:          Registered_Suite := AUnit.Test_Suites.New_Suite;
+1062 +:          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("empty message", Test_Empty_Message_Encodes_Empty'Access));
+1063 +:          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("all scalar encodings", Test_All_Scalar_Encodings'Access));
+1064 +:          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("string alias api", Test_Serialize_Deserialize_String_Aliases'Access));
+1065 +:          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("randomized roundtrip", Test_Randomized_Roundtrip'Access));
+1066 +:          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("boundary matrix", Test_Boundary_Value_Matrix'Access));
+1067 +:          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("large payload stress", Test_Large_Payload_Stress'Access));
+1068 +:          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("malformed fuzz", Test_Malformed_Fuzz_Corpus'Access));
+1069 +:          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("malformed corpus fixture", Test_Malformed_Corpus_Fixture'Access));
+1070 +:          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("cpp differential corpus", Test_Cpp_Differential_Corpus'Access));
+1071 +:          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("stream serialization", Test_Stream_Serialization'Access));
+1072 +:          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("stream chunking", Test_Stream_Chunking'Access));
+1073 +:          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("fixture empty", Test_Fixture_Empty'Access));
+1074 +:          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("fixture all types", Test_Fixture_All_Types_Compatibility'Access));
+1075 +:          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("golden match", Test_Ada_Encoding_Matches_Golden'Access));
+1076 +:          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("fixture advanced types", Test_Fixture_Advanced_Types_Compatibility'Access));
+1077 +:          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("advanced golden match", Test_Ada_Encoding_Matches_Advanced_Golden'Access));
+1078 +:          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("unknown fields stability", Test_Unknown_Fields_Stability'Access));
+1079 +:          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("packed unpacked equivalence", Test_Packed_Unpacked_Equivalence'Access));
+1080 +:          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("public packed decode helpers", Test_Public_Packed_Decode_Helpers'Access));
+1081 +:          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("benchmark regression guard", Test_Benchmark_Regression_Guard'Access));
+1082 +:          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("truncated varint", Test_Truncated_Varint_Fails'Access));
+1083 +:          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("unsupported group", Test_Unsupported_Group_Wire_Fails'Access));
+1084 +:          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("wire mismatch", Test_Wire_Mismatch_Fails'Access));
+1085 +:          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("clear buffer", Test_Clear_Buffer'Access));
+1086 +:          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("packed fixed32", Test_Packed_Fixed32'Access));
+1087 +:          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("zero field number", Test_Zero_Field_Number_Fails'Access));
+1088 +:          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("truncated length", Test_Truncated_Length_Field_Fails'Access));
+1089 +:          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("empty length", Test_Empty_Length_Field'Access));
+1090 +:          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("truncated fixed32", Test_Truncated_Fixed32_Fails'Access));
+1091 +:          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("truncated fixed64", Test_Truncated_Fixed64_Fails'Access));
+1092 +:          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("find field missing", Test_Find_Field_Not_Found_Fails'Access));
+1093 +:          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("decode hex invalid digit", Test_Decode_Hex_Invalid_Digit_Fails'Access));
+1094 +:          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("decode hex odd length", Test_Decode_Hex_Odd_Length_Fails'Access));
+1095 +:          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("chunked read eof", Test_Chunked_Read_EOF'Access));
+1096 +:          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("enum and packed int64", Test_Enum_And_Packed_Int64'Access));
+1097 +:          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("stream serialization empty", Test_Stream_Serialization_Empty_Buffer'Access));
+1098 +:          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("packed uint64 and sint64", Test_Packed_UInt64_And_SInt64'Access));
+1099 .:       end if;
+1100 +:       return Registered_Suite;
+1101 .:    end Suite;
+1102 .: 
+1103 .:    procedure Cleanup is
+1104 .:    begin
+1105 +:       null;
+1106 .:    end Cleanup;
+1107 .: 
+1108 .: end Protobuf_Tests;

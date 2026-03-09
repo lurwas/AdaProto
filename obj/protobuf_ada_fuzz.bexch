@@ -1,0 +1,39 @@
+[GENERATED OBJECT FILE]
+b__protobuf_ada_fuzz.o
+[PROJECT FILES]
+/home/richard/src/Ada/protobuf-ada-best/protobuf_ada.gpr
+20260309161038 f69eef269aa4015cfc3873591bf41058
+/home/richard/.local/share/gnatcoverage/gnatcov_rts/gnatcov_rts_full.gpr
+20211110124951 1431fef72628a7852d994d6c31b94bef
+/usr/share/gpr/aunit.gpr
+20260308151746 eeac937f27fba40a575f0b51274fc625
+[BOUND OBJECT FILES]
+/home/richard/src/Ada/protobuf-ada-best/obj/gnatcov_rts-buffers-bb_fixture_loader.o
+/home/richard/src/Ada/protobuf-ada-best/obj/gnatcov_rts-buffers-bb_protobuf.o
+/home/richard/src/Ada/protobuf-ada-best/obj/gnatcov_rts-buffers-bb_protobuf_ada_bench.o
+/home/richard/src/Ada/protobuf-ada-best/obj/gnatcov_rts-buffers-bb_protobuf_ada_fuzzzz.o
+/home/richard/src/Ada/protobuf-ada-best/obj/gnatcov_rts-buffers-bb_protobuf_ada_junit.o
+/home/richard/src/Ada/protobuf-ada-best/obj/gnatcov_rts-buffers-bb_protobuf_ada_test.o
+/home/richard/src/Ada/protobuf-ada-best/obj/gnatcov_rts-buffers-bb_protobuf_tests.o
+/home/richard/src/Ada/protobuf-ada-best/obj/gnatcov_rts-buffers-bs_fixture_loader.o
+/home/richard/src/Ada/protobuf-ada-best/obj/gnatcov_rts-buffers-bs_protobuf.o
+/home/richard/src/Ada/protobuf-ada-best/obj/gnatcov_rts-buffers-bs_protobuf_tests.o
+/home/richard/src/Ada/protobuf-ada-best/obj/gnatcov_rts-buffers-pb_protobuf.o
+/home/richard/src/Ada/protobuf-ada-best/obj/gnatcov_rts-buffers-pb_protobuf_ada_fuzzzz.o
+/home/richard/src/Ada/protobuf-ada-best/obj/gnatcov_rts-buffers-ps_protobuf.o
+/home/richard/src/Ada/protobuf-ada-best/obj/protobuf.o
+/home/richard/src/Ada/protobuf-ada-best/obj/gnatcov_rts-buffers-db_protobuf_ada_fuzzzz.o
+/home/richard/src/Ada/protobuf-ada-best/obj/protobuf_ada_fuzz.o
+[GENERATED SOURCE FILES]
+b__protobuf_ada_fuzz.ads
+b__protobuf_ada_fuzz.adb
+b__protobuf_ada_fuzz.ali
+[RESULTING OPTIONS]
+-L/home/richard/src/Ada/protobuf-ada-best/obj/
+-L/home/richard/src/Ada/protobuf-ada-best/obj/
+-L/usr/lib/aunit/
+-L/home/richard/.local/share/gnatcoverage/gnatcov_rts/lib-gnatcov_rts_full.static/
+-L/usr/lib/gcc/x86_64-linux-gnu/12/adalib/
+-shared
+-lgnat-12
+-ldl

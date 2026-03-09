@@ -1,0 +1,541 @@
+/home/richard/src/Ada/protobuf-ada-best/src/protobuf.ads:
+no code
+no code
+Coverage level: stmt
+   1 .: with Ada.Containers.Vectors;
+   2 .: with Ada.Streams;
+   3 .: with Ada.Strings.Unbounded;
+   4 .: with Interfaces;
+   5 .: 
+   6 .: package Protobuf is
+   7 .:    pragma Preelaborate;
+   8 .: 
+   9 .:    Parse_Error : exception;
+  10 .:    Encode_Error : exception;
+  11 .: 
+  12 .:    subtype Field_Number is Positive range 1 .. 2 ** 29 - 1;
+  13 .: 
+  14 .:    type Wire_Type is
+  15 .:      (Varint_Wire,
+  16 .:       Fixed64_Wire,
+  17 .:       Length_Delimited_Wire,
+  18 .:       Fixed32_Wire);
+  19 .: 
+  20 .:    type Parsed_Field (Kind : Wire_Type := Varint_Wire) is record
+  21 .:       Number : Field_Number;
+  22 .:       case Kind is
+  23 .:          when Varint_Wire =>
+  24 .:             Varint_Value : Interfaces.Unsigned_64;
+  25 .:          when Fixed64_Wire =>
+  26 .:             Fixed64_Value : Interfaces.Unsigned_64;
+  27 .:          when Length_Delimited_Wire =>
+  28 .:             Bytes_Value : Ada.Strings.Unbounded.Unbounded_String;
+  29 .:          when Fixed32_Wire =>
+  30 .:             Fixed32_Value : Interfaces.Unsigned_32;
+  31 .:       end case;
+  32 .:    end record;
+  33 .: 
+  34 .:    package Parsed_Field_Vectors is new Ada.Containers.Vectors
+  35 .:      (Index_Type => Natural,
+  36 .:       Element_Type => Parsed_Field);
+  37 .: 
+  38 .:    type Message_Buffer is limited private;
+  39 .: 
+  40 .:    type Int32_Array is array (Positive range <>) of Interfaces.Integer_32;
+  41 .:    type Int64_Array is array (Positive range <>) of Interfaces.Integer_64;
+  42 .:    type UInt32_Array is array (Positive range <>) of Interfaces.Unsigned_32;
+  43 .:    type UInt64_Array is array (Positive range <>) of Interfaces.Unsigned_64;
+  44 .:    type Bool_Array is array (Positive range <>) of Boolean;
+  45 .:    type SFixed32_Array is array (Positive range <>) of Interfaces.Integer_32;
+  46 .:    type SFixed64_Array is array (Positive range <>) of Interfaces.Integer_64;
+  47 .:    type Fixed32_Array is array (Positive range <>) of Interfaces.Unsigned_32;
+  48 .:    type Fixed64_Array is array (Positive range <>) of Interfaces.Unsigned_64;
+  49 .:    subtype Float32 is Interfaces.IEEE_Float_32;
+  50 .:    subtype Float64 is Interfaces.IEEE_Float_64;
+  51 .: 
+  52 .:    type Float_Array is array (Positive range <>) of Float32;
+  53 .:    type Double_Array is array (Positive range <>) of Float64;
+  54 .: 
+  55 .:    ---------------------------------------------------------------------------------------
+  56 .:    -- Clears all encoded data in the target message buffer.
+  57 .:    -- Buffer: Message buffer to reset.
+  58 .:    ---------------------------------------------------------------------------------------
+  59 .:    procedure Clear (Buffer : in out Message_Buffer);
+  60 .: 
+  61 .:    ---------------------------------------------------------------------------------------
+  62 .:    -- Returns the encoded message bytes currently stored in Buffer.
+  63 .:    -- Buffer: Message buffer containing encoded data.
+  64 .:    ---------------------------------------------------------------------------------------
+  65 .:    function To_String (Buffer : Message_Buffer) return String;
+  66 .: 
+  67 .:    ---------------------------------------------------------------------------------------
+  68 .:    -- Returns the encoded message bytes currently stored in Buffer.
+  69 .:    -- This is an explicit serialization alias of To_String.
+  70 .:    -- Buffer: Message buffer containing encoded data.
+  71 .:    ---------------------------------------------------------------------------------------
+  72 .:    function Serialize_To_String (Buffer : Message_Buffer) return String;
+  73 .: 
+  74 .:    ---------------------------------------------------------------------------------------
+  75 .:    -- Writes the encoded message bytes in Buffer to Stream using buffered I/O.
+  76 .:    -- Buffer: Message buffer containing encoded data.
+  77 .:    -- Stream: Destination stream receiving encoded bytes.
+  78 .:    ---------------------------------------------------------------------------------------
+  79 .:    procedure Write_To_Stream
+  80 .:      (Buffer : Message_Buffer;
+  81 .:       Stream : not null access Ada.Streams.Root_Stream_Type'Class);
+  82 .: 
+  83 .:    ---------------------------------------------------------------------------------------
+  84 .:    -- Appends an int32 field encoded as protobuf varint.
+  85 .:    -- Buffer: Message buffer to append into.
+  86 .:    -- Number: Protobuf field number.
+  87 .:    -- Value: int32 field value.
+  88 .:    ---------------------------------------------------------------------------------------
+  89 .:    procedure Add_Int32 (Buffer : in out Message_Buffer; Number : Field_Number; Value : Interfaces.Integer_32);
+  90 .: 
+  91 .:    ---------------------------------------------------------------------------------------
+  92 .:    -- Appends an int64 field encoded as protobuf varint.
+  93 .:    -- Buffer: Message buffer to append into.
+  94 .:    -- Number: Protobuf field number.
+  95 .:    -- Value: int64 field value.
+  96 .:    ---------------------------------------------------------------------------------------
+  97 .:    procedure Add_Int64 (Buffer : in out Message_Buffer; Number : Field_Number; Value : Interfaces.Integer_64);
+  98 .: 
+  99 .:    ---------------------------------------------------------------------------------------
+ 100 .:    -- Appends a uint32 field encoded as protobuf varint.
+ 101 .:    -- Buffer: Message buffer to append into.
+ 102 .:    -- Number: Protobuf field number.
+ 103 .:    -- Value: uint32 field value.
+ 104 .:    ---------------------------------------------------------------------------------------
+ 105 .:    procedure Add_UInt32 (Buffer : in out Message_Buffer; Number : Field_Number; Value : Interfaces.Unsigned_32);
+ 106 .: 
+ 107 .:    ---------------------------------------------------------------------------------------
+ 108 .:    -- Appends a uint64 field encoded as protobuf varint.
+ 109 .:    -- Buffer: Message buffer to append into.
+ 110 .:    -- Number: Protobuf field number.
+ 111 .:    -- Value: uint64 field value.
+ 112 .:    ---------------------------------------------------------------------------------------
+ 113 .:    procedure Add_UInt64 (Buffer : in out Message_Buffer; Number : Field_Number; Value : Interfaces.Unsigned_64);
+ 114 .: 
+ 115 .:    ---------------------------------------------------------------------------------------
+ 116 .:    -- Appends a sint32 field encoded with ZigZag + varint.
+ 117 .:    -- Buffer: Message buffer to append into.
+ 118 .:    -- Number: Protobuf field number.
+ 119 .:    -- Value: sint32 field value.
+ 120 .:    ---------------------------------------------------------------------------------------
+ 121 .:    procedure Add_SInt32 (Buffer : in out Message_Buffer; Number : Field_Number; Value : Interfaces.Integer_32);
+ 122 .: 
+ 123 .:    ---------------------------------------------------------------------------------------
+ 124 .:    -- Appends a sint64 field encoded with ZigZag + varint.
+ 125 .:    -- Buffer: Message buffer to append into.
+ 126 .:    -- Number: Protobuf field number.
+ 127 .:    -- Value: sint64 field value.
+ 128 .:    ---------------------------------------------------------------------------------------
+ 129 .:    procedure Add_SInt64 (Buffer : in out Message_Buffer; Number : Field_Number; Value : Interfaces.Integer_64);
+ 130 .: 
+ 131 .:    ---------------------------------------------------------------------------------------
+ 132 .:    -- Appends a bool field encoded as protobuf varint.
+ 133 .:    -- Buffer: Message buffer to append into.
+ 134 .:    -- Number: Protobuf field number.
+ 135 .:    -- Value: Boolean field value.
+ 136 .:    ---------------------------------------------------------------------------------------
+ 137 .:    procedure Add_Bool (Buffer : in out Message_Buffer; Number : Field_Number; Value : Boolean);
+ 138 .: 
+ 139 .:    ---------------------------------------------------------------------------------------
+ 140 .:    -- Appends an enum field encoded as protobuf varint.
+ 141 .:    -- Buffer: Message buffer to append into.
+ 142 .:    -- Number: Protobuf field number.
+ 143 .:    -- Value: Enum numeric value.
+ 144 .:    ---------------------------------------------------------------------------------------
+ 145 .:    procedure Add_Enum (Buffer : in out Message_Buffer; Number : Field_Number; Value : Interfaces.Integer_32);
+ 146 .: 
+ 147 .:    ---------------------------------------------------------------------------------------
+ 148 .:    -- Appends a fixed32 field encoded as 4 little-endian bytes.
+ 149 .:    -- Buffer: Message buffer to append into.
+ 150 .:    -- Number: Protobuf field number.
+ 151 .:    -- Value: fixed32 field value.
+ 152 .:    ---------------------------------------------------------------------------------------
+ 153 .:    procedure Add_Fixed32 (Buffer : in out Message_Buffer; Number : Field_Number; Value : Interfaces.Unsigned_32);
+ 154 .: 
+ 155 .:    ---------------------------------------------------------------------------------------
+ 156 .:    -- Appends a fixed64 field encoded as 8 little-endian bytes.
+ 157 .:    -- Buffer: Message buffer to append into.
+ 158 .:    -- Number: Protobuf field number.
+ 159 .:    -- Value: fixed64 field value.
+ 160 .:    ---------------------------------------------------------------------------------------
+ 161 .:    procedure Add_Fixed64 (Buffer : in out Message_Buffer; Number : Field_Number; Value : Interfaces.Unsigned_64);
+ 162 .: 
+ 163 .:    ---------------------------------------------------------------------------------------
+ 164 .:    -- Appends an sfixed32 field encoded as 4 little-endian bytes.
+ 165 .:    -- Buffer: Message buffer to append into.
+ 166 .:    -- Number: Protobuf field number.
+ 167 .:    -- Value: sfixed32 field value.
+ 168 .:    ---------------------------------------------------------------------------------------
+ 169 .:    procedure Add_SFixed32 (Buffer : in out Message_Buffer; Number : Field_Number; Value : Interfaces.Integer_32);
+ 170 .: 
+ 171 .:    ---------------------------------------------------------------------------------------
+ 172 .:    -- Appends an sfixed64 field encoded as 8 little-endian bytes.
+ 173 .:    -- Buffer: Message buffer to append into.
+ 174 .:    -- Number: Protobuf field number.
+ 175 .:    -- Value: sfixed64 field value.
+ 176 .:    ---------------------------------------------------------------------------------------
+ 177 .:    procedure Add_SFixed64 (Buffer : in out Message_Buffer; Number : Field_Number; Value : Interfaces.Integer_64);
+ 178 .: 
+ 179 .:    ---------------------------------------------------------------------------------------
+ 180 .:    -- Appends a float field encoded as protobuf fixed32 bits.
+ 181 .:    -- Buffer: Message buffer to append into.
+ 182 .:    -- Number: Protobuf field number.
+ 183 .:    -- Value: 32-bit IEEE float value.
+ 184 .:    ---------------------------------------------------------------------------------------
+ 185 .:    procedure Add_Float (Buffer : in out Message_Buffer; Number : Field_Number; Value : Float32);
+ 186 .: 
+ 187 .:    ---------------------------------------------------------------------------------------
+ 188 .:    -- Appends a double field encoded as protobuf fixed64 bits.
+ 189 .:    -- Buffer: Message buffer to append into.
+ 190 .:    -- Number: Protobuf field number.
+ 191 .:    -- Value: 64-bit IEEE float value.
+ 192 .:    ---------------------------------------------------------------------------------------
+ 193 .:    procedure Add_Double (Buffer : in out Message_Buffer; Number : Field_Number; Value : Float64);
+ 194 .: 
+ 195 .:    ---------------------------------------------------------------------------------------
+ 196 .:    -- Appends a UTF-8 string field as length-delimited bytes.
+ 197 .:    -- Buffer: Message buffer to append into.
+ 198 .:    -- Number: Protobuf field number.
+ 199 .:    -- Value: String field contents.
+ 200 .:    ---------------------------------------------------------------------------------------
+ 201 .:    procedure Add_String (Buffer : in out Message_Buffer; Number : Field_Number; Value : String);
+ 202 .: 
+ 203 .:    ---------------------------------------------------------------------------------------
+ 204 .:    -- Appends a bytes field as length-delimited raw bytes.
+ 205 .:    -- Buffer: Message buffer to append into.
+ 206 .:    -- Number: Protobuf field number.
+ 207 .:    -- Value: Raw bytes.
+ 208 .:    ---------------------------------------------------------------------------------------
+ 209 .:    procedure Add_Bytes (Buffer : in out Message_Buffer; Number : Field_Number; Value : String);
+ 210 .: 
+ 211 .:    ---------------------------------------------------------------------------------------
+ 212 .:    -- Appends a nested message field from pre-encoded bytes.
+ 213 .:    -- Buffer: Message buffer to append into.
+ 214 .:    -- Number: Protobuf field number.
+ 215 .:    -- Encoded_Message: Pre-encoded nested message bytes.
+ 216 .:    ---------------------------------------------------------------------------------------
+ 217 .:    procedure Add_Message (Buffer : in out Message_Buffer; Number : Field_Number; Encoded_Message : String);
+ 218 .: 
+ 219 .:    ---------------------------------------------------------------------------------------
+ 220 .:    -- Appends packed repeated int32 values.
+ 221 .:    -- Buffer: Message buffer to append into.
+ 222 .:    -- Number: Protobuf field number.
+ 223 .:    -- Values: Collection of int32 values.
+ 224 .:    ---------------------------------------------------------------------------------------
+ 225 .:    procedure Add_Packed_Int32 (Buffer : in out Message_Buffer; Number : Field_Number; Values : Int32_Array);
+ 226 .: 
+ 227 .:    ---------------------------------------------------------------------------------------
+ 228 .:    -- Appends packed repeated int64 values.
+ 229 .:    -- Buffer: Message buffer to append into.
+ 230 .:    -- Number: Protobuf field number.
+ 231 .:    -- Values: Collection of int64 values.
+ 232 .:    ---------------------------------------------------------------------------------------
+ 233 .:    procedure Add_Packed_Int64 (Buffer : in out Message_Buffer; Number : Field_Number; Values : Int64_Array);
+ 234 .: 
+ 235 .:    ---------------------------------------------------------------------------------------
+ 236 .:    -- Appends packed repeated uint32 values.
+ 237 .:    -- Buffer: Message buffer to append into.
+ 238 .:    -- Number: Protobuf field number.
+ 239 .:    -- Values: Collection of uint32 values.
+ 240 .:    ---------------------------------------------------------------------------------------
+ 241 .:    procedure Add_Packed_UInt32 (Buffer : in out Message_Buffer; Number : Field_Number; Values : UInt32_Array);
+ 242 .: 
+ 243 .:    ---------------------------------------------------------------------------------------
+ 244 .:    -- Appends packed repeated uint64 values.
+ 245 .:    -- Buffer: Message buffer to append into.
+ 246 .:    -- Number: Protobuf field number.
+ 247 .:    -- Values: Collection of uint64 values.
+ 248 .:    ---------------------------------------------------------------------------------------
+ 249 .:    procedure Add_Packed_UInt64 (Buffer : in out Message_Buffer; Number : Field_Number; Values : UInt64_Array);
+ 250 .: 
+ 251 .:    ---------------------------------------------------------------------------------------
+ 252 .:    -- Appends packed repeated sint32 values.
+ 253 .:    -- Buffer: Message buffer to append into.
+ 254 .:    -- Number: Protobuf field number.
+ 255 .:    -- Values: Collection of sint32 values.
+ 256 .:    ---------------------------------------------------------------------------------------
+ 257 .:    procedure Add_Packed_SInt32 (Buffer : in out Message_Buffer; Number : Field_Number; Values : Int32_Array);
+ 258 .: 
+ 259 .:    ---------------------------------------------------------------------------------------
+ 260 .:    -- Appends packed repeated sint64 values.
+ 261 .:    -- Buffer: Message buffer to append into.
+ 262 .:    -- Number: Protobuf field number.
+ 263 .:    -- Values: Collection of sint64 values.
+ 264 .:    ---------------------------------------------------------------------------------------
+ 265 .:    procedure Add_Packed_SInt64 (Buffer : in out Message_Buffer; Number : Field_Number; Values : Int64_Array);
+ 266 .: 
+ 267 .:    ---------------------------------------------------------------------------------------
+ 268 .:    -- Appends packed repeated bool values.
+ 269 .:    -- Buffer: Message buffer to append into.
+ 270 .:    -- Number: Protobuf field number.
+ 271 .:    -- Values: Collection of bool values.
+ 272 .:    ---------------------------------------------------------------------------------------
+ 273 .:    procedure Add_Packed_Bool (Buffer : in out Message_Buffer; Number : Field_Number; Values : Bool_Array);
+ 274 .: 
+ 275 .:    ---------------------------------------------------------------------------------------
+ 276 .:    -- Appends packed repeated enum values.
+ 277 .:    -- Buffer: Message buffer to append into.
+ 278 .:    -- Number: Protobuf field number.
+ 279 .:    -- Values: Collection of enum numeric values.
+ 280 .:    ---------------------------------------------------------------------------------------
+ 281 .:    procedure Add_Packed_Enum (Buffer : in out Message_Buffer; Number : Field_Number; Values : Int32_Array);
+ 282 .: 
+ 283 .:    ---------------------------------------------------------------------------------------
+ 284 .:    -- Appends packed repeated fixed32 values.
+ 285 .:    -- Buffer: Message buffer to append into.
+ 286 .:    -- Number: Protobuf field number.
+ 287 .:    -- Values: Collection of fixed32 values.
+ 288 .:    ---------------------------------------------------------------------------------------
+ 289 .:    procedure Add_Packed_Fixed32 (Buffer : in out Message_Buffer; Number : Field_Number; Values : Fixed32_Array);
+ 290 .: 
+ 291 .:    ---------------------------------------------------------------------------------------
+ 292 .:    -- Appends packed repeated fixed64 values.
+ 293 .:    -- Buffer: Message buffer to append into.
+ 294 .:    -- Number: Protobuf field number.
+ 295 .:    -- Values: Collection of fixed64 values.
+ 296 .:    ---------------------------------------------------------------------------------------
+ 297 .:    procedure Add_Packed_Fixed64 (Buffer : in out Message_Buffer; Number : Field_Number; Values : Fixed64_Array);
+ 298 .: 
+ 299 .:    ---------------------------------------------------------------------------------------
+ 300 .:    -- Appends packed repeated sfixed32 values.
+ 301 .:    -- Buffer: Message buffer to append into.
+ 302 .:    -- Number: Protobuf field number.
+ 303 .:    -- Values: Collection of sfixed32 values.
+ 304 .:    ---------------------------------------------------------------------------------------
+ 305 .:    procedure Add_Packed_SFixed32 (Buffer : in out Message_Buffer; Number : Field_Number; Values : SFixed32_Array);
+ 306 .: 
+ 307 .:    ---------------------------------------------------------------------------------------
+ 308 .:    -- Appends packed repeated sfixed64 values.
+ 309 .:    -- Buffer: Message buffer to append into.
+ 310 .:    -- Number: Protobuf field number.
+ 311 .:    -- Values: Collection of sfixed64 values.
+ 312 .:    ---------------------------------------------------------------------------------------
+ 313 .:    procedure Add_Packed_SFixed64 (Buffer : in out Message_Buffer; Number : Field_Number; Values : SFixed64_Array);
+ 314 .: 
+ 315 .:    ---------------------------------------------------------------------------------------
+ 316 .:    -- Appends packed repeated float values.
+ 317 .:    -- Buffer: Message buffer to append into.
+ 318 .:    -- Number: Protobuf field number.
+ 319 .:    -- Values: Collection of float values.
+ 320 .:    ---------------------------------------------------------------------------------------
+ 321 .:    procedure Add_Packed_Float (Buffer : in out Message_Buffer; Number : Field_Number; Values : Float_Array);
+ 322 .: 
+ 323 .:    ---------------------------------------------------------------------------------------
+ 324 .:    -- Appends packed repeated double values.
+ 325 .:    -- Buffer: Message buffer to append into.
+ 326 .:    -- Number: Protobuf field number.
+ 327 .:    -- Values: Collection of double values.
+ 328 .:    ---------------------------------------------------------------------------------------
+ 329 .:    procedure Add_Packed_Double (Buffer : in out Message_Buffer; Number : Field_Number; Values : Double_Array);
+ 330 .: 
+ 331 .:    ---------------------------------------------------------------------------------------
+ 332 .:    -- Decodes packed int32 payload bytes into int32 values.
+ 333 .:    -- Bytes: Packed payload bytes (length-delimited field contents only).
+ 334 .:    ---------------------------------------------------------------------------------------
+ 335 .:    function Decode_Packed_Int32 (Bytes : String) return Int32_Array;
+ 336 .: 
+ 337 .:    ---------------------------------------------------------------------------------------
+ 338 .:    -- Decodes packed int64 payload bytes into int64 values.
+ 339 .:    -- Bytes: Packed payload bytes (length-delimited field contents only).
+ 340 .:    ---------------------------------------------------------------------------------------
+ 341 .:    function Decode_Packed_Int64 (Bytes : String) return Int64_Array;
+ 342 .: 
+ 343 .:    ---------------------------------------------------------------------------------------
+ 344 .:    -- Decodes packed uint32 payload bytes into uint32 values.
+ 345 .:    -- Bytes: Packed payload bytes (length-delimited field contents only).
+ 346 .:    ---------------------------------------------------------------------------------------
+ 347 .:    function Decode_Packed_UInt32 (Bytes : String) return UInt32_Array;
+ 348 .: 
+ 349 .:    ---------------------------------------------------------------------------------------
+ 350 .:    -- Decodes packed uint64 payload bytes into uint64 values.
+ 351 .:    -- Bytes: Packed payload bytes (length-delimited field contents only).
+ 352 .:    ---------------------------------------------------------------------------------------
+ 353 .:    function Decode_Packed_UInt64 (Bytes : String) return UInt64_Array;
+ 354 .: 
+ 355 .:    ---------------------------------------------------------------------------------------
+ 356 .:    -- Decodes packed sint32 payload bytes into sint32 values.
+ 357 .:    -- Bytes: Packed payload bytes (length-delimited field contents only).
+ 358 .:    ---------------------------------------------------------------------------------------
+ 359 .:    function Decode_Packed_SInt32 (Bytes : String) return Int32_Array;
+ 360 .: 
+ 361 .:    ---------------------------------------------------------------------------------------
+ 362 .:    -- Decodes packed sint64 payload bytes into sint64 values.
+ 363 .:    -- Bytes: Packed payload bytes (length-delimited field contents only).
+ 364 .:    ---------------------------------------------------------------------------------------
+ 365 .:    function Decode_Packed_SInt64 (Bytes : String) return Int64_Array;
+ 366 .: 
+ 367 .:    ---------------------------------------------------------------------------------------
+ 368 .:    -- Decodes packed bool payload bytes into bool values.
+ 369 .:    -- Bytes: Packed payload bytes (length-delimited field contents only).
+ 370 .:    ---------------------------------------------------------------------------------------
+ 371 .:    function Decode_Packed_Bool (Bytes : String) return Bool_Array;
+ 372 .: 
+ 373 .:    ---------------------------------------------------------------------------------------
+ 374 .:    -- Decodes packed fixed32 payload bytes into fixed32 values.
+ 375 .:    -- Bytes: Packed payload bytes (length-delimited field contents only).
+ 376 .:    ---------------------------------------------------------------------------------------
+ 377 .:    function Decode_Packed_Fixed32 (Bytes : String) return Fixed32_Array;
+ 378 .: 
+ 379 .:    ---------------------------------------------------------------------------------------
+ 380 .:    -- Decodes packed fixed64 payload bytes into fixed64 values.
+ 381 .:    -- Bytes: Packed payload bytes (length-delimited field contents only).
+ 382 .:    ---------------------------------------------------------------------------------------
+ 383 .:    function Decode_Packed_Fixed64 (Bytes : String) return Fixed64_Array;
+ 384 .: 
+ 385 .:    ---------------------------------------------------------------------------------------
+ 386 .:    -- Decodes packed sfixed32 payload bytes into sfixed32 values.
+ 387 .:    -- Bytes: Packed payload bytes (length-delimited field contents only).
+ 388 .:    ---------------------------------------------------------------------------------------
+ 389 .:    function Decode_Packed_SFixed32 (Bytes : String) return SFixed32_Array;
+ 390 .: 
+ 391 .:    ---------------------------------------------------------------------------------------
+ 392 .:    -- Decodes packed sfixed64 payload bytes into sfixed64 values.
+ 393 .:    -- Bytes: Packed payload bytes (length-delimited field contents only).
+ 394 .:    ---------------------------------------------------------------------------------------
+ 395 .:    function Decode_Packed_SFixed64 (Bytes : String) return SFixed64_Array;
+ 396 .: 
+ 397 .:    ---------------------------------------------------------------------------------------
+ 398 .:    -- Decodes packed float payload bytes into float values.
+ 399 .:    -- Bytes: Packed payload bytes (length-delimited field contents only).
+ 400 .:    ---------------------------------------------------------------------------------------
+ 401 .:    function Decode_Packed_Float (Bytes : String) return Float_Array;
+ 402 .: 
+ 403 .:    ---------------------------------------------------------------------------------------
+ 404 .:    -- Decodes packed double payload bytes into double values.
+ 405 .:    -- Bytes: Packed payload bytes (length-delimited field contents only).
+ 406 .:    ---------------------------------------------------------------------------------------
+ 407 .:    function Decode_Packed_Double (Bytes : String) return Double_Array;
+ 408 .: 
+ 409 .:    ---------------------------------------------------------------------------------------
+ 410 .:    -- Parses encoded protobuf data from a String into raw parsed fields.
+ 411 .:    -- Data: Encoded protobuf bytes.
+ 412 .:    ---------------------------------------------------------------------------------------
+ 413 .:    function Parse_From_String (Data : String) return Parsed_Field_Vectors.Vector;
+ 414 .: 
+ 415 .:    ---------------------------------------------------------------------------------------
+ 416 .:    -- Parses encoded protobuf data from a String into raw parsed fields.
+ 417 .:    -- This is an explicit deserialization alias of Parse_From_String.
+ 418 .:    -- Data: Encoded protobuf bytes.
+ 419 .:    ---------------------------------------------------------------------------------------
+ 420 .:    function Deserialize_From_String (Data : String) return Parsed_Field_Vectors.Vector;
+ 421 .: 
+ 422 .:    ---------------------------------------------------------------------------------------
+ 423 .:    -- Parses encoded protobuf data from a Stream into raw parsed fields.
+ 424 .:    -- Stream: Source stream containing protobuf bytes.
+ 425 .:    -- Length: Number of bytes to read from Stream.
+ 426 .:    ---------------------------------------------------------------------------------------
+ 427 .:    function Parse_From_Stream
+ 428 .:      (Stream : not null access Ada.Streams.Root_Stream_Type'Class;
+ 429 .:       Length : Natural) return Parsed_Field_Vectors.Vector;
+ 430 .: 
+ 431 .:    ---------------------------------------------------------------------------------------
+ 432 .:    -- Converts a varint field to int32.
+ 433 .:    -- Field: Parsed field with varint wire type.
+ 434 .:    ---------------------------------------------------------------------------------------
+ 435 .:    function As_Int32 (Field : Parsed_Field) return Interfaces.Integer_32;
+ 436 .: 
+ 437 .:    ---------------------------------------------------------------------------------------
+ 438 .:    -- Converts a varint field to int64.
+ 439 .:    -- Field: Parsed field with varint wire type.
+ 440 .:    ---------------------------------------------------------------------------------------
+ 441 .:    function As_Int64 (Field : Parsed_Field) return Interfaces.Integer_64;
+ 442 .: 
+ 443 .:    ---------------------------------------------------------------------------------------
+ 444 .:    -- Converts a varint field to uint32.
+ 445 .:    -- Field: Parsed field with varint wire type.
+ 446 .:    ---------------------------------------------------------------------------------------
+ 447 .:    function As_UInt32 (Field : Parsed_Field) return Interfaces.Unsigned_32;
+ 448 .: 
+ 449 .:    ---------------------------------------------------------------------------------------
+ 450 .:    -- Converts a varint field to uint64.
+ 451 .:    -- Field: Parsed field with varint wire type.
+ 452 .:    ---------------------------------------------------------------------------------------
+ 453 .:    function As_UInt64 (Field : Parsed_Field) return Interfaces.Unsigned_64;
+ 454 .: 
+ 455 .:    ---------------------------------------------------------------------------------------
+ 456 .:    -- Converts a ZigZag varint field to sint32.
+ 457 .:    -- Field: Parsed field with varint wire type.
+ 458 .:    ---------------------------------------------------------------------------------------
+ 459 .:    function As_SInt32 (Field : Parsed_Field) return Interfaces.Integer_32;
+ 460 .: 
+ 461 .:    ---------------------------------------------------------------------------------------
+ 462 .:    -- Converts a ZigZag varint field to sint64.
+ 463 .:    -- Field: Parsed field with varint wire type.
+ 464 .:    ---------------------------------------------------------------------------------------
+ 465 .:    function As_SInt64 (Field : Parsed_Field) return Interfaces.Integer_64;
+ 466 .: 
+ 467 .:    ---------------------------------------------------------------------------------------
+ 468 .:    -- Converts a varint field to bool.
+ 469 .:    -- Field: Parsed field with varint wire type.
+ 470 .:    ---------------------------------------------------------------------------------------
+ 471 .:    function As_Bool (Field : Parsed_Field) return Boolean;
+ 472 .: 
+ 473 .:    ---------------------------------------------------------------------------------------
+ 474 .:    -- Converts a varint field to enum numeric value.
+ 475 .:    -- Field: Parsed field with varint wire type.
+ 476 .:    ---------------------------------------------------------------------------------------
+ 477 .:    function As_Enum (Field : Parsed_Field) return Interfaces.Integer_32;
+ 478 .: 
+ 479 .:    ---------------------------------------------------------------------------------------
+ 480 .:    -- Converts a fixed32 field to unsigned 32-bit value.
+ 481 .:    -- Field: Parsed field with fixed32 wire type.
+ 482 .:    ---------------------------------------------------------------------------------------
+ 483 .:    function As_Fixed32 (Field : Parsed_Field) return Interfaces.Unsigned_32;
+ 484 .: 
+ 485 .:    ---------------------------------------------------------------------------------------
+ 486 .:    -- Converts a fixed64 field to unsigned 64-bit value.
+ 487 .:    -- Field: Parsed field with fixed64 wire type.
+ 488 .:    ---------------------------------------------------------------------------------------
+ 489 .:    function As_Fixed64 (Field : Parsed_Field) return Interfaces.Unsigned_64;
+ 490 .: 
+ 491 .:    ---------------------------------------------------------------------------------------
+ 492 .:    -- Converts a fixed32 field to signed 32-bit value.
+ 493 .:    -- Field: Parsed field with fixed32 wire type.
+ 494 .:    ---------------------------------------------------------------------------------------
+ 495 .:    function As_SFixed32 (Field : Parsed_Field) return Interfaces.Integer_32;
+ 496 .: 
+ 497 .:    ---------------------------------------------------------------------------------------
+ 498 .:    -- Converts a fixed64 field to signed 64-bit value.
+ 499 .:    -- Field: Parsed field with fixed64 wire type.
+ 500 .:    ---------------------------------------------------------------------------------------
+ 501 .:    function As_SFixed64 (Field : Parsed_Field) return Interfaces.Integer_64;
+ 502 .: 
+ 503 .:    ---------------------------------------------------------------------------------------
+ 504 .:    -- Converts a fixed32 field to IEEE float value.
+ 505 .:    -- Field: Parsed field with fixed32 wire type.
+ 506 .:    ---------------------------------------------------------------------------------------
+ 507 .:    function As_Float (Field : Parsed_Field) return Float32;
+ 508 .: 
+ 509 .:    ---------------------------------------------------------------------------------------
+ 510 .:    -- Converts a fixed64 field to IEEE double value.
+ 511 .:    -- Field: Parsed field with fixed64 wire type.
+ 512 .:    ---------------------------------------------------------------------------------------
+ 513 .:    function As_Double (Field : Parsed_Field) return Float64;
+ 514 .: 
+ 515 .:    ---------------------------------------------------------------------------------------
+ 516 .:    -- Converts a length-delimited field to String.
+ 517 .:    -- Field: Parsed field with length-delimited wire type.
+ 518 .:    ---------------------------------------------------------------------------------------
+ 519 .:    function As_String (Field : Parsed_Field) return String;
+ 520 .: 
+ 521 .:    ---------------------------------------------------------------------------------------
+ 522 .:    -- Converts a length-delimited field to raw bytes.
+ 523 .:    -- Field: Parsed field with length-delimited wire type.
+ 524 .:    ---------------------------------------------------------------------------------------
+ 525 .:    function As_Bytes (Field : Parsed_Field) return String;
+ 526 .: 
+ 527 .:    ---------------------------------------------------------------------------------------
+ 528 .:    -- Returns a length-delimited nested-message payload as raw bytes.
+ 529 .:    -- Field: Parsed field with length-delimited wire type.
+ 530 .:    ---------------------------------------------------------------------------------------
+ 531 .:    function As_Message_Bytes (Field : Parsed_Field) return String;
+ 532 .: 
+ 533 .: private
+ 534 .:    type Message_Buffer is limited record
+ 535 .:       Data : Ada.Strings.Unbounded.Unbounded_String;
+ 536 .:    end record;
+ 537 .: end Protobuf;

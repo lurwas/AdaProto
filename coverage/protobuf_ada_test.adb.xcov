@@ -1,0 +1,22 @@
+/home/richard/src/Ada/protobuf-ada-best/tests/protobuf_ada_test.adb:
+100% of 8 lines covered
+100% statement coverage (8 out of 8)
+
+Coverage level: stmt
+   1 .: with AUnit.Options;
+   2 .: with AUnit.Reporter.Text;
+   3 .: with AUnit.Run;
+   4 .: with AUnit.Test_Results;
+   5 .: with Protobuf_Tests;
+   6 .: 
+   7 .: procedure Protobuf_Ada_Test is
+   8 +:    procedure Runner is new AUnit.Run.Test_Runner_With_Results (Protobuf_Tests.Suite);
+   9 +:    Reporter : AUnit.Reporter.Text.Text_Reporter;
+  10 +:    Results : AUnit.Test_Results.Result;
+  11 +:    Options : AUnit.Options.AUnit_Options := AUnit.Options.Default_Options;
+  12 .: begin
+  13 +:    Options.Report_Successes := False;
+  14 +:    Runner (Reporter, Results, Options);
+  15 +:    AUnit.Test_Results.Clear (Results);
+  16 +:    Protobuf_Tests.Cleanup;
+  17 .: end Protobuf_Ada_Test;

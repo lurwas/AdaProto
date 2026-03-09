@@ -1,0 +1,123 @@
+V "GNAT Lib v12"
+A -O2
+A -gnatA
+A -gnat2012
+A -gnata
+A -g
+A -mtune=generic
+A -march=x86-64
+P SS ZX
+
+RN
+RV NO_SECONDARY_STACK
+RV NO_IMPLEMENTATION_PRAGMAS
+
+U gnatcov_rts.buffers.db_protobuf_ada_fuzzzz%b  gnatcov_rts-buffers-db_protobuf_ada_fuzzzz.adb  078f7ffc NE OO PK
+W gnatcov_rts%s		gnatcov_rts.ads		gnatcov_rts.ali
+W gnatcov_rts.buffers%s	gnatcov_rts-buffers.adb	gnatcov_rts-buffers.ali
+W gnatcov_rts.buffers.bb_fixture_loader%s  gnatcov_rts-buffers-bb_fixture_loader.ads  gnatcov_rts-buffers-bb_fixture_loader.ali
+W gnatcov_rts.buffers.bb_protobuf%s  gnatcov_rts-buffers-bb_protobuf.ads  gnatcov_rts-buffers-bb_protobuf.ali
+W gnatcov_rts.buffers.bb_protobuf_ada_bench%s  gnatcov_rts-buffers-bb_protobuf_ada_bench.ads  gnatcov_rts-buffers-bb_protobuf_ada_bench.ali
+W gnatcov_rts.buffers.bb_protobuf_ada_fuzzzz%s  gnatcov_rts-buffers-bb_protobuf_ada_fuzzzz.ads  gnatcov_rts-buffers-bb_protobuf_ada_fuzzzz.ali
+W gnatcov_rts.buffers.bb_protobuf_ada_junit%s  gnatcov_rts-buffers-bb_protobuf_ada_junit.ads  gnatcov_rts-buffers-bb_protobuf_ada_junit.ali
+W gnatcov_rts.buffers.bb_protobuf_ada_test%s  gnatcov_rts-buffers-bb_protobuf_ada_test.ads  gnatcov_rts-buffers-bb_protobuf_ada_test.ali
+W gnatcov_rts.buffers.bb_protobuf_tests%s  gnatcov_rts-buffers-bb_protobuf_tests.ads  gnatcov_rts-buffers-bb_protobuf_tests.ali
+W gnatcov_rts.buffers.bs_fixture_loader%s  gnatcov_rts-buffers-bs_fixture_loader.ads  gnatcov_rts-buffers-bs_fixture_loader.ali
+W gnatcov_rts.buffers.bs_protobuf%s  gnatcov_rts-buffers-bs_protobuf.ads  gnatcov_rts-buffers-bs_protobuf.ali
+W gnatcov_rts.buffers.bs_protobuf_tests%s  gnatcov_rts-buffers-bs_protobuf_tests.ads  gnatcov_rts-buffers-bs_protobuf_tests.ali
+W gnatcov_rts.traces%s	gnatcov_rts-traces.adb	gnatcov_rts-traces.ali
+W gnatcov_rts.traces.output%s  gnatcov_rts-traces-output.adb  gnatcov_rts-traces-output.ali
+W gnatcov_rts.traces.output.files%s  gnatcov_rts-traces-output-files.adb  gnatcov_rts-traces-output-files.ali
+Z system.secondary_stack%s  s-secsta.adb	s-secsta.ali
+
+U gnatcov_rts.buffers.db_protobuf_ada_fuzzzz%s  gnatcov_rts-buffers-db_protobuf_ada_fuzzzz.ads  474fd568 EE NE OO PK
+W gnatcov_rts.buffers%s	gnatcov_rts-buffers.adb	gnatcov_rts-buffers.ali
+
+D ada.ads		20240620080806 76789da1 ada%s
+D a-comlin.ads		20240620080806 4aa66568 ada.command_line%s
+D gnatcov_rts.ads	20211110124951 fd54d6a6 gnatcov_rts%s
+D gnatcov_rts-buffers.ads  20211110124951 67f8c1d9 gnatcov_rts.buffers%s
+D gnatcov_rts-buffers-bb_fixture_loader.ads  20260309172408 2e5302b3 gnatcov_rts.buffers.bb_fixture_loader%s
+D gnatcov_rts-buffers-bb_protobuf.ads  20260309172408 3a15a8c3 gnatcov_rts.buffers.bb_protobuf%s
+D gnatcov_rts-buffers-bb_protobuf_ada_bench.ads  20260309172408 9e7cecff gnatcov_rts.buffers.bb_protobuf_ada_bench%s
+D gnatcov_rts-buffers-bb_protobuf_ada_fuzzzz.ads  20260309172408 03368436 gnatcov_rts.buffers.bb_protobuf_ada_fuzzzz%s
+D gnatcov_rts-buffers-bb_protobuf_ada_junit.ads  20260309172408 c2f95c87 gnatcov_rts.buffers.bb_protobuf_ada_junit%s
+D gnatcov_rts-buffers-bb_protobuf_ada_test.ads  20260309172408 6643cf2e gnatcov_rts.buffers.bb_protobuf_ada_test%s
+D gnatcov_rts-buffers-bb_protobuf_tests.ads  20260309172408 4a4e4467 gnatcov_rts.buffers.bb_protobuf_tests%s
+D gnatcov_rts-buffers-bs_fixture_loader.ads  20260309172408 060ba52e gnatcov_rts.buffers.bs_fixture_loader%s
+D gnatcov_rts-buffers-bs_protobuf.ads  20260309172408 d741d6cb gnatcov_rts.buffers.bs_protobuf%s
+D gnatcov_rts-buffers-bs_protobuf_tests.ads  20260309172408 98315800 gnatcov_rts.buffers.bs_protobuf_tests%s
+D gnatcov_rts-buffers-db_protobuf_ada_fuzzzz.ads  20260309172408 20b714b1 gnatcov_rts.buffers.db_protobuf_ada_fuzzzz%s
+D gnatcov_rts-buffers-db_protobuf_ada_fuzzzz.adb  20260309172408 d54d2f92 gnatcov_rts.buffers.db_protobuf_ada_fuzzzz%b
+D gnatcov_rts-buffers-lists.ads  20211110124951 8602cff2 gnatcov_rts.buffers.lists%s
+D gnatcov_rts-traces.ads  20211110124951 6fd130f2 gnatcov_rts.traces%s
+D gnatcov_rts-traces-output.ads  20211110124951 567bd325 gnatcov_rts.traces.output%s
+D gnatcov_rts-traces-output-files.ads  20211110124951 dcf67a4d gnatcov_rts.traces.output.files%s
+D interfac.ads		20240620080806 edec285f interfaces%s
+D system.ads		20240620080806 a2da961d system%s
+D s-conca2.ads		20240620080806 3d460502 system.concat_2%s
+D s-parame.ads		20240620080806 d494a4a6 system.parameters%s
+D s-secsta.ads		20240620080806 62cd9202 system.secondary_stack%s
+D s-stoele.ads		20240620080806 6d8e1ff4 system.storage_elements%s
+G a e
+G c Z s b [dump_buffers gnatcov_rts__buffers__db_protobuf_ada_fuzzzz 4 14 none]
+G r c none [dump_buffers gnatcov_rts__buffers__db_protobuf_ada_fuzzzz 4 14 none] [default_trace_filename gnatcov_rts__traces__output__files 44 13 none]
+G r c none [dump_buffers gnatcov_rts__buffers__db_protobuf_ada_fuzzzz 4 14 none] [clock gnatcov_rts__traces__output__files 41 13 none]
+G r c none [dump_buffers gnatcov_rts__buffers__db_protobuf_ada_fuzzzz 4 14 none] [write_trace_file gnatcov_rts__traces__output__files 78 14 none]
+X 3 gnatcov_rts.ads
+32K9*GNATcov_RTS 48e16 15|2r9 7r5 16|2r6 3r6 4r6 5r6 6r6 7r6 8r6 9r6 10r6
+. 11r6 12r6 13r14 17r7 18r16 19r16 20r16 21r16 22r16 23r16 24r16 25r16 26r16
+. 27r17 28r22 30r24 35r5
+X 4 gnatcov_rts-buffers.ads
+34K21*Buffers 3|32k9 4|218e24 15|2r21 7r17 16|3r18 4r18 5r18 6r18 7r18 8r18
+. 9r18 10r18 11r18 12r18 13r26 18r28 19r28 20r28 21r28 22r28 23r28 24r28
+. 25r28 26r28 27r29 35r17
+X 5 gnatcov_rts-buffers-bb_fixture_loader.ads
+2K29*BB_fixture_loader 33e42 16|3w26 18r36
+18r4*Buffers{4|82R9} 16|18m54 18r54
+X 6 gnatcov_rts-buffers-bb_protobuf.ads
+2K29*BB_protobuf 33e36 16|4w26 19r36
+18r4*Buffers{4|82R9} 16|19m48 19r48
+X 7 gnatcov_rts-buffers-bb_protobuf_ada_bench.ads
+2K29*BB_protobuf_ada_bench 33e46 16|5w26 20r36
+18r4*Buffers{4|82R9} 16|20m58 20r58
+X 8 gnatcov_rts-buffers-bb_protobuf_ada_fuzzzz.ads
+2K29*BB_protobuf_ada_fuzzzz 33e47 16|6w26 21r36
+18r4*Buffers{4|82R9} 16|21m59 21r59
+X 9 gnatcov_rts-buffers-bb_protobuf_ada_junit.ads
+2K29*BB_protobuf_ada_junit 33e46 16|7w26 22r36
+18r4*Buffers{4|82R9} 16|22m58 22r58
+X 10 gnatcov_rts-buffers-bb_protobuf_ada_test.ads
+2K29*BB_protobuf_ada_test 33e45 16|8w26 23r36
+18r4*Buffers{4|82R9} 16|23m57 23r57
+X 11 gnatcov_rts-buffers-bb_protobuf_tests.ads
+2K29*BB_protobuf_tests 33e42 16|9w26 24r36
+18r4*Buffers{4|82R9} 16|24m54 24r54
+X 12 gnatcov_rts-buffers-bs_fixture_loader.ads
+2K29*BS_fixture_loader 33e42 16|10w26 25r36
+18r4*Buffers{4|82R9} 16|25m54 25r54
+X 13 gnatcov_rts-buffers-bs_protobuf.ads
+2K29*BS_protobuf 33e36 16|11w26 26r36
+18r4*Buffers{4|82R9} 16|26m48 26r48
+X 14 gnatcov_rts-buffers-bs_protobuf_tests.ads
+2K29*BS_protobuf_tests 33e42 16|12w26 27r37
+18r4*Buffers{4|82R9} 16|27m55 27r55
+X 15 gnatcov_rts-buffers-db_protobuf_ada_fuzzzz.ads
+2K29*DB_protobuf_ada_fuzzzz 4|34k21 15|7l25 7e47 16|13b34 35l25 35t47
+4U14*Dump_Buffers 5i<c,gnatcov_rts_B_protobuf_ada_fuzzzz_dump_buffers>22
+. 16|15b14 33l8 33t20
+X 18 gnatcov_rts-traces.ads
+33K21*Traces 16|2r18 17r19 28r34 30r36 18|270e23
+X 19 gnatcov_rts-traces-output.ads
+31K28*Output 16|2r25 17r26 28r41 30r43 19|59e30
+X 20 gnatcov_rts-traces-output-files.ads
+31K35*Files 16|2w32 17r33 28r48 30r50 20|92e36
+36a4*Default_Trace_Filename_Env_Var{string} 16|30r56
+44V13*Default_Trace_Filename{string} 16|28s54
+45a7 Env_Var{string} 16|30r13
+46a7 Prefix{string} 16|29r13
+47a7 Tag{string} 16|31r13
+48b7 Simple{boolean} 16|32r13
+78U14*Write_Trace_File 16|17s39
+80a7 Filename{string} 16|28r10
+

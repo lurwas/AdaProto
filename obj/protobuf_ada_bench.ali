@@ -1,0 +1,236 @@
+V "GNAT Lib v12"
+M P W=b
+A -O2
+A -gnatA
+A -gnat2012
+A -gnata
+A -g
+A -mtune=generic
+A -march=x86-64
+P SS ZX
+
+RN
+RV NO_CALENDAR
+RV NO_DELAY
+RV NO_EXCEPTION_HANDLERS
+RV NO_EXCEPTION_PROPAGATION
+RV NO_EXCEPTIONS
+RV NO_FIXED_POINT
+RV NO_IO
+RV NO_NESTED_FINALIZATION
+RV NO_SECONDARY_STACK
+RV NO_STANDARD_STORAGE_POOLS
+RV NO_DEFAULT_INITIALIZATION
+RV NO_DYNAMIC_SIZED_OBJECTS
+RV NO_IMPLEMENTATION_PRAGMAS
+
+U protobuf_ada_bench%b	protobuf_ada_bench.adb	b081eb80 NE OO SU
+W ada%s			ada.ads			ada.ali
+W ada.calendar%s	a-calend.adb		a-calend.ali
+Z ada.exceptions%s	a-except.adb		a-except.ali
+Z ada.strings.text_buffers%s  a-sttebu.adb	a-sttebu.ali
+Z ada.tags%s		a-tags.adb		a-tags.ali
+W ada.text_io%s		a-textio.adb		a-textio.ali
+W gnatcov_rts%s		gnatcov_rts.ads		gnatcov_rts.ali
+W gnatcov_rts.buffers%s	gnatcov_rts-buffers.adb	gnatcov_rts-buffers.ali
+W gnatcov_rts.buffers.db_protobuf_ada_bench%s  gnatcov_rts-buffers-db_protobuf_ada_bench.adb  gnatcov_rts-buffers-db_protobuf_ada_bench.ali
+W gnatcov_rts.buffers.pb_protobuf_ada_bench%s  gnatcov_rts-buffers-pb_protobuf_ada_bench.ads  gnatcov_rts-buffers-pb_protobuf_ada_bench.ali
+W interfaces%s		interfac.ads		interfac.ali
+W protobuf%s		protobuf.adb		protobuf.ali
+Z system.img_fixed_64%s	s-imfi64.ads		s-imfi64.ali
+Z system.img_int%s	s-imgint.ads		s-imgint.ali
+Z system.img_llli%s	s-imgllli.ads		s-imgllli.ali
+Z system.secondary_stack%s  s-secsta.adb	s-secsta.ali
+Z system.soft_links%s	s-soflin.adb		s-soflin.ali
+Z system.standard_library%s  s-stalib.adb	s-stalib.ali
+
+D ada.ads		20240620080806 76789da1 ada%s
+D a-calend.ads		20240620080806 f55c50a3 ada.calendar%s
+D a-charac.ads		20240620080806 2d3ec45b ada.characters%s
+D a-chlat1.ads		20240620080806 e0d72e76 ada.characters.latin_1%s
+D a-contai.ads		20240620080806 61e5e089 ada.containers%s
+D a-conhel.ads		20240620080806 20298884 ada.containers.helpers%s
+D a-convec.ads		20240620080806 5d39d84a ada.containers.vectors%s
+D a-except.ads		20240620080806 2a7d8d70 ada.exceptions%s
+D a-finali.ads		20240620080806 bf4f806b ada.finalization%s
+D a-ioexce.ads		20240620080806 40018c65 ada.io_exceptions%s
+D a-iteint.ads		20240620080806 49a8bee2 ada.iterator_interfaces%s
+D a-numeri.ads		20240620080806 84bea7a3 ada.numerics%s
+D a-nubinu.ads		20240620080806 93f1f3d1 ada.numerics.big_numbers%s
+D a-nbnbig.ads		20240620080806 511b9bab ada.numerics.big_numbers.big_integers_ghost%s
+D a-stream.ads		20240620080806 119b8fb3 ada.streams%s
+D a-string.ads		20240620080806 90ac6797 ada.strings%s
+D a-strmap.ads		20240620080806 233229cd ada.strings.maps%s
+D a-sttebu.ads		20240620080806 18209c64 ada.strings.text_buffers%s
+D a-strunb.ads		20240620080806 5837d881 ada.strings.unbounded%s
+D a-stuten.ads		20240620080806 33c54060 ada.strings.utf_encoding%s
+D a-tags.ads		20240620080806 9eaa38c6 ada.tags%s
+D a-textio.ads		20240620080806 deada98a ada.text_io%s
+D a-unccon.ads		20240620080806 0e9b276f ada.unchecked_conversion%s
+D gnatcov_rts.ads	20211110124951 fd54d6a6 gnatcov_rts%s
+D gnatcov_rts-buffers.ads  20211110124951 67f8c1d9 gnatcov_rts.buffers%s
+D gnatcov_rts-buffers-db_protobuf_ada_bench.ads  20260309172408 7963984e gnatcov_rts.buffers.db_protobuf_ada_bench%s
+D gnatcov_rts-buffers-pb_protobuf_ada_bench.ads  20260309172408 23314fec gnatcov_rts.buffers.pb_protobuf_ada_bench%s
+D gnatcov_rts-buffers-ps_protobuf.ads  20260309172408 59daa46f gnatcov_rts.buffers.ps_protobuf%s
+D interfac.ads		20240620080806 edec285f interfaces%s
+D i-cstrea.ads		20240620080806 e53d8b8e interfaces.c_streams%s
+D protobuf.ads		20260309172408 0c3288cc protobuf%s
+D protobuf_ada_bench.adb  20260309172408 dda8b33e protobuf_ada_bench%b
+D system.ads		20240620080806 a2da961d system%s
+D s-arit64.ads		20240620080806 90488c35 system.arith_64%s
+D s-atocou.ads		20240620080806 dc18efc3 system.atomic_counters%s
+D s-crtl.ads		20240620080806 8a0692f8 system.crtl%s
+D s-exctab.ads		20240620080806 91bef6ef system.exception_table%s
+D s-ficobl.ads		20240620080806 dc5161d4 system.file_control_block%s
+D s-finmas.ads		20240620080806 bd688734 system.finalization_masters%s
+D s-finroo.ads		20240620080806 4ff27390 system.finalization_root%s
+D s-imagef.ads		20240620080806 019cdf69 system.image_f%s
+D s-imagei.ads		20240620080806 0d3f86a7 system.image_i%s
+D s-imfi64.ads		20240620080806 dbac59b3 system.img_fixed_64%s
+D s-imgint.ads		20240620080806 bdb6f5ec system.img_int%s
+D s-imgllli.ads		20240620080806 5cf3dc07 system.img_llli%s
+D s-memory.ads		20240620080806 5b8432d0 system.memory%s
+D s-parame.ads		20240620080806 d494a4a6 system.parameters%s
+D s-pooglo.ads		20240620080806 91708d21 system.pool_global%s
+D s-putima.ads		20240620080806 4e095881 system.put_images%s
+D s-secsta.ads		20240620080806 62cd9202 system.secondary_stack%s
+D s-soflin.ads		20240620080806 df77073e system.soft_links%s
+D s-stache.ads		20240620080806 0b81c1fe system.stack_checking%s
+D s-stalib.ads		20240620080806 1c9580f6 system.standard_library%s
+D s-stalib.adb		20240620080806 eb464a47 system.standard_library%b
+D s-stoele.ads		20240620080806 6d8e1ff4 system.storage_elements%s
+D s-stoele.adb		20240620080806 8f5a9db6 system.storage_elements%b
+D s-stopoo.ads		20240620080806 e9fa2dd8 system.storage_pools%s
+D s-stratt.ads		20240620080806 f7dfd786 system.stream_attributes%s
+D s-traent.ads		20240620080806 c81cbf8c system.traceback_entries%s
+D s-unstyp.ads		20240620080806 fa2a7f59 system.unsigned_types%s
+D s-wchcon.ads		20240620080806 d9032363 system.wch_con%s
+D unchconv.ads		20240620080806 ca2f9e18 unchecked_conversion%s
+G a e
+G c Z b b [protobuf_ada_bench standard 7 289 none]
+G r c none [protobuf_ada_bench standard 7 289 none] [witness gnatcov_rts__buffers 153 13 none]
+G r s message_buffer [protobuf_ada_bench standard 7 289 none] [message_bufferIP protobuf 535 9 none]
+G r l message_buffer [protobuf_ada_bench standard 7 289 none] [message_bufferDI protobuf 535 9 none]
+G r k message_buffer [protobuf_ada_bench standard 7 289 none] [message_bufferDF protobuf 535 9 none]
+G r c none [protobuf_ada_bench standard 7 289 none] [witness gnatcov_rts__buffers 146 14 none]
+G r c none [protobuf_ada_bench standard 7 289 none] [add_int32 protobuf 90 14 none]
+G r c none [protobuf_ada_bench standard 7 289 none] [add_uint64 protobuf 114 14 none]
+G r c none [protobuf_ada_bench standard 7 289 none] [add_string protobuf 202 14 none]
+G r c none [protobuf_ada_bench standard 7 289 none] [add_packed_sint32 protobuf 258 14 none]
+G r c none [protobuf_ada_bench standard 7 289 none] [to_string protobuf 66 13 none]
+G r c none [protobuf_ada_bench standard 7 289 none] [parse_from_string protobuf 414 13 none]
+G r c none [protobuf_ada_bench standard 7 289 none] [as_int32 protobuf 436 13 none]
+G r c none [protobuf_ada_bench standard 7 289 none] [dump_buffers gnatcov_rts__buffers__db_protobuf_ada_bench 4 14 none]
+X 1 ada.ads
+16K9*Ada 20e8 32|2r6 3r6 9r38 64r95 65r95 66r95 67r95
+X 2 a-calend.ads
+36K13*Calendar 413e17 32|2w10 9r42
+42I9*Time<226I9> 32|26r53 31r168 32r168 33r170 34r168
+56V13*Clock{42I9} 32|35s114 51s109 53s111 62s109
+112V14*"-"{duration} 32|28s113
+226I9 Time_Rep<long_long_integer>
+X 7 a-convec.ads
+91R9*Vector<9|43R9> 32|56r209[31|35]
+X 11 a-iteint.ads
+24h9 Forward_Iterator
+32h9 Reversible_Iterator<24R9[7|119]>
+X 22 a-textio.ads
+58K13*Text_IO 727e16 32|3w10 64r99 65r99 66r99 67r99
+507U14*Put_Line 32|64s107 65s107 66s107 67s107
+X 24 gnatcov_rts.ads
+32K9*GNATcov_RTS 48e16 32|7r6 7r53 7w100 7r138 12r23 12r63 12r91 15r26 15r66
+. 15r94 17r7 17r35 18r7 18r35 19r7 19r35 20r7 20r35 21r7 21r35 24r23 24r63
+. 24r91 28r7 28r35 31r23 31r63 31r91 32r24 32r64 32r92 33r24 33r64 33r92
+. 34r24 34r64 34r92 35r7 35r35 36r4 36r32 38r30 38r70 38r98 40r10 40r38 41r10
+. 41r38 42r10 42r38 43r10 43r38 45r33 45r73 45r101 47r13 47r41 51r4 51r32
+. 53r4 53r32 54r4 54r32 56r30 56r70 56r98 57r30 57r70 57r98 59r10 59r38 62r4
+. 62r32 64r4 64r32 65r4 65r32 66r4 66r32 67r4 67r32 68r27
+39N4*Version 32|7r150
+X 25 gnatcov_rts-buffers.ads
+34K21*Buffers 218e24 32|7r18 7r65 12r35 12r75 12r103 15r38 15r78 15r106 17r19
+. 17r47 18r19 18r47 19r19 19r47 20r19 20r47 21r19 21r47 24r35 24r75 24r103
+. 28r19 28r47 31r35 31r75 31r103 32r36 32r76 32r104 33r36 33r76 33r104 34r36
+. 34r76 34r104 35r19 35r47 36r16 36r44 38r42 38r82 38r110 40r22 40r50 41r22
+. 41r50 42r22 42r50 43r22 43r50 45r45 45r85 45r113 47r25 47r53 51r16 51r44
+. 53r16 53r44 54r16 54r44 56r42 56r82 56r110 57r42 57r82 57r110 59r22 59r50
+. 62r16 62r44 64r16 64r44 65r16 65r44 66r16 66r44 67r16 67r44 68r39
+146U14*Witness 32|17s27 18s27 19s27 20s27 21s27 28s27 35s27 36s24 40s30 41s30
+. 42s30 43s30 47s33 51s24 53s24 54s24 59s30 62s24 64s24 65s24 66s24 67s24
+150R9*Witness_Dummy_Type 152e14 32|12r43 15r46 24r43 31r43 32r44 33r44 34r44
+. 38r50 45r53 56r50 57r50
+153V13*Witness{150R9} 32|12s83 15s86 24s83 31s83 32s84 33s84 34s84 38s90
+. 45s93 56s90 57s90
+X 26 gnatcov_rts-buffers-db_protobuf_ada_bench.ads
+2K29*DB_protobuf_ada_bench 7e46 32|7w73 68r47
+4U14*Dump_Buffers 5i<c,gnatcov_rts_B_protobuf_ada_bench_dump_buffers>22 32|68s69
+X 27 gnatcov_rts-buffers-pb_protobuf_ada_bench.ads
+6K29*PB_protobuf_ada_bench 19e46 32|7w26 12r111 15r114 17r55 18r55 19r55
+. 20r55 21r55 24r111 28r55 31r111 32r112 33r112 34r112 35r55 36r52 38r118
+. 40r58 41r58 42r58 43r58 45r121 47r61 51r52 53r52 54r52 56r118 57r118 59r58
+. 62r52 64r52 65r52 66r52 67r52
+10m4*Statement_Buffer{33|67M9} 32|12r133 15r136 17r77 18r77 19r77 20r77 21r77
+. 24r133 28r77 31r133 32r134 33r134 34r134 35r77 36r74 38r140 40r80 41r80
+. 42r80 43r80 45r143 47r83 51r74 53r74 54r74 56r140 57r140 59r80 62r74 64r74
+. 65r74 66r74 67r74
+X 29 interfac.ads
+38K9*Interfaces 231e15 32|4w6 10r8
+52I9*Integer_32<integer> 32|40r127 57r179
+55I9*Integer_64<long_long_integer>
+82M9*Unsigned_64 32|41r128
+X 31 protobuf.ads
+7K46*Protobuf 538e13 32|5w6 15r160 17r97 18r97 19r97 20r97 21r104 38r165
+. 40r101 41r101 42r101 43r101 45r192 56r179 56r219 57r193
+35K12*Parsed_Field_Vectors[7|74] 32|56r188
+39R9*Message_Buffer 537e14 32|15r169 38r174
+66V13*To_String{string} 32|21s113 45s201
+90U14*Add_Int32 32|17s106 40s110
+114U14*Add_UInt64 32|18s106 41s110
+202U14*Add_String 32|19s106 42s110
+258U14*Add_Packed_SInt32 32|20s106 43s110
+414V13*Parse_From_String{7|91R9[35]} 32|56s228
+436V13*As_Int32{29|52I9} 32|57s202
+X 32 protobuf_ada_bench.adb
+7U289*Protobuf_Ada_Bench 7b289 68l86 68t104
+9q4 GNATcov_Original_Main 68l5 68e26
+12r4 Discard_UNIT_BODY0{25|150R9}
+12i153 Iterations{positive} 36r109 54r109 64r133
+14V13 Sample_Message{string} 14b13 22l8 22t22 24s179
+15r7 Discard_UNIT_BODY1{25|150R9}
+15r156 B{31|39R9} 17m117 17r117 18m118 18r118 19m118 19r118 20m125 20r125
+. 21r124
+24r4 Discard_UNIT_BODY7{25|150R9}
+24a153 Data{string} 56r247 65r134
+26V13 Elapsed_Seconds{duration} 26b13 26>30 26>42 29l8 29t23 66s153 67s153
+26i30 Start_Time{2|42I9} 28r115
+26i42 End_Time{2|42I9} 28r104
+31r4 Discard_UNIT_BODY9{25|150R9}
+31i153 Encode_Start{2|42I9} 35m98 66r170
+32r4 Discard_UNIT_BODY10{25|150R9}
+32i155 Encode_End{2|42I9} 51m95 66r184
+33r4 Discard_UNIT_BODY11{25|150R9}
+33i155 Decode_Start{2|42I9} 53m95 67r170
+34r4 Discard_UNIT_BODY12{25|150R9}
+34i155 Decode_End{2|42I9} 62m95 67r184
+36i99 I{integer} 40r139 41r141
+38r10 Discard_UNIT_BODY15{25|150R9}
+38r161 B{31|39R9} 40m121 40r121 41m122 41r122 42m122 42r122 43m129 43r129
+. 45r212
+45r13 Discard_UNIT_BODY20{25|150R9}
+45a164 Ignore{string}
+54i99 I{integer}
+56r10 Discard_UNIT_BODY25{25|150R9}
+56r161 Parsed{7|91R9[31|35]} 57r212
+57r10 Discard_UNIT_BODY26{25|150R9}
+57i161 Ignore{29|52I9}
+X 33 system.ads
+67M9*Address
+X 34 s-arit64.ads
+59I12*Int64{29|55I9}
+92V13*Multiply_With_Ovflo_Check64{59I12} 96i<c,__gnat_mulv64>22
+X 46 s-memory.ads
+51V13*Alloc{33|67M9} 101i<c,__gnat_malloc>22
+66U14*Free 102i<c,__gnat_free>22
+74V13*Realloc{33|67M9} 103i<c,__gnat_realloc>22
+X 54 s-stalib.adb
+87U14 Break_Start 88i<c,__gnat_break_start>22
+

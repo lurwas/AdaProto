@@ -1,0 +1,72 @@
+/home/richard/src/Ada/protobuf-ada-best/tests/protobuf_ada_bench.adb:
+0% of 33 lines covered
+0% statement coverage (0 out of 33)
+
+Coverage level: stmt
+   1 .: with Ada.Calendar;
+   2 .: with Ada.Text_IO;
+   3 .: with Interfaces;
+   4 .: with Protobuf;
+   5 .: 
+   6 .: procedure Protobuf_Ada_Bench is
+   7 .:    use Ada.Calendar;
+   8 .:    use Interfaces;
+   9 .: 
+  10 -:    Iterations : constant Positive := 100_000;
+  11 .: 
+  12 .:    function Sample_Message return String is
+  13 -:       B : Protobuf.Message_Buffer;
+  14 .:    begin
+  15 -:       Protobuf.Add_Int32 (B, 1, -123);
+  16 -:       Protobuf.Add_UInt64 (B, 2, 987_654_321_123);
+  17 -:       Protobuf.Add_String (B, 3, "protobuf-ada-benchmark");
+  18 -:       Protobuf.Add_Packed_SInt32 (B, 4, (-1, 0, 1, 2, 3, -4, 5));
+  19 -:       return Protobuf.To_String (B);
+  20 .:    end Sample_Message;
+  21 .: 
+  22 -:    Data : constant String := Sample_Message;
+  23 .: 
+  24 .:    function Elapsed_Seconds (Start_Time, End_Time : Time) return Duration is
+  25 .:    begin
+  26 -:       return End_Time - Start_Time;
+  27 .:    end Elapsed_Seconds;
+  28 .: 
+  29 -:    Encode_Start : Time;
+  30 -:    Encode_End : Time;
+  31 -:    Decode_Start : Time;
+  32 -:    Decode_End : Time;
+  33 .: begin
+  34 -:    Encode_Start := Clock;
+  35 -:    for I in 1 .. Iterations loop
+  36 .:       declare
+  37 -:          B : Protobuf.Message_Buffer;
+  38 .:       begin
+  39 -:          Protobuf.Add_Int32 (B, 1, Integer_32 (I));
+  40 -:          Protobuf.Add_UInt64 (B, 2, Unsigned_64 (I) * 17);
+  41 -:          Protobuf.Add_String (B, 3, "bench");
+  42 -:          Protobuf.Add_Packed_SInt32 (B, 4, (-3, -2, -1, 0, 1, 2, 3));
+  43 .:          declare
+  44 -:             Ignore : constant String := Protobuf.To_String (B);
+  45 .:          begin
+  46 -:             null;
+  47 .:          end;
+  48 .:       end;
+  49 .:    end loop;
+  50 -:    Encode_End := Clock;
+  51 .: 
+  52 -:    Decode_Start := Clock;
+  53 -:    for I in 1 .. Iterations loop
+  54 .:       declare
+  55 -:          Parsed : constant Protobuf.Parsed_Field_Vectors.Vector := Protobuf.Parse_From_String (Data);
+  56 -:          Ignore : constant Integer_32 := Protobuf.As_Int32 (Parsed (0));
+  57 .:       begin
+  58 -:          null;
+  59 .:       end;
+  60 .:    end loop;
+  61 -:    Decode_End := Clock;
+  62 .: 
+  63 -:    Ada.Text_IO.Put_Line ("iterations=" & Iterations'Image);
+  64 -:    Ada.Text_IO.Put_Line ("sample_size=" & Data'Length'Image & " bytes");
+  65 -:    Ada.Text_IO.Put_Line ("encode_seconds=" & Duration'Image (Elapsed_Seconds (Encode_Start, Encode_End)));
+  66 -:    Ada.Text_IO.Put_Line ("decode_seconds=" & Duration'Image (Elapsed_Seconds (Decode_Start, Decode_End)));
+  67 .: end Protobuf_Ada_Bench;

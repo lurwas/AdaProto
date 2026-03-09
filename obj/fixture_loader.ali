@@ -1,0 +1,169 @@
+V "GNAT Lib v12"
+A -O2
+A -gnatA
+A -gnat2012
+A -gnata
+A -g
+A -mtune=generic
+A -march=x86-64
+P SS ZX
+
+RN
+RV NO_EXCEPTION_HANDLERS
+RV NO_EXCEPTION_PROPAGATION
+RV NO_EXCEPTIONS
+RV NO_IO
+RV NO_IMPLICIT_CONDITIONALS
+RV NO_SECONDARY_STACK
+RV NO_STANDARD_STORAGE_POOLS
+RV NO_DEFAULT_INITIALIZATION
+RV NO_DYNAMIC_SIZED_OBJECTS
+RV NO_IMPLEMENTATION_PRAGMAS
+
+U fixture_loader%b	fixture_loader.adb	88a234f8 NE OO PK
+W ada%s			ada.ads			ada.ali
+W ada.directories%s	a-direct.adb		a-direct.ali
+Z ada.exceptions%s	a-except.adb		a-except.ali
+W ada.streams%s		a-stream.adb		a-stream.ali
+W ada.streams.stream_io%s  a-ststio.adb		a-ststio.ali
+Z ada.strings.text_buffers%s  a-sttebu.adb	a-sttebu.ali
+W gnatcov_rts%s		gnatcov_rts.ads		gnatcov_rts.ali
+W gnatcov_rts.buffers%s	gnatcov_rts-buffers.adb	gnatcov_rts-buffers.ali
+W gnatcov_rts.buffers.pb_fixture_loader%s  gnatcov_rts-buffers-pb_fixture_loader.ads  gnatcov_rts-buffers-pb_fixture_loader.ali
+Z system.secondary_stack%s  s-secsta.adb	s-secsta.ali
+
+U fixture_loader%s	fixture_loader.ads	c9f4d298 EE NE OO PK
+Z ada.strings.text_buffers%s  a-sttebu.adb	a-sttebu.ali
+W gnatcov_rts%s		gnatcov_rts.ads		gnatcov_rts.ali
+W gnatcov_rts.buffers%s	gnatcov_rts-buffers.adb	gnatcov_rts-buffers.ali
+W gnatcov_rts.buffers.ps_fixture_loader%s  gnatcov_rts-buffers-ps_fixture_loader.ads  gnatcov_rts-buffers-ps_fixture_loader.ali
+
+D ada.ads		20240620080806 76789da1 ada%s
+D a-calend.ads		20240620080806 f55c50a3 ada.calendar%s
+D a-charac.ads		20240620080806 2d3ec45b ada.characters%s
+D a-chlat1.ads		20240620080806 e0d72e76 ada.characters.latin_1%s
+D a-direct.ads		20240620080806 467e87a1 ada.directories%s
+D a-except.ads		20240620080806 2a7d8d70 ada.exceptions%s
+D a-finali.ads		20240620080806 bf4f806b ada.finalization%s
+D a-ioexce.ads		20240620080806 40018c65 ada.io_exceptions%s
+D a-stream.ads		20240620080806 119b8fb3 ada.streams%s
+D a-ststio.ads		20240620080806 d6d358e8 ada.streams.stream_io%s
+D a-string.ads		20240620080806 90ac6797 ada.strings%s
+D a-strmap.ads		20240620080806 233229cd ada.strings.maps%s
+D a-sttebu.ads		20240620080806 18209c64 ada.strings.text_buffers%s
+D a-strunb.ads		20240620080806 5837d881 ada.strings.unbounded%s
+D a-stuten.ads		20240620080806 33c54060 ada.strings.utf_encoding%s
+D a-tags.ads		20240620080806 9eaa38c6 ada.tags%s
+D a-unccon.ads		20240620080806 0e9b276f ada.unchecked_conversion%s
+D fixture_loader.ads	20260309172408 a40c1367 fixture_loader%s
+D fixture_loader.adb	20260309172408 c41bf85f fixture_loader%b
+D gnatcov_rts.ads	20211110124951 fd54d6a6 gnatcov_rts%s
+D gnatcov_rts-buffers.ads  20211110124951 67f8c1d9 gnatcov_rts.buffers%s
+D gnatcov_rts-buffers-pb_fixture_loader.ads  20260309172408 78180089 gnatcov_rts.buffers.pb_fixture_loader%s
+D gnatcov_rts-buffers-ps_fixture_loader.ads  20260309172408 6df8c1ff gnatcov_rts.buffers.ps_fixture_loader%s
+D interfac.ads		20240620080806 edec285f interfaces%s
+D i-cstrea.ads		20240620080806 e53d8b8e interfaces.c_streams%s
+D system.ads		20240620080806 a2da961d system%s
+D s-atocou.ads		20240620080806 dc18efc3 system.atomic_counters%s
+D s-crtl.ads		20240620080806 8a0692f8 system.crtl%s
+D s-exctab.ads		20240620080806 91bef6ef system.exception_table%s
+D s-ficobl.ads		20240620080806 dc5161d4 system.file_control_block%s
+D s-finroo.ads		20240620080806 4ff27390 system.finalization_root%s
+D s-parame.ads		20240620080806 d494a4a6 system.parameters%s
+D s-putima.ads		20240620080806 4e095881 system.put_images%s
+D s-secsta.ads		20240620080806 62cd9202 system.secondary_stack%s
+D s-soflin.ads		20240620080806 df77073e system.soft_links%s
+D s-stache.ads		20240620080806 0b81c1fe system.stack_checking%s
+D s-stalib.ads		20240620080806 1c9580f6 system.standard_library%s
+D s-stoele.ads		20240620080806 6d8e1ff4 system.storage_elements%s
+D s-stoele.adb		20240620080806 8f5a9db6 system.storage_elements%b
+D s-stratt.ads		20240620080806 f7dfd786 system.stream_attributes%s
+D s-traent.ads		20240620080806 c81cbf8c system.traceback_entries%s
+D s-unstyp.ads		20240620080806 fa2a7f59 system.unsigned_types%s
+D unchconv.ads		20240620080806 ca2f9e18 unchecked_conversion%s
+G a e
+G c Z s b [read_fixture fixture_loader 3 13 none]
+G c Z b b [try_path fixture_loader 7 13 none]
+G r c none [read_fixture fixture_loader 3 13 none] [witness gnatcov_rts__buffers 153 13 none]
+G r c none [read_fixture fixture_loader 3 13 none] [witness gnatcov_rts__buffers 146 14 none]
+G r c none [read_fixture fixture_loader 3 13 none] [witness gnatcov_rts__buffers 170 13 none]
+G r c none [try_path fixture_loader 7 13 none] [witness gnatcov_rts__buffers 153 13 none]
+G r c none [try_path fixture_loader 7 13 none] [witness gnatcov_rts__buffers 146 14 none]
+X 1 ada.ads
+16K9*Ada 20e8 19|2r6 3r6 8r11 9r11 49r97 51r107 53r107 56r100
+X 5 a-direct.ads
+76K13*Directories 524e20 19|2w10 49r101 51r111 53r111 56r104
+310V13*Exists{boolean} 19|49s113 51s123 53s123
+473X4*Name_Error 19|56r116
+X 9 a-stream.ads
+36K13*Streams 87e16 19|3r10 8r15 9r15
+42M9*Stream_Element
+44I9*Stream_Element_Offset<long_long_integer> 19|15r189 15r219 16r162
+54A9*Stream_Element_Array(42M9)<44I9> 19|15r162
+X 10 a-ststio.ads
+39K21*Stream_IO 224e26 19|3w18 9r23
+44P9*File_Type 19|10r159
+47n23*In_File{47E9} 19|12r105
+58I9*Count<9|44I9> 19|14r176
+74U14*Open 19|12s93
+80U14*Close 19|19s99 23s96 39s100
+89V13*Is_Open{boolean} 19|38s100
+104U14*Read 19|22s96
+125V13*Size{58I9} 19|14s185
+X 18 fixture_loader.ads
+2K52*Fixture_Loader 4l5 4e19 19|5b57 59l5 59t19
+3V13*Read_Fixture{string} 3>27 19|44b13 57l8 57t20
+3a27 Name{string} 19|44b27 45r196 46r199 47r202 56r156
+X 19 fixture_loader.adb
+7V13 Try_Path{string} 7b13 7>23 42l8 42t16 50s104 52s104 54s104
+7a23 Path{string} 12r114
+10r7 Discard_UNIT_BODY0{21|150R9}
+10p152 File{10|44P9} 12m99 12r99 14r191 19m106 19r106 22r102 23m103 23r103
+. 38r109 39m107 39r107
+14r10 Discard_UNIT_BODY2{21|150R9}
+14i155 File_Size{10|58I9} 15r242 18r99
+15r10 Discard_UNIT_BODY3{21|150R9}
+15a155 Data{9|54A9} 22m108 24r108 30r109 31r142
+16r10 Discard_UNIT_BODY4{21|150R9}
+16i155 Last{9|44I9} 22m114 24r100 28r191
+28r13 Discard_UNIT_BODY12{21|150R9}
+28a160 Result{string} 31m103 33r107
+30i104 I<long_long_integer> 31r120 31r148
+45r7 Discard_UNIT_BODY19{21|150R9}
+45a154 Path_1=45:194{string} 49r121 50r114
+46r7 Discard_UNIT_BODY20{21|150R9}
+46a154 Path_2=46:197{string} 51r131 52r114
+47r7 Discard_UNIT_BODY21{21|150R9}
+47a154 Path_3=47:200{string} 53r131 54r114
+X 20 gnatcov_rts.ads
+32K9*GNATcov_RTS 18|2r6 19|5r6 10r26 10r66 10r94 12r7 12r35 14r29 14r69 14r97
+. 15r29 15r69 15r97 16r29 16r69 16r97 18r10 18r38 19r13 19r41 20r13 20r41
+. 22r10 22r38 23r10 23r38 24r10 24r38 25r13 25r41 28r33 28r73 28r101 30r13
+. 30r41 31r16 31r44 33r13 33r41 38r10 38r38 39r13 39r41 41r10 41r38 45r27
+. 45r67 45r95 46r27 46r67 46r95 47r27 47r67 47r95 49r7 49r35 50r10 50r38
+. 51r13 51r41 52r10 52r38 53r13 53r41 54r10 54r38 56r7 56r35 20|48e16
+X 21 gnatcov_rts-buffers.ads
+34K21*Buffers 18|2r18 19|5r18 10r38 10r78 10r106 12r19 12r47 14r41 14r81
+. 14r109 15r41 15r81 15r109 16r41 16r81 16r109 18r22 18r50 19r25 19r53 20r25
+. 20r53 22r22 22r50 23r22 23r50 24r22 24r50 25r25 25r53 28r45 28r85 28r113
+. 30r25 30r53 31r28 31r56 33r25 33r53 38r22 38r50 39r25 39r53 41r22 41r50
+. 45r39 45r79 45r107 46r39 46r79 46r107 47r39 47r79 47r107 49r19 49r47 50r22
+. 50r50 51r25 51r53 52r22 52r50 53r25 53r53 54r22 54r50 56r19 56r47 21|218e24
+146U14*Witness 19|12s27 18s30 19s33 20s33 22s30 23s30 24s30 25s33 30s33 31s36
+. 33s33 38s30 39s33 41s30 49s27 50s30 52s30 54s30 56s27
+150R9*Witness_Dummy_Type 19|10r46 14r49 15r49 16r49 28r53 45r47 46r47 47r47
+. 21|152e14
+153V13*Witness{150R9} 19|10s86 14s89 15s89 16s89 28s93 45s87 46s87 47s87
+170V13*Witness{boolean} 19|51s33 53s33
+X 22 gnatcov_rts-buffers-pb_fixture_loader.ads
+6K29*PB_fixture_loader 19|5w26 10r114 12r55 14r117 15r117 16r117 18r58 19r61
+. 20r61 22r58 23r58 24r58 25r61 28r121 30r61 31r64 33r61 38r58 39r61 41r58
+. 45r115 46r115 47r115 49r55 50r58 51r61 52r58 53r61 54r58 56r55 22|19e42
+10m4*Statement_Buffer{26|67M9} 19|10r132 12r73 14r135 15r135 16r135 18r76
+. 19r79 20r79 22r76 23r76 24r76 25r79 28r139 30r79 31r82 33r79 38r76 39r79
+. 41r76 45r133 46r133 47r133 49r73 50r76 51r79 52r76 53r79 54r76 56r73
+X 23 gnatcov_rts-buffers-ps_fixture_loader.ads
+6K29*PS_fixture_loader 18|2w26 23|19e42
+X 26 system.ads
+67M9*Address
+

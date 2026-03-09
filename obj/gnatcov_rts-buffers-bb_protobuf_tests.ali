@@ -1,0 +1,63 @@
+V "GNAT Lib v12"
+A -O2
+A -gnatA
+A -gnat2012
+A -gnata
+A -g
+A -mtune=generic
+A -march=x86-64
+P ZX
+
+RN
+RV NO_IMPLEMENTATION_PRAGMAS
+
+U gnatcov_rts.buffers.bb_protobuf_tests%s  gnatcov_rts-buffers-bb_protobuf_tests.ads  2db685be NE OO PR PK
+W gnatcov_rts.buffers%s	gnatcov_rts-buffers.adb	gnatcov_rts-buffers.ali
+Z system%s		system.ads		system.ali
+
+D gnatcov_rts.ads	20211110124951 fd54d6a6 gnatcov_rts%s
+D gnatcov_rts-buffers.ads  20211110124951 67f8c1d9 gnatcov_rts.buffers%s
+D gnatcov_rts-buffers-bb_protobuf_tests.ads  20260309172408 4a4e4467 gnatcov_rts.buffers.bb_protobuf_tests%s
+D interfac.ads		20240620080806 edec285f interfaces%s
+D system.ads		20240620080806 a2da961d system%s
+D s-stoele.ads		20240620080806 6d8e1ff4 system.storage_elements%s
+G a e
+X 1 gnatcov_rts.ads
+32K9*GNATcov_RTS 48e16 3|2r9 33r5
+X 2 gnatcov_rts-buffers.ads
+34K21*Buffers 1|32k9 2|218e24 3|2r21 33r17
+49n28*Unit_Body{48E9} 3|23r24
+53n31*Unit_Based_Language{53E9} 3|22r24
+69I9*Any_Bit_Id<integer>
+74A9*Coverage_Buffer_Type(boolean)<69I9> 3|6r23 10r22 14r18
+78A9*SCOs_Hash<6|67A9>(6|61M9)<6|52I9>
+82R9*Unit_Coverage_Buffers 124e14 3|18r22
+83i7*Unit_Name_Length{positive} 3|19m7
+84i7*Project_Name_Length{natural} 3|20m7
+86a7*Fingerprint{78A9} 3|21m7
+92e7*Language_Kind{53E9} 3|22m7
+95e7*Unit_Part{48E9} 3|23m7
+96a7*Unit_Name{string} 3|24m7
+111a7*Project_Name{string} 3|25m7
+115m7*Statement{5|67M9} 3|26m7
+115m18*Decision{5|67M9} 3|27m7
+115m28*MCDC{5|67M9} 3|28m7
+121i7*Statement_Last_Bit{69I9} 3|29m7
+121i27*Decision_Last_Bit{69I9} 3|30m7
+121i46*MCDC_Last_Bit{69I9} 3|31m7
+X 3 gnatcov_rts-buffers-bb_protobuf_tests.ads
+2K29*BB_protobuf_tests 2|34k21 3|33l25 33e42
+6a4*Statement_Buffer{2|74A9} 7m58 7r58 26m20 26r20
+7m4*Statement_Buffer_Address{5|67M9} 8r22
+10a4*Decision_Buffer{2|74A9} 11m57 11r57 27m20 27r20
+11m4*Decision_Buffer_Address{5|67M9} 12r22
+14a4*MCDC_Buffer{2|74A9} 15m53 15r53 28m20 28r20
+15m4*MCDC_Buffer_Address{5|67M9} 16r22
+18r4*Buffers{2|82R9}
+X 5 system.ads
+37K9*System 3|7r40 11r39 15r35 5|154e11
+67M9*Address 3|7r47 11r46 15r42
+X 6 s-stoele.ads
+61M9*Storage_Element
+67A9*Storage_Array(61M9)<52I9>
+

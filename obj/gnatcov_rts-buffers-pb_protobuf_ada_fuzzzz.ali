@@ -1,0 +1,39 @@
+V "GNAT Lib v12"
+A -O2
+A -gnatA
+A -gnat2012
+A -gnata
+A -g
+A -mtune=generic
+A -march=x86-64
+P ZX
+
+RN
+RV NO_IMPLEMENTATION_PRAGMAS
+
+U gnatcov_rts.buffers.pb_protobuf_ada_fuzzzz%s  gnatcov_rts-buffers-pb_protobuf_ada_fuzzzz.ads  9a0a9ae9 NE OO PU PK
+W gnatcov_rts%s		gnatcov_rts.ads		gnatcov_rts.ali
+W gnatcov_rts.buffers%s	gnatcov_rts-buffers.adb	gnatcov_rts-buffers.ali
+W system%s		system.ads		system.ali
+
+D gnatcov_rts.ads	20211110124951 fd54d6a6 gnatcov_rts%s
+D gnatcov_rts-buffers.ads  20211110124951 67f8c1d9 gnatcov_rts.buffers%s
+D gnatcov_rts-buffers-pb_protobuf_ada_fuzzzz.ads  20260309172408 a27c1b8b gnatcov_rts.buffers.pb_protobuf_ada_fuzzzz%s
+D interfac.ads		20240620080806 edec285f interfaces%s
+D system.ads		20240620080806 a2da961d system%s
+D s-stoele.ads		20240620080806 6d8e1ff4 system.storage_elements%s
+G a e
+X 1 gnatcov_rts.ads
+32K9*GNATcov_RTS 48e16 3|3w6 4r28 6r9 19r5
+39N4*Version 3|4r40
+X 2 gnatcov_rts-buffers.ads
+34K21*Buffers 1|32k9 2|218e24 3|6r21 19r17
+X 3 gnatcov_rts-buffers-pb_protobuf_ada_fuzzzz.ads
+6K29*PB_protobuf_ada_fuzzzz 2|34k21 3|19l25 19e47
+10m4*Statement_Buffer{5|67M9} 11r22
+13m4*Decision_Buffer{5|67M9} 14r22
+16m4*MCDC_Buffer{5|67M9} 17r22
+X 5 system.ads
+37K9*System 3|2w6 10r32 13r31 16r27 5|154e11
+67M9*Address 3|10r39 13r38 16r34
+

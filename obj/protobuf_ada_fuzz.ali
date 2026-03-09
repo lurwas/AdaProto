@@ -1,0 +1,280 @@
+V "GNAT Lib v12"
+M P W=b
+A -O2
+A -gnatA
+A -gnat2012
+A -gnata
+A -g
+A -mtune=generic
+A -march=x86-64
+P SS ZX
+
+RN
+RV NO_DISPATCHING_CALLS
+RV NO_EXCEPTION_HANDLERS
+RV NO_EXCEPTION_PROPAGATION
+RV NO_EXCEPTIONS
+RV NO_FLOATING_POINT
+RV NO_IO
+RV NO_IMPLICIT_CONDITIONALS
+RV NO_LOCAL_ALLOCATORS
+RV NO_NESTED_FINALIZATION
+RV NO_SECONDARY_STACK
+RV NO_STANDARD_STORAGE_POOLS
+RV NO_DEFAULT_INITIALIZATION
+RV NO_DYNAMIC_SIZED_OBJECTS
+RV NO_IMPLEMENTATION_PRAGMAS
+
+U protobuf_ada_fuzz%b	protobuf_ada_fuzz.adb	68908724 NE OO SU
+W ada%s			ada.ads			ada.ali
+W ada.command_line%s	a-comlin.adb		a-comlin.ali
+W ada.exceptions%s	a-except.adb		a-except.ali
+W ada.streams%s		a-stream.adb		a-stream.ali
+W ada.streams.stream_io%s  a-ststio.adb		a-ststio.ali
+Z ada.strings.text_buffers%s  a-sttebu.adb	a-sttebu.ali
+Z ada.tags%s		a-tags.adb		a-tags.ali
+W ada.text_io%s		a-textio.adb		a-textio.ali
+W gnatcov_rts%s		gnatcov_rts.ads		gnatcov_rts.ali
+W gnatcov_rts.buffers%s	gnatcov_rts-buffers.adb	gnatcov_rts-buffers.ali
+W gnatcov_rts.buffers.db_protobuf_ada_fuzzzz%s  gnatcov_rts-buffers-db_protobuf_ada_fuzzzz.adb  gnatcov_rts-buffers-db_protobuf_ada_fuzzzz.ali
+W gnatcov_rts.buffers.pb_protobuf_ada_fuzzzz%s  gnatcov_rts-buffers-pb_protobuf_ada_fuzzzz.ads  gnatcov_rts-buffers-pb_protobuf_ada_fuzzzz.ali
+W interfaces%s		interfac.ads		interfac.ali
+W protobuf%s		protobuf.adb		protobuf.ali
+Z system%s		system.ads		system.ali
+Z system.secondary_stack%s  s-secsta.adb	s-secsta.ali
+Z system.soft_links%s	s-soflin.adb		s-soflin.ali
+
+D ada.ads		20240620080806 76789da1 ada%s
+D a-charac.ads		20240620080806 2d3ec45b ada.characters%s
+D a-chlat1.ads		20240620080806 e0d72e76 ada.characters.latin_1%s
+D a-comlin.ads		20240620080806 4aa66568 ada.command_line%s
+D a-contai.ads		20240620080806 61e5e089 ada.containers%s
+D a-conhel.ads		20240620080806 20298884 ada.containers.helpers%s
+D a-convec.ads		20240620080806 5d39d84a ada.containers.vectors%s
+D a-except.ads		20240620080806 2a7d8d70 ada.exceptions%s
+D a-finali.ads		20240620080806 bf4f806b ada.finalization%s
+D a-ioexce.ads		20240620080806 40018c65 ada.io_exceptions%s
+D a-iteint.ads		20240620080806 49a8bee2 ada.iterator_interfaces%s
+D a-stream.ads		20240620080806 119b8fb3 ada.streams%s
+D a-ststio.ads		20240620080806 d6d358e8 ada.streams.stream_io%s
+D a-string.ads		20240620080806 90ac6797 ada.strings%s
+D a-strmap.ads		20240620080806 233229cd ada.strings.maps%s
+D a-sttebu.ads		20240620080806 18209c64 ada.strings.text_buffers%s
+D a-strunb.ads		20240620080806 5837d881 ada.strings.unbounded%s
+D a-stuten.ads		20240620080806 33c54060 ada.strings.utf_encoding%s
+D a-tags.ads		20240620080806 9eaa38c6 ada.tags%s
+D a-textio.ads		20240620080806 deada98a ada.text_io%s
+D a-unccon.ads		20240620080806 0e9b276f ada.unchecked_conversion%s
+D gnatcov_rts.ads	20211110124951 fd54d6a6 gnatcov_rts%s
+D gnatcov_rts-buffers.ads  20211110124951 67f8c1d9 gnatcov_rts.buffers%s
+D gnatcov_rts-buffers-db_protobuf_ada_fuzzzz.ads  20260309172408 20b714b1 gnatcov_rts.buffers.db_protobuf_ada_fuzzzz%s
+D gnatcov_rts-buffers-pb_protobuf_ada_fuzzzz.ads  20260309172408 a27c1b8b gnatcov_rts.buffers.pb_protobuf_ada_fuzzzz%s
+D gnatcov_rts-buffers-ps_protobuf.ads  20260309172408 59daa46f gnatcov_rts.buffers.ps_protobuf%s
+D interfac.ads		20240620080806 edec285f interfaces%s
+D i-cstrea.ads		20240620080806 e53d8b8e interfaces.c_streams%s
+D protobuf.ads		20260309172408 0c3288cc protobuf%s
+D protobuf_ada_fuzz.adb	20260309172408 9e74e751 protobuf_ada_fuzz%b
+D system.ads		20240620080806 a2da961d system%s
+D s-atocou.ads		20240620080806 dc18efc3 system.atomic_counters%s
+D s-crtl.ads		20240620080806 8a0692f8 system.crtl%s
+D s-exctab.ads		20240620080806 91bef6ef system.exception_table%s
+D s-ficobl.ads		20240620080806 dc5161d4 system.file_control_block%s
+D s-finmas.ads		20240620080806 bd688734 system.finalization_masters%s
+D s-finroo.ads		20240620080806 4ff27390 system.finalization_root%s
+D s-parame.ads		20240620080806 d494a4a6 system.parameters%s
+D s-pooglo.ads		20240620080806 91708d21 system.pool_global%s
+D s-putima.ads		20240620080806 4e095881 system.put_images%s
+D s-secsta.ads		20240620080806 62cd9202 system.secondary_stack%s
+D s-soflin.ads		20240620080806 df77073e system.soft_links%s
+D s-stache.ads		20240620080806 0b81c1fe system.stack_checking%s
+D s-stalib.ads		20240620080806 1c9580f6 system.standard_library%s
+D s-stoele.ads		20240620080806 6d8e1ff4 system.storage_elements%s
+D s-stoele.adb		20240620080806 8f5a9db6 system.storage_elements%b
+D s-stopoo.ads		20240620080806 e9fa2dd8 system.storage_pools%s
+D s-stratt.ads		20240620080806 f7dfd786 system.stream_attributes%s
+D s-traent.ads		20240620080806 c81cbf8c system.traceback_entries%s
+D s-unstyp.ads		20240620080806 fa2a7f59 system.unsigned_types%s
+D s-wchcon.ads		20240620080806 d9032363 system.wch_con%s
+D unchconv.ads		20240620080806 ca2f9e18 unchecked_conversion%s
+G a e
+G c Z b b [protobuf_ada_fuzz standard 9 291 none]
+G r c none [protobuf_ada_fuzz standard 9 291 none] [witness gnatcov_rts__buffers 153 13 none]
+G r c none [protobuf_ada_fuzz standard 9 291 none] [witness gnatcov_rts__buffers 146 14 none]
+G r c none [protobuf_ada_fuzz standard 9 291 none] [parse_from_string protobuf 414 13 none]
+G r c none [protobuf_ada_fuzz standard 9 291 none] [as_int64 protobuf 442 13 none]
+G r c none [protobuf_ada_fuzz standard 9 291 none] [as_sint64 protobuf 466 13 none]
+G r c none [protobuf_ada_fuzz standard 9 291 none] [as_uint64 protobuf 454 13 none]
+G r c none [protobuf_ada_fuzz standard 9 291 none] [as_bool protobuf 472 13 none]
+G r c none [protobuf_ada_fuzz standard 9 291 none] [as_fixed64 protobuf 490 13 none]
+G r c none [protobuf_ada_fuzz standard 9 291 none] [as_sfixed64 protobuf 502 13 none]
+G r c none [protobuf_ada_fuzz standard 9 291 none] [as_double protobuf 514 13 none]
+G r c none [protobuf_ada_fuzz standard 9 291 none] [as_bytes protobuf 526 13 none]
+G r c none [protobuf_ada_fuzz standard 9 291 none] [as_fixed32 protobuf 484 13 none]
+G r c none [protobuf_ada_fuzz standard 9 291 none] [as_sfixed32 protobuf 496 13 none]
+G r c none [protobuf_ada_fuzz standard 9 291 none] [as_float protobuf 508 13 none]
+G r c none [protobuf_ada_fuzz standard 9 291 none] [dump_buffers gnatcov_rts__buffers__db_protobuf_ada_fuzzzz 4 14 none]
+X 1 ada.ads
+16K9*Ada 20e8 30|2r6 3r6 4r6 5r6 11r204 13r13 21r167 22r18 22r60 23r167 33r113
+. 39r143 45r102 46r99 47r99 47r133 52r196 109r105 109r154 110r105 110r139
+X 4 a-comlin.ads
+36K13*Command_Line 144e21 30|2w10 45r106 47r103 47r137 52r200 110r109 110r143
+39V13*Argument_Count{natural} 30|45s119
+52V13*Argument{string} 30|52s213
+70I9*Exit_Status<integer>
+73i4*Failure{70I9} 30|47r150 110r156
+75U14*Set_Exit_Status 30|47s116 110s122
+X 7 a-convec.ads
+91R9*Vector<9|43R9> 30|56r213[29|35] 84r231[29|35]
+X 8 a-except.ads
+44K13*Exceptions 295e19 30|3w10 109r158
+94V13*Exception_Information{string} 30|109s169
+X 11 a-iteint.ads
+24h9 Forward_Iterator
+32h9 Reversible_Iterator<24R9[7|119]>
+X 12 a-stream.ads
+36K13*Streams 87e16 30|4r10 11r208 13r17 21r171 22r22 22r64 23r171 33r117
+. 39r147
+42M9*Stream_Element
+44I9*Stream_Element_Offset<long_long_integer> 30|13r25 22r30 22r72 23r179
+. 33r125 39r155
+54A9*Stream_Element_Array(42M9)<44I9> 30|21r179
+X 13 a-ststio.ads
+39K21*Stream_IO 224e26 30|4w18 11r216
+44P9*File_Type 30|16r168
+47n23*In_File{47E9} 30|18r118
+58I9*Count<12|44I9> 30|12r17 20r180
+74U14*Open 30|18s102
+80U14*Close 30|26s108 31s106
+104U14*Read 30|30s105
+125V13*Size{58I9} 30|20s193
+X 20 a-textio.ads
+58K13*Text_IO 727e16 30|5w10 46r103 109r109
+507U14*Put_Line 30|46s111 109s117
+X 22 gnatcov_rts.ads
+32K9*GNATcov_RTS 48e16 30|9r6 9r54 9w102 9r140 11r53 11r93 11r121 16r26 16r66
+. 16r94 18r7 18r35 20r29 20r69 20r97 21r29 21r69 21r97 23r29 23r69 23r97
+. 25r10 25r38 26r13 26r41 27r13 27r41 30r10 30r38 31r10 31r38 33r10 33r38
+. 34r13 34r41 37r10 37r38 38r13 38r41 39r16 39r44 45r7 45r35 46r7 46r35 47r7
+. 47r35 48r7 48r35 52r27 52r67 52r95 56r33 56r73 56r101 59r13 59r41 60r16
+. 60r44 63r45 63r85 63r113 64r45 64r85 64r113 65r45 65r85 65r113 66r45 66r85
+. 66r113 68r25 68r53 72r45 72r85 72r113 73r45 73r85 73r113 74r45 74r85 74r113
+. 76r25 76r53 80r45 80r85 80r113 84r51 84r91 84r119 87r31 87r59 91r31 91r59
+. 96r45 96r85 96r113 97r45 97r85 97r113 98r45 98r85 98r113 100r25 100r53
+. 107r13 107r41 109r13 109r41 110r13 110r41 113r27
+39N4*Version 30|9r152
+X 23 gnatcov_rts-buffers.ads
+34K21*Buffers 218e24 30|9r18 9r66 11r65 11r105 11r133 16r38 16r78 16r106
+. 18r19 18r47 20r41 20r81 20r109 21r41 21r81 21r109 23r41 23r81 23r109 25r22
+. 25r50 26r25 26r53 27r25 27r53 30r22 30r50 31r22 31r50 33r22 33r50 34r25
+. 34r53 37r22 37r50 38r25 38r53 39r28 39r56 45r19 45r47 46r19 46r47 47r19
+. 47r47 48r19 48r47 52r39 52r79 52r107 56r45 56r85 56r113 59r25 59r53 60r28
+. 60r56 63r57 63r97 63r125 64r57 64r97 64r125 65r57 65r97 65r125 66r57 66r97
+. 66r125 68r37 68r65 72r57 72r97 72r125 73r57 73r97 73r125 74r57 74r97 74r125
+. 76r37 76r65 80r57 80r97 80r125 84r63 84r103 84r131 87r43 87r71 91r43 91r71
+. 96r57 96r97 96r125 97r57 97r97 97r125 98r57 98r97 98r125 100r37 100r65
+. 107r25 107r53 109r25 109r53 110r25 110r53 113r39
+146U14*Witness 30|18s27 25s30 26s33 27s33 30s30 31s30 33s30 34s33 37s30 38s33
+. 39s36 45s27 46s27 47s27 48s27 59s33 60s36 68s45 76s45 87s51 91s51 100s45
+. 107s33 109s33 110s33
+150R9*Witness_Dummy_Type 152e14 30|11r73 16r46 20r49 21r49 23r49 52r47 56r53
+. 63r65 64r65 65r65 66r65 72r65 73r65 74r65 80r65 84r71 96r65 97r65 98r65
+153V13*Witness{150R9} 30|11s113 16s86 20s89 21s89 23s89 52s87 56s93 63s105
+. 64s105 65s105 66s105 72s105 73s105 74s105 80s105 84s111 96s105 97s105 98s105
+X 24 gnatcov_rts-buffers-db_protobuf_ada_fuzzzz.ads
+2K29*DB_protobuf_ada_fuzzzz 7e47 30|9w74 113r47
+4U14*Dump_Buffers 5i<c,gnatcov_rts_B_protobuf_ada_fuzzzz_dump_buffers>22
+. 30|113s70
+X 25 gnatcov_rts-buffers-pb_protobuf_ada_fuzzzz.ads
+6K29*PB_protobuf_ada_fuzzzz 19e47 30|9w26 11r141 16r114 18r55 20r117 21r117
+. 23r117 25r58 26r61 27r61 30r58 31r58 33r58 34r61 37r58 38r61 39r64 45r55
+. 46r55 47r55 48r55 52r115 56r121 59r61 60r64 63r133 64r133 65r133 66r133
+. 68r73 72r133 73r133 74r133 76r73 80r133 84r139 87r79 91r79 96r133 97r133
+. 98r133 100r73 107r61 109r61 110r61
+10m4*Statement_Buffer{31|67M9} 30|11r164 16r137 18r78 20r140 21r140 23r140
+. 25r81 26r84 27r84 30r81 31r81 33r81 34r84 37r81 38r84 39r87 45r78 46r78
+. 47r78 48r78 52r138 56r144 59r84 60r87 63r156 64r156 65r156 66r156 68r96
+. 72r156 73r156 74r156 76r96 80r156 84r162 87r102 91r102 96r156 97r156 98r156
+. 100r96 107r84 109r84 110r84
+X 27 interfac.ads
+38K9*Interfaces 231e15 30|6w6 63r197 64r197 65r197 72r197 73r197 96r197 97r197
+52I9*Integer_32<integer> 30|97r208
+55I9*Integer_64<long_long_integer> 30|63r208 64r208 73r208
+79M9*Unsigned_32 30|96r208
+82M9*Unsigned_64 30|65r208 72r208
+216F9*IEEE_Float_32<short_float>
+219F9*IEEE_Float_64<long_float>
+X 29 protobuf.ads
+7K46*Protobuf 538e13 30|7w6 56r183 57r15 61r24 63r222 64r222 65r223 66r208
+. 70r24 72r223 73r222 74r197 74r217 78r24 80r206 84r201 85r33 90r33 94r24
+. 96r223 97r222 98r197 98r217 106r15
+10X4*Parse_Error 30|90r42 106r24
+16n7*Varint_Wire{15E9} 30|61r33
+17n7*Fixed64_Wire{15E9} 30|70r33
+18n7*Length_Delimited_Wire{15E9} 30|78r33
+19n7*Fixed32_Wire{15E9} 30|94r33
+35K12*Parsed_Field_Vectors[7|74] 30|56r192 84r210
+50F12*Float32{27|216F9} 30|98r206
+51F12*Float64{27|219F9} 30|74r206
+414V13*Parse_From_String{7|91R9[35]} 30|57s24 85s42
+442V13*As_Int64{27|55I9} 30|63s231
+454V13*As_UInt64{27|82M9} 30|65s232
+466V13*As_SInt64{27|55I9} 30|64s231
+472V13*As_Bool{boolean} 30|66s217
+484V13*As_Fixed32{27|79M9} 30|96s232
+490V13*As_Fixed64{27|82M9} 30|72s232
+496V13*As_SFixed32{27|52I9} 30|97s231
+502V13*As_SFixed64{27|55I9} 30|73s231
+508V13*As_Float{50F12} 30|98s226
+514V13*As_Double{51F12} 30|74s226
+526V13*As_Bytes{string} 30|80s215
+X 30 protobuf_ada_fuzz.adb
+9U291*Protobuf_Ada_Fuzz 9b291 113l87 113t104
+11q4 GNATcov_Original_Main 113l5 113e26
+11r34 Discard_UNIT_BODY0{23|150R9}
+11K192 SIO=11:216 12r13 16r164 18r98 18r114 20r176 20r189 26r104 30r101 31r102
+15V13 Load_File{string} 15b13 15>24 43l8 43t17 52s185
+15a24 Path{string} 18r127
+16r7 Discard_UNIT_BODY1{23|150R9}
+16p157 File{13|44P9} 18m108 18r108 20r199 26m115 26r115 30r111 31m113 31r113
+20r10 Discard_UNIT_BODY3{23|150R9}
+20i160 Size{13|58I9} 22r95 25r104 33r148
+21r10 Discard_UNIT_BODY4{23|150R9}
+21a160 Data{12|54A9} 30m117 39r137
+23r10 Discard_UNIT_BODY5{23|150R9}
+23i160 Last{12|44I9} 30m123 33r105 37r140
+37a109 Result{string} 38r114 39m108
+38i109 I{integer} 39r116 39r178
+52r7 Discard_UNIT_BODY20{23|150R9}
+52a159 Data{string} 57r43
+56r13 Discard_UNIT_BODY21{23|150R9}
+56r165 Parsed{7|91R9[29|35]} 59r114
+59r109 F{29|21R9} 60r113 63r241 64r242 65r243 66r226 72r244 73r244 74r237
+. 80r225 96r244 97r244 98r236
+63r25 Discard_UNIT_BODY24{23|150R9}
+63i177 Ignore_1{27|55I9}
+64r25 Discard_UNIT_BODY25{23|150R9}
+64i177 Ignore_2{27|55I9}
+65r25 Discard_UNIT_BODY26{23|150R9}
+65m177 Ignore_3{27|82M9}
+66r25 Discard_UNIT_BODY27{23|150R9}
+66b177 Ignore_4{boolean}
+72r25 Discard_UNIT_BODY29{23|150R9}
+72m177 Ignore_1{27|82M9}
+73r25 Discard_UNIT_BODY30{23|150R9}
+73i177 Ignore_2{27|55I9}
+74r25 Discard_UNIT_BODY31{23|150R9}
+74f177 Ignore_3{29|51F12}
+80r25 Discard_UNIT_BODY33{23|150R9}
+80a177 Payload{string} 85r61
+84r31 Discard_UNIT_BODY34{23|150R9}
+84r183 Nested{7|91R9[29|35]}
+96r25 Discard_UNIT_BODY37{23|150R9}
+96m177 Ignore_1{27|79M9}
+97r25 Discard_UNIT_BODY38{23|150R9}
+97i177 Ignore_2{27|52I9}
+98r25 Discard_UNIT_BODY39{23|150R9}
+98f177 Ignore_3{29|50F12}
+108r15 E{8|53R9} 109r192
+X 31 system.ads
+67M9*Address
+
