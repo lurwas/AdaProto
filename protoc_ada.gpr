@@ -1,0 +1,19 @@
+--  Build project for the proto3 -> Ada code generator (protoc-ada).
+--  Kept separate from protobuf_ada.gpr: this tool only produces source text
+--  and does not depend on the Protobuf runtime.
+project Protoc_Ada is
+
+   for Source_Dirs use ("compiler");
+   for Object_Dir use "obj_compiler";
+   for Exec_Dir use "bin";
+   for Main use ("protoc_ada.adb");
+
+   package Builder is
+      for Executable ("protoc_ada.adb") use "protoc-ada";
+   end Builder;
+
+   package Compiler is
+      for Default_Switches ("Ada") use ("-gnat2012", "-O2");
+   end Compiler;
+
+end Protoc_Ada;

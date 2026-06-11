@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package sample;
+
+// Exercises the Phase 1a code generator: singular scalar fields of every
+// supported wire category.
+message Person {
+  int32  id      = 1;
+  string name    = 2;
+  bool   active  = 3;
+  double balance = 4;
+  sint64 delta   = 5;
+  bytes  blob    = 6;
+}
+
+message Pair {
+  uint32 first  = 1;
+  uint32 second = 2;
+}

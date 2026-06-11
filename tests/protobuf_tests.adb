@@ -12,6 +12,7 @@ with AUnit.Test_Suites;
 with Fixture_Loader;
 with Interfaces;
 with Protobuf;
+with Sample;
 
 package body Protobuf_Tests is
    use AUnit.Assertions;
@@ -1055,6 +1056,63 @@ package body Protobuf_Tests is
       end;
    end Test_Packed_UInt64_And_SInt64;
 
+   --  Proves the protoc-ada generated types (Sample.Person / Sample.Pair):
+   --  (1) serialize byte-identically to hand-written runtime calls,
+   --  (2) round-trip through encode + decode,
+   --  (3) honour proto3 default omission (default scalars are not emitted),
+   --  including the reserved-word-escaped field Delta_F (proto field "delta").
+   procedure Test_Generated_Types_Roundtrip is
+      use Ada.Strings.Unbounded;
+      P : constant Sample.Person :=
+        (Id      => 42,
+         Name    => To_Unbounded_String ("alice"),
+         Active  => True,
+         Balance => 3.5,
+         Delta_F => -7,
+         Blob    => To_Unbounded_String ("blob"));
+      Reference : Protobuf.Message_Buffer;
+   begin
+      --  Wire compatibility: the generated encoder must match the exact bytes
+      --  produced by the equivalent runtime calls, in field-number order.
+      Protobuf.Add_Int32  (Reference, 1, 42);
+      Protobuf.Add_String (Reference, 2, "alice");
+      Protobuf.Add_Bool   (Reference, 3, True);
+      Protobuf.Add_Double (Reference, 4, 3.5);
+      Protobuf.Add_SInt64 (Reference, 5, -7);
+      Protobuf.Add_Bytes  (Reference, 6, "blob");
+      Assert (Sample.Serialize (P) = Protobuf.To_String (Reference),
+              "generated Serialize matches hand-written wire bytes");
+
+      --  Round-trip.
+      declare
+         D : constant Sample.Person :=
+           Sample.Parse_Person (Sample.Serialize (P));
+      begin
+         Assert (D.Id = 42, "id round-trips");
+         Assert (To_String (D.Name) = "alice", "name round-trips");
+         Assert (D.Active = True, "active round-trips");
+         Assert (D.Balance = 3.5, "balance round-trips");
+         Assert (D.Delta_F = -7, "reserved-word field round-trips");
+         Assert (To_String (D.Blob) = "blob", "bytes round-trip");
+      end;
+
+      --  proto3 default omission: an all-default message encodes to nothing.
+      declare
+         Empty : Sample.Person;
+      begin
+         Assert (Sample.Serialize (Empty) = "",
+                 "default scalar fields are omitted on the wire");
+      end;
+
+      --  A second generated message type in the same unit.
+      declare
+         Q : constant Sample.Pair := (First => 1, Second => 2);
+         R : constant Sample.Pair := Sample.Parse_Pair (Sample.Serialize (Q));
+      begin
+         Assert (R.First = 1 and R.Second = 2, "Pair round-trips");
+      end;
+   end Test_Generated_Types_Roundtrip;
+
    --  Exercises the reserve-once / geometrically-grown serialization buffer:
    --  many fields force several reallocations past the initial capacity, a
    --  maximal varint exercises the 10-byte worst case, and Clear+reuse must
@@ -1185,6 +1243,7 @@ package body Protobuf_Tests is
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("stream serialization empty", Test_Stream_Serialization_Empty_Buffer'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("packed uint64 and sint64", Test_Packed_UInt64_And_SInt64'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("serialization buffer growth and reuse", Test_Serialization_Buffer_Growth_And_Reuse'Access));
+         AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated types roundtrip", Test_Generated_Types_Roundtrip'Access));
       end if;
       return Registered_Suite;
    end Suite;
