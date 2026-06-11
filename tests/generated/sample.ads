@@ -2,7 +2,21 @@
 --  Do not edit by hand.
 with Interfaces;
 with Ada.Strings.Unbounded;
+with Ada.Containers.Vectors;
 package Sample is
+
+   subtype Color is Interfaces.Integer_32;
+   Color_COLOR_UNSPECIFIED : constant Color := 0;
+   Color_RED : constant Color := 1;
+   Color_GREEN : constant Color := 2;
+   Color_BLUE : constant Color := 3;
+
+   use type Interfaces.Integer_32;
+   use type Ada.Strings.Unbounded.Unbounded_String;
+   use type Color;
+   package Integer_32_Vectors is new Ada.Containers.Vectors (Positive, Interfaces.Integer_32);
+   package Unbounded_String_Vectors is new Ada.Containers.Vectors (Positive, Ada.Strings.Unbounded.Unbounded_String);
+   package Color_Vectors is new Ada.Containers.Vectors (Positive, Color);
 
    type Person is record
       Id : Interfaces.Integer_32 := 0;
@@ -23,6 +37,16 @@ package Sample is
 
    function Serialize (Message : Pair) return String;
    function Parse_Pair (Data : String) return Pair;
+
+   type Bag is record
+      Numbers : Integer_32_Vectors.Vector;
+      Tags : Unbounded_String_Vectors.Vector;
+      Color_F : Color := 0;
+      Palette : Color_Vectors.Vector;
+   end record;
+
+   function Serialize (Message : Bag) return String;
+   function Parse_Bag (Data : String) return Bag;
 
 end Sample;
 

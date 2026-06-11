@@ -1113,6 +1113,76 @@ package body Protobuf_Tests is
       end;
    end Test_Generated_Types_Roundtrip;
 
+   --  Phase 1b: enums (open, int32-valued) and repeated fields. Proves packed
+   --  encode/decode wire-compatibility, repeated-string handling, and that the
+   --  decoder also accepts the unpacked repeated encoding (conformance).
+   procedure Test_Generated_Enums_And_Repeated is
+      use Ada.Strings.Unbounded;
+      B : Sample.Bag;
+      Reference : Protobuf.Message_Buffer;
+   begin
+      B.Numbers.Append (1);
+      B.Numbers.Append (2);
+      B.Numbers.Append (-3);
+      B.Tags.Append (To_Unbounded_String ("a"));
+      B.Tags.Append (To_Unbounded_String ("bb"));
+      B.Color_F := Sample.Color_GREEN;
+      B.Palette.Append (Sample.Color_RED);
+      B.Palette.Append (Sample.Color_BLUE);
+
+      --  Wire compatibility: packed repeated scalars, repeated strings (one
+      --  field each), and the enum encoded as int32.
+      Protobuf.Add_Packed_Int32 (Reference, 1, (1, 2, -3));
+      Protobuf.Add_String       (Reference, 2, "a");
+      Protobuf.Add_String       (Reference, 2, "bb");
+      Protobuf.Add_Int32        (Reference, 3, 2);
+      Protobuf.Add_Packed_Int32 (Reference, 4, (1, 3));
+      Assert (Sample.Serialize (B) = Protobuf.To_String (Reference),
+              "generated repeated/enum encoder matches hand-written bytes");
+
+      --  Round-trip.
+      declare
+         D : constant Sample.Bag := Sample.Parse_Bag (Sample.Serialize (B));
+      begin
+         Assert (Natural (D.Numbers.Length) = 3
+                 and then D.Numbers (1) = 1 and then D.Numbers (3) = -3,
+                 "packed repeated int32 round-trips");
+         Assert (Natural (D.Tags.Length) = 2
+                 and then To_String (D.Tags (2)) = "bb",
+                 "repeated string round-trips");
+         Assert (D.Color_F = Sample.Color_GREEN, "enum round-trips");
+         Assert (Natural (D.Palette.Length) = 2
+                 and then D.Palette (1) = Sample.Color_RED
+                 and then D.Palette (2) = Sample.Color_BLUE,
+                 "repeated enum round-trips");
+      end;
+
+      --  Conformance: the decoder must also accept the *unpacked* encoding of a
+      --  packable repeated field (each element as a separate field entry).
+      declare
+         Unpacked : Protobuf.Message_Buffer;
+      begin
+         Protobuf.Add_Int32 (Unpacked, 1, 7);
+         Protobuf.Add_Int32 (Unpacked, 1, 8);
+         declare
+            D : constant Sample.Bag :=
+              Sample.Parse_Bag (Protobuf.To_String (Unpacked));
+         begin
+            Assert (Natural (D.Numbers.Length) = 2
+                    and then D.Numbers (1) = 7 and then D.Numbers (2) = 8,
+                    "decoder accepts unpacked repeated encoding");
+         end;
+      end;
+
+      --  Empty repeated fields and a default enum encode to nothing.
+      declare
+         Empty : Sample.Bag;
+      begin
+         Assert (Sample.Serialize (Empty) = "",
+                 "empty repeated fields and default enum are omitted");
+      end;
+   end Test_Generated_Enums_And_Repeated;
+
    --  Exercises the reserve-once / geometrically-grown serialization buffer:
    --  many fields force several reallocations past the initial capacity, a
    --  maximal varint exercises the 10-byte worst case, and Clear+reuse must
@@ -1244,6 +1314,7 @@ package body Protobuf_Tests is
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("packed uint64 and sint64", Test_Packed_UInt64_And_SInt64'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("serialization buffer growth and reuse", Test_Serialization_Buffer_Growth_And_Reuse'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated types roundtrip", Test_Generated_Types_Roundtrip'Access));
+         AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated enums and repeated", Test_Generated_Enums_And_Repeated'Access));
       end if;
       return Registered_Suite;
    end Suite;

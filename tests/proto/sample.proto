@@ -17,3 +17,18 @@ message Pair {
   uint32 first  = 1;
   uint32 second = 2;
 }
+
+enum Color {
+  COLOR_UNSPECIFIED = 0;
+  RED               = 1;
+  GREEN             = 2;
+  BLUE              = 3;
+}
+
+// Exercises Phase 1b: enums plus repeated packed scalars and repeated strings.
+message Bag {
+  repeated int32  numbers = 1;
+  repeated string tags    = 2;
+  Color           color   = 3;
+  repeated Color  palette = 4;
+}

@@ -2,6 +2,7 @@
 with Interfaces; use Interfaces;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Protobuf;
+use type Protobuf.Wire_Type;
 package body Sample is
 
    function Serialize (Message : Person) return String is
@@ -81,6 +82,75 @@ package body Sample is
       end loop;
       return Result;
    end Parse_Pair;
+
+   function Serialize (Message : Bag) return String is
+      Buffer : Protobuf.Message_Buffer;
+   begin
+      if not Message.Numbers.Is_Empty then
+         declare
+            Tmp : Protobuf.Int32_Array (1 .. Natural (Message.Numbers.Length));
+         begin
+            for I in Tmp'Range loop
+               Tmp (I) := Message.Numbers (Positive (I));
+            end loop;
+            Protobuf.Add_Packed_Int32 (Buffer, 1, Tmp);
+         end;
+      end if;
+      for I in Message.Tags.First_Index .. Message.Tags.Last_Index loop
+         Protobuf.Add_String (Buffer, 2, To_String (Message.Tags (I)));
+      end loop;
+      if Message.Color_F /= 0 then
+         Protobuf.Add_Int32 (Buffer, 3, Message.Color_F);
+      end if;
+      if not Message.Palette.Is_Empty then
+         declare
+            Tmp : Protobuf.Int32_Array (1 .. Natural (Message.Palette.Length));
+         begin
+            for I in Tmp'Range loop
+               Tmp (I) := Message.Palette (Positive (I));
+            end loop;
+            Protobuf.Add_Packed_Int32 (Buffer, 4, Tmp);
+         end;
+      end if;
+      return Protobuf.To_String (Buffer);
+   end Serialize;
+
+   function Parse_Bag (Data : String) return Bag is
+      Result : Bag;
+      Fields : constant Protobuf.Parsed_Field_Vectors.Vector :=
+        Protobuf.Parse_From_String (Data);
+   begin
+      for Item of Fields loop
+         case Item.Number is
+            when 1 =>
+               if Item.Kind = Protobuf.Length_Delimited_Wire then
+                  declare
+                     A : constant Protobuf.Int32_Array := Protobuf.Decode_Packed_Int32 (Protobuf.As_Bytes (Item));
+                  begin
+                     for V of A loop Result.Numbers.Append (V); end loop;
+                  end;
+               else
+                  Result.Numbers.Append (Protobuf.As_Int32 (Item));
+               end if;
+            when 2 =>
+               Result.Tags.Append (To_Unbounded_String (Protobuf.As_String (Item)));
+            when 3 =>
+               Result.Color_F := Protobuf.As_Int32 (Item);
+            when 4 =>
+               if Item.Kind = Protobuf.Length_Delimited_Wire then
+                  declare
+                     A : constant Protobuf.Int32_Array := Protobuf.Decode_Packed_Int32 (Protobuf.As_Bytes (Item));
+                  begin
+                     for V of A loop Result.Palette.Append (V); end loop;
+                  end;
+               else
+                  Result.Palette.Append (Protobuf.As_Int32 (Item));
+               end if;
+            when others => null;
+         end case;
+      end loop;
+      return Result;
+   end Parse_Bag;
 
 end Sample;
 
