@@ -6,15 +6,14 @@ on:
 
 jobs:
   build-test:
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, ubuntu-24.04]
         mode: [normal, asan, ubsan]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install dependencies
         run: |
@@ -30,19 +29,12 @@ jobs:
 
       - name: Build
         run: |
-          # The AUnit JUnit reporter (AUnit.Reporter.JUnit) is absent from older
-          # AUnit -- e.g. Ubuntu 22.04's libaunit20 ships only text/xml/gnattest
-          # reporters -- so build the JUnit binary only where the reporter exists.
-          MAINS="protobuf_ada_test.adb protobuf_ada_bench.adb protobuf_ada_fuzz.adb"
-          if [ "${{ matrix.os }}" = "ubuntu-24.04" ]; then
-            MAINS="$MAINS protobuf_ada_junit.adb"
-          fi
           if [ "${{ matrix.mode }}" = "asan" ]; then
-            gprbuild -P protobuf_ada.gpr $MAINS -cargs -gnat2012 -g -O1 -fsanitize=address -fno-omit-frame-pointer -largs -fsanitize=address
+            gprbuild -P protobuf_ada.gpr -cargs -gnat2012 -g -O1 -fsanitize=address -fno-omit-frame-pointer -largs -fsanitize=address
           elif [ "${{ matrix.mode }}" = "ubsan" ]; then
-            gprbuild -P protobuf_ada.gpr $MAINS -cargs -gnat2012 -g -O1 -fsanitize=undefined -fno-omit-frame-pointer -largs -fsanitize=undefined
+            gprbuild -P protobuf_ada.gpr -cargs -gnat2012 -g -O1 -fsanitize=undefined -fno-omit-frame-pointer -largs -fsanitize=undefined
           else
-            gprbuild -P protobuf_ada.gpr $MAINS
+            gprbuild -P protobuf_ada.gpr
           fi
 
       - name: Unit tests
@@ -52,7 +44,6 @@ jobs:
         run: tools/test_compiler_compat.sh
 
       - name: JUnit output
-        if: matrix.os == 'ubuntu-24.04'
         run: ./bin/protobuf-ada-junit > tests/junit.xml
 
       - name: Benchmark regression guard
@@ -61,7 +52,7 @@ jobs:
   valgrind:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -79,7 +70,7 @@ jobs:
   fuzz-smoke:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install dependencies
         run: |
           sudo apt-get update
