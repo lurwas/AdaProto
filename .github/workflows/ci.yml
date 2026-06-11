@@ -19,7 +19,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y gnat gprbuild libaunit22-dev protobuf-compiler libprotobuf-dev valgrind
+          sudo apt-get install -y gnat gprbuild libaunit-dev protobuf-compiler libprotobuf-dev valgrind
 
       - name: Regenerate fixtures
         run: tools/generate_fixtures.sh
@@ -53,7 +53,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y gnat gprbuild libaunit22-dev protobuf-compiler libprotobuf-dev valgrind
+          sudo apt-get install -y gnat gprbuild libaunit-dev protobuf-compiler libprotobuf-dev valgrind
       - name: Build
         run: gprbuild -P protobuf_ada.gpr
       - name: Valgrind leak check
@@ -67,7 +67,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y gnat gprbuild libaunit22-dev
+          sudo apt-get install -y gnat gprbuild libaunit-dev
       - name: Build
         run: gprbuild -P protobuf_ada.gpr
       - name: Fuzz harness smoke
