@@ -47,6 +47,9 @@ jobs:
         run: ./bin/protobuf-ada-junit > tests/junit.xml
 
       - name: Benchmark regression guard
+        # Only meaningful on an optimized build; asan/ubsan instrumentation
+        # slows execution several-fold and would always trip the guard.
+        if: matrix.mode == 'normal'
         run: tools/bench_compare.sh
 
   valgrind:
