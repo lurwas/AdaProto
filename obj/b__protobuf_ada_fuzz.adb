@@ -22,30 +22,23 @@ package body ada_main is
    E048 : Short_Integer; pragma Import (Ada, E048, "system__dwarf_lines_E");
    E017 : Short_Integer; pragma Import (Ada, E017, "system__soft_links__initialize_E");
    E037 : Short_Integer; pragma Import (Ada, E037, "system__traceback__symbolic_E");
-   E188 : Short_Integer; pragma Import (Ada, E188, "ada__assertions_E");
+   E156 : Short_Integer; pragma Import (Ada, E156, "ada__assertions_E");
    E103 : Short_Integer; pragma Import (Ada, E103, "ada__strings__utf_encoding_E");
    E109 : Short_Integer; pragma Import (Ada, E109, "ada__tags_E");
    E101 : Short_Integer; pragma Import (Ada, E101, "ada__strings__text_buffers_E");
-   E158 : Short_Integer; pragma Import (Ada, E158, "gnat_E");
-   E161 : Short_Integer; pragma Import (Ada, E161, "interfaces__c__strings_E");
    E099 : Short_Integer; pragma Import (Ada, E099, "ada__streams_E");
    E129 : Short_Integer; pragma Import (Ada, E129, "system__file_control_block_E");
    E128 : Short_Integer; pragma Import (Ada, E128, "system__finalization_root_E");
    E126 : Short_Integer; pragma Import (Ada, E126, "ada__finalization_E");
    E125 : Short_Integer; pragma Import (Ada, E125, "system__file_io_E");
    E119 : Short_Integer; pragma Import (Ada, E119, "ada__streams__stream_io_E");
-   E192 : Short_Integer; pragma Import (Ada, E192, "system__storage_pools_E");
-   E190 : Short_Integer; pragma Import (Ada, E190, "system__finalization_masters_E");
-   E203 : Short_Integer; pragma Import (Ada, E203, "system__storage_pools__subpools_E");
-   E170 : Short_Integer; pragma Import (Ada, E170, "ada__strings__unbounded_E");
+   E160 : Short_Integer; pragma Import (Ada, E160, "system__storage_pools_E");
+   E158 : Short_Integer; pragma Import (Ada, E158, "system__finalization_masters_E");
+   E171 : Short_Integer; pragma Import (Ada, E171, "system__storage_pools__subpools_E");
+   E139 : Short_Integer; pragma Import (Ada, E139, "ada__strings__unbounded_E");
    E131 : Short_Integer; pragma Import (Ada, E131, "ada__text_io_E");
-   E208 : Short_Integer; pragma Import (Ada, E208, "system__pool_global_E");
-   E164 : Short_Integer; pragma Import (Ada, E164, "protobuf_E");
-   E148 : Short_Integer; pragma Import (Ada, E148, "gnatcov_rts__traces_E");
-   E152 : Short_Integer; pragma Import (Ada, E152, "gnatcov_rts__traces__output_E");
-   E157 : Short_Integer; pragma Import (Ada, E157, "gnatcov_rts__traces__output__bytes_io_E");
-   E155 : Short_Integer; pragma Import (Ada, E155, "gnatcov_rts__traces__output__files_E");
-   E136 : Short_Integer; pragma Import (Ada, E136, "gnatcov_rts__buffers__db_protobuf_ada_fuzzzz_E");
+   E175 : Short_Integer; pragma Import (Ada, E175, "system__pool_global_E");
+   E133 : Short_Integer; pragma Import (Ada, E133, "protobuf_E");
 
    Sec_Default_Sized_Stacks : array (1 .. 1) of aliased System.Secondary_Stack.SS_Stack (System.Parameters.Runtime_Default_Sec_Stack_Size);
 
@@ -60,7 +53,7 @@ package body ada_main is
          procedure F1;
          pragma Import (Ada, F1, "protobuf__finalize_body");
       begin
-         E164 := E164 - 1;
+         E133 := E133 - 1;
          F1;
       end;
       declare
@@ -69,7 +62,7 @@ package body ada_main is
       begin
          F2;
       end;
-      E208 := E208 - 1;
+      E175 := E175 - 1;
       declare
          procedure F3;
          pragma Import (Ada, F3, "system__pool_global__finalize_spec");
@@ -83,21 +76,21 @@ package body ada_main is
       begin
          F4;
       end;
-      E170 := E170 - 1;
+      E139 := E139 - 1;
       declare
          procedure F5;
          pragma Import (Ada, F5, "ada__strings__unbounded__finalize_spec");
       begin
          F5;
       end;
-      E203 := E203 - 1;
+      E171 := E171 - 1;
       declare
          procedure F6;
          pragma Import (Ada, F6, "system__storage_pools__subpools__finalize_spec");
       begin
          F6;
       end;
-      E190 := E190 - 1;
+      E158 := E158 - 1;
       declare
          procedure F7;
          pragma Import (Ada, F7, "system__finalization_masters__finalize_spec");
@@ -250,7 +243,7 @@ package body ada_main is
       E037 := E037 + 1;
       E011 := E011 + 1;
       Ada.Assertions'Elab_Spec;
-      E188 := E188 + 1;
+      E156 := E156 + 1;
       Ada.Strings.Utf_Encoding'Elab_Spec;
       E103 := E103 + 1;
       Ada.Tags'Elab_Spec;
@@ -258,10 +251,6 @@ package body ada_main is
       E109 := E109 + 1;
       Ada.Strings.Text_Buffers'Elab_Spec;
       E101 := E101 + 1;
-      Gnat'Elab_Spec;
-      E158 := E158 + 1;
-      Interfaces.C.Strings'Elab_Spec;
-      E161 := E161 + 1;
       Ada.Streams'Elab_Spec;
       E099 := E099 + 1;
       System.File_Control_Block'Elab_Spec;
@@ -275,29 +264,22 @@ package body ada_main is
       Ada.Streams.Stream_Io'Elab_Spec;
       E119 := E119 + 1;
       System.Storage_Pools'Elab_Spec;
-      E192 := E192 + 1;
+      E160 := E160 + 1;
       System.Finalization_Masters'Elab_Spec;
       System.Finalization_Masters'Elab_Body;
-      E190 := E190 + 1;
+      E158 := E158 + 1;
       System.Storage_Pools.Subpools'Elab_Spec;
-      E203 := E203 + 1;
+      E171 := E171 + 1;
       Ada.Strings.Unbounded'Elab_Spec;
-      E170 := E170 + 1;
+      E139 := E139 + 1;
       Ada.Text_Io'Elab_Spec;
       Ada.Text_Io'Elab_Body;
       E131 := E131 + 1;
       System.Pool_Global'Elab_Spec;
-      E208 := E208 + 1;
+      E175 := E175 + 1;
       Protobuf'Elab_Spec;
       Protobuf'Elab_Body;
-      E164 := E164 + 1;
-      Gnatcov_Rts.Traces'Elab_Spec;
-      E148 := E148 + 1;
-      E152 := E152 + 1;
-      GNATCOV_RTS.TRACES.OUTPUT.BYTES_IO'ELAB_SPEC;
-      E157 := E157 + 1;
-      E155 := E155 + 1;
-      E136 := E136 + 1;
+      E133 := E133 + 1;
    end adainit;
 
    procedure Ada_Main_Program;
@@ -335,26 +317,11 @@ package body ada_main is
    end;
 
 --  BEGIN Object file/option list
-   --   /home/richard/src/Ada/protobuf-ada-best/obj/gnatcov_rts-buffers-bb_fixture_loader.o
-   --   /home/richard/src/Ada/protobuf-ada-best/obj/gnatcov_rts-buffers-bb_protobuf.o
-   --   /home/richard/src/Ada/protobuf-ada-best/obj/gnatcov_rts-buffers-bb_protobuf_ada_bench.o
-   --   /home/richard/src/Ada/protobuf-ada-best/obj/gnatcov_rts-buffers-bb_protobuf_ada_fuzzzz.o
-   --   /home/richard/src/Ada/protobuf-ada-best/obj/gnatcov_rts-buffers-bb_protobuf_ada_junit.o
-   --   /home/richard/src/Ada/protobuf-ada-best/obj/gnatcov_rts-buffers-bb_protobuf_ada_test.o
-   --   /home/richard/src/Ada/protobuf-ada-best/obj/gnatcov_rts-buffers-bb_protobuf_tests.o
-   --   /home/richard/src/Ada/protobuf-ada-best/obj/gnatcov_rts-buffers-bs_fixture_loader.o
-   --   /home/richard/src/Ada/protobuf-ada-best/obj/gnatcov_rts-buffers-bs_protobuf.o
-   --   /home/richard/src/Ada/protobuf-ada-best/obj/gnatcov_rts-buffers-bs_protobuf_tests.o
-   --   /home/richard/src/Ada/protobuf-ada-best/obj/gnatcov_rts-buffers-pb_protobuf.o
-   --   /home/richard/src/Ada/protobuf-ada-best/obj/gnatcov_rts-buffers-pb_protobuf_ada_fuzzzz.o
-   --   /home/richard/src/Ada/protobuf-ada-best/obj/gnatcov_rts-buffers-ps_protobuf.o
    --   /home/richard/src/Ada/protobuf-ada-best/obj/protobuf.o
-   --   /home/richard/src/Ada/protobuf-ada-best/obj/gnatcov_rts-buffers-db_protobuf_ada_fuzzzz.o
    --   /home/richard/src/Ada/protobuf-ada-best/obj/protobuf_ada_fuzz.o
    --   -L/home/richard/src/Ada/protobuf-ada-best/obj/
    --   -L/home/richard/src/Ada/protobuf-ada-best/obj/
    --   -L/usr/lib/aunit/
-   --   -L/home/richard/.local/share/gnatcoverage/gnatcov_rts/lib-gnatcov_rts_full.static/
    --   -L/usr/lib/gcc/x86_64-linux-gnu/12/adalib/
    --   -shared
    --   -lgnat-12
