@@ -1055,6 +1055,94 @@ package body Protobuf_Tests is
       end;
    end Test_Packed_UInt64_And_SInt64;
 
+   --  Exercises the reserve-once / geometrically-grown serialization buffer:
+   --  many fields force several reallocations past the initial capacity, a
+   --  maximal varint exercises the 10-byte worst case, and Clear+reuse must
+   --  reproduce a fresh encoding byte-for-byte. This pins the behaviour of the
+   --  optimized encode path that replaced per-character Unbounded_String appends.
+   procedure Test_Serialization_Buffer_Growth_And_Reuse is
+
+      procedure Build (B : in out Protobuf.Message_Buffer) is
+      begin
+         --  50 varint fields + a 500-byte string + fixed64 + a 64-element packed
+         --  field push the buffer well past its initial capacity, through
+         --  multiple doublings (each of which copies the live bytes forward).
+         for K in 1 .. 50 loop
+            Protobuf.Add_UInt64
+              (B, Protobuf.Field_Number (K), Unsigned_64 (K) * 1_000_000);
+         end loop;
+         Protobuf.Add_String (B, 200, (1 .. 500 => 'z'));
+         Protobuf.Add_Fixed64 (B, 201, 16#0102_0304_0506_0708#);
+         Protobuf.Add_Packed_UInt32 (B, 202, (1 .. 64 => 16#0FFF_FFFF#));
+      end Build;
+
+      B1 : Protobuf.Message_Buffer;
+      B2 : Protobuf.Message_Buffer;
+   begin
+      Build (B1);
+      Build (B2);
+
+      --  Determinism: identical input must yield identical bytes across buffers.
+      Assert (Protobuf.To_String (B1) = Protobuf.To_String (B2),
+              "growth path is deterministic across buffers");
+
+      --  Clear keeps the storage but resets length; reusing the buffer must
+      --  reproduce exactly the same bytes as a fresh one.
+      declare
+         Fresh : constant String := Protobuf.To_String (B1);
+      begin
+         Protobuf.Clear (B1);
+         Assert (Protobuf.To_String (B1) = "", "cleared buffer serializes to empty");
+         Build (B1);
+         Assert (Protobuf.To_String (B1) = Fresh,
+                 "reused buffer matches a fresh encoding");
+      end;
+
+      --  Every value must survive encode + decode through the grown buffer.
+      declare
+         Parsed : constant Protobuf.Parsed_Field_Vectors.Vector :=
+           Protobuf.Parse_From_String (Protobuf.To_String (B2));
+      begin
+         for K in 1 .. 50 loop
+            Assert
+              (Protobuf.As_UInt64 (Find_Field (Parsed, Protobuf.Field_Number (K)))
+                 = Unsigned_64 (K) * 1_000_000,
+               "uint64 field roundtrip after growth");
+         end loop;
+         Assert (Protobuf.As_String (Find_Field (Parsed, 200))'Length = 500,
+                 "500-byte string preserved across growth");
+         Assert (Protobuf.As_Fixed64 (Find_Field (Parsed, 201))
+                   = 16#0102_0304_0506_0708#,
+                 "fixed64 preserved across growth");
+         declare
+            U : constant Protobuf.UInt32_Array :=
+              Protobuf.Decode_Packed_UInt32
+                (Protobuf.As_Bytes (Find_Field (Parsed, 202)));
+         begin
+            Assert (U'Length = 64, "packed field length preserved");
+            Assert (U (1) = 16#0FFF_FFFF# and U (64) = 16#0FFF_FFFF#,
+                    "packed field values preserved");
+         end;
+      end;
+
+      --  A maximal varint must use all 10 wire bytes and round-trip exactly,
+      --  exercising the worst-case width the encoder reserves for.
+      declare
+         B : Protobuf.Message_Buffer;
+      begin
+         Protobuf.Add_UInt64 (B, 1, Unsigned_64'Last);
+         declare
+            S : constant String := Protobuf.To_String (B);
+            Parsed : constant Protobuf.Parsed_Field_Vectors.Vector :=
+              Protobuf.Parse_From_String (S);
+         begin
+            Assert (S'Length = 11, "max uint64 encodes to 1 tag + 10 value bytes");
+            Assert (Protobuf.As_UInt64 (Find_Field (Parsed, 1)) = Unsigned_64'Last,
+                    "max uint64 round-trips");
+         end;
+      end;
+   end Test_Serialization_Buffer_Growth_And_Reuse;
+
    function Suite return AUnit.Test_Suites.Access_Test_Suite is
    begin
       if Registered_Suite = null then
@@ -1096,6 +1184,7 @@ package body Protobuf_Tests is
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("enum and packed int64", Test_Enum_And_Packed_Int64'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("stream serialization empty", Test_Stream_Serialization_Empty_Buffer'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("packed uint64 and sint64", Test_Packed_UInt64_And_SInt64'Access));
+         AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("serialization buffer growth and reuse", Test_Serialization_Buffer_Growth_And_Reuse'Access));
       end if;
       return Registered_Suite;
    end Suite;

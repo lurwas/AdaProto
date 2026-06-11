@@ -2,6 +2,7 @@ with Ada.Containers.Vectors;
 with Ada.Streams;
 with Ada.Strings.Unbounded;
 with Ada.Unchecked_Conversion;
+with Ada.Unchecked_Deallocation;
 with Interfaces;
 
 package body Protobuf is
@@ -30,29 +31,86 @@ package body Protobuf is
    package Float_Vectors is new Ada.Containers.Vectors (Natural, Float32);
    package Double_Vectors is new Ada.Containers.Vectors (Natural, Float64);
 
-   procedure Append_Byte (Target : in out Unbounded_String; Value : Unsigned_8) is
+   procedure Free is new Ada.Unchecked_Deallocation (String, Byte_Array_Access);
+
+   Initial_Capacity : constant := 64;
+
+   --  A 64-bit varint occupies at most ceil (64 / 7) = 10 bytes on the wire.
+   Max_Varint_Bytes : constant := 10;
+
+   --  Ensure Storage can hold at least Extra more bytes past Used, growing it
+   --  geometrically so a run of appends costs amortized O(1) per byte. After a
+   --  call, Storage (Buffer.Used + 1 .. Buffer.Used + Extra) may be written
+   --  directly without any further bounds growth.
+   procedure Reserve (Buffer : in out Message_Buffer; Extra : Natural) is
+      Needed : constant Natural := Buffer.Used + Extra;
    begin
-      Append (Target, Character'Val (Integer (Value)));
+      if Buffer.Storage = null then
+         Buffer.Storage := new String (1 .. Natural'Max (Initial_Capacity, Extra));
+      elsif Needed > Buffer.Storage'Length then
+         declare
+            New_Capacity : Natural := Buffer.Storage'Length;
+         begin
+            loop
+               New_Capacity := New_Capacity * 2;
+               exit when New_Capacity >= Needed;
+            end loop;
+            declare
+               Grown : constant Byte_Array_Access := new String (1 .. New_Capacity);
+            begin
+               Grown (1 .. Buffer.Used) := Buffer.Storage (1 .. Buffer.Used);
+               Free (Buffer.Storage);
+               Buffer.Storage := Grown;
+            end;
+         end;
+      end if;
+   end Reserve;
+
+   --  Store a single byte that the caller has already reserved room for.
+   procedure Put (Buffer : in out Message_Buffer; Value : Unsigned_8) with Inline is
+   begin
+      Buffer.Used := Buffer.Used + 1;
+      Buffer.Storage (Buffer.Used) := Character'Val (Integer (Value));
+   end Put;
+
+   procedure Append_Byte (Buffer : in out Message_Buffer; Value : Unsigned_8) is
+   begin
+      Reserve (Buffer, 1);
+      Put (Buffer, Value);
    end Append_Byte;
+
+   --  The single growth point for appending a run of raw bytes (strings,
+   --  pre-encoded packed payloads).
+   procedure Append_Raw (Buffer : in out Message_Buffer; Value : String) is
+   begin
+      if Value'Length = 0 then
+         return;
+      end if;
+      Reserve (Buffer, Value'Length);
+      Buffer.Storage (Buffer.Used + 1 .. Buffer.Used + Value'Length) := Value;
+      Buffer.Used := Buffer.Used + Value'Length;
+   end Append_Raw;
 
    function Read_Byte (Data : String; Position : Positive) return Unsigned_8 is
    begin
       return Unsigned_8 (Character'Pos (Data (Position)));
    end Read_Byte;
 
-   procedure Append_Varint (Target : in out Unbounded_String; Value : Unsigned_64) is
+   procedure Append_Varint (Buffer : in out Message_Buffer; Value : Unsigned_64) is
       Remaining : Unsigned_64 := Value;
    begin
+      --  Reserve the worst case once, then store each byte without re-checking.
+      Reserve (Buffer, Max_Varint_Bytes);
       loop
          declare
-            Byte : Unsigned_8 := Unsigned_8 (Remaining and 16#7F#);
+            Byte : constant Unsigned_8 := Unsigned_8 (Remaining and 16#7F#);
          begin
             Remaining := Shift_Right (Remaining, 7);
             if Remaining = 0 then
-               Append_Byte (Target, Byte);
+               Put (Buffer, Byte);
                exit;
             else
-               Append_Byte (Target, Byte or 16#80#);
+               Put (Buffer, Byte or 16#80#);
             end if;
          end;
       end loop;
@@ -80,22 +138,30 @@ package body Protobuf is
       raise Parse_Error with "truncated varint";
    end Decode_Varint;
 
-   procedure Append_Fixed32 (Target : in out Unbounded_String; Value : Unsigned_32) is
-      Tmp : Unsigned_32 := Value;
-   begin
-      for I in 1 .. 4 loop
-         Append_Byte (Target, Unsigned_8 (Tmp and 16#FF#));
-         Tmp := Shift_Right (Tmp, 8);
-      end loop;
-   end Append_Fixed32;
-
-   procedure Append_Fixed64 (Target : in out Unbounded_String; Value : Unsigned_64) is
+   --  Write the low Width bytes of Value little-endian. Shared by every
+   --  fixed32/fixed64-family encoder; reserves once, then stores directly.
+   procedure Append_Little_Endian
+     (Buffer : in out Message_Buffer;
+      Value  : Unsigned_64;
+      Width  : Positive)
+   is
       Tmp : Unsigned_64 := Value;
    begin
-      for I in 1 .. 8 loop
-         Append_Byte (Target, Unsigned_8 (Tmp and 16#FF#));
+      Reserve (Buffer, Width);
+      for I in 1 .. Width loop
+         Put (Buffer, Unsigned_8 (Tmp and 16#FF#));
          Tmp := Shift_Right (Tmp, 8);
       end loop;
+   end Append_Little_Endian;
+
+   procedure Append_Fixed32 (Buffer : in out Message_Buffer; Value : Unsigned_32) is
+   begin
+      Append_Little_Endian (Buffer, Unsigned_64 (Value), 4);
+   end Append_Fixed32;
+
+   procedure Append_Fixed64 (Buffer : in out Message_Buffer; Value : Unsigned_64) is
+   begin
+      Append_Little_Endian (Buffer, Value, 8);
    end Append_Fixed64;
 
    function Decode_Fixed32 (Data : String; Cursor : in out Natural) return Unsigned_32 is
@@ -139,12 +205,12 @@ package body Protobuf is
    end Wire_Code;
 
    procedure Append_Tag
-     (Target : in out Unbounded_String;
+     (Buffer : in out Message_Buffer;
       Number : Field_Number;
       Kind   : Wire_Type) is
       Tag : constant Unsigned_64 := Shift_Left (Unsigned_64 (Number), 3) or Wire_Code (Kind);
    begin
-      Append_Varint (Target, Tag);
+      Append_Varint (Buffer, Tag);
    end Append_Tag;
 
    function ZigZag_Encode_32 (Value : Integer_32) return Unsigned_32 is
@@ -173,13 +239,22 @@ package body Protobuf is
 
    procedure Clear (Buffer : in out Message_Buffer) is
    begin
-      Buffer.Data := Null_Unbounded_String;
+      --  Keep Storage allocated so a reused buffer avoids re-growing.
+      Buffer.Used := 0;
    end Clear;
 
    function To_String (Buffer : Message_Buffer) return String is
    begin
-      return Ada.Strings.Unbounded.To_String (Buffer.Data);
+      if Buffer.Storage = null then
+         return "";
+      end if;
+      return Buffer.Storage (1 .. Buffer.Used);
    end To_String;
+
+   overriding procedure Finalize (Buffer : in out Message_Buffer) is
+   begin
+      Free (Buffer.Storage);
+   end Finalize;
 
    function Serialize_To_String (Buffer : Message_Buffer) return String is
    begin
@@ -209,47 +284,47 @@ package body Protobuf is
 
    procedure Add_Int32 (Buffer : in out Message_Buffer; Number : Field_Number; Value : Integer_32) is
    begin
-      Append_Tag (Buffer.Data, Number, Varint_Wire);
-      Append_Varint (Buffer.Data, To_Unsigned_64 (Integer_64 (Value)));
+      Append_Tag (Buffer, Number, Varint_Wire);
+      Append_Varint (Buffer, To_Unsigned_64 (Integer_64 (Value)));
    end Add_Int32;
 
    procedure Add_Int64 (Buffer : in out Message_Buffer; Number : Field_Number; Value : Integer_64) is
    begin
-      Append_Tag (Buffer.Data, Number, Varint_Wire);
-      Append_Varint (Buffer.Data, To_Unsigned_64 (Value));
+      Append_Tag (Buffer, Number, Varint_Wire);
+      Append_Varint (Buffer, To_Unsigned_64 (Value));
    end Add_Int64;
 
    procedure Add_UInt32 (Buffer : in out Message_Buffer; Number : Field_Number; Value : Unsigned_32) is
    begin
-      Append_Tag (Buffer.Data, Number, Varint_Wire);
-      Append_Varint (Buffer.Data, Unsigned_64 (Value));
+      Append_Tag (Buffer, Number, Varint_Wire);
+      Append_Varint (Buffer, Unsigned_64 (Value));
    end Add_UInt32;
 
    procedure Add_UInt64 (Buffer : in out Message_Buffer; Number : Field_Number; Value : Unsigned_64) is
    begin
-      Append_Tag (Buffer.Data, Number, Varint_Wire);
-      Append_Varint (Buffer.Data, Value);
+      Append_Tag (Buffer, Number, Varint_Wire);
+      Append_Varint (Buffer, Value);
    end Add_UInt64;
 
    procedure Add_SInt32 (Buffer : in out Message_Buffer; Number : Field_Number; Value : Integer_32) is
    begin
-      Append_Tag (Buffer.Data, Number, Varint_Wire);
-      Append_Varint (Buffer.Data, Unsigned_64 (ZigZag_Encode_32 (Value)));
+      Append_Tag (Buffer, Number, Varint_Wire);
+      Append_Varint (Buffer, Unsigned_64 (ZigZag_Encode_32 (Value)));
    end Add_SInt32;
 
    procedure Add_SInt64 (Buffer : in out Message_Buffer; Number : Field_Number; Value : Integer_64) is
    begin
-      Append_Tag (Buffer.Data, Number, Varint_Wire);
-      Append_Varint (Buffer.Data, ZigZag_Encode_64 (Value));
+      Append_Tag (Buffer, Number, Varint_Wire);
+      Append_Varint (Buffer, ZigZag_Encode_64 (Value));
    end Add_SInt64;
 
    procedure Add_Bool (Buffer : in out Message_Buffer; Number : Field_Number; Value : Boolean) is
    begin
-      Append_Tag (Buffer.Data, Number, Varint_Wire);
+      Append_Tag (Buffer, Number, Varint_Wire);
       if Value then
-         Append_Byte (Buffer.Data, 1);
+         Append_Byte (Buffer, 1);
       else
-         Append_Byte (Buffer.Data, 0);
+         Append_Byte (Buffer, 0);
       end if;
    end Add_Bool;
 
@@ -260,14 +335,14 @@ package body Protobuf is
 
    procedure Add_Fixed32 (Buffer : in out Message_Buffer; Number : Field_Number; Value : Unsigned_32) is
    begin
-      Append_Tag (Buffer.Data, Number, Fixed32_Wire);
-      Append_Fixed32 (Buffer.Data, Value);
+      Append_Tag (Buffer, Number, Fixed32_Wire);
+      Append_Fixed32 (Buffer, Value);
    end Add_Fixed32;
 
    procedure Add_Fixed64 (Buffer : in out Message_Buffer; Number : Field_Number; Value : Unsigned_64) is
    begin
-      Append_Tag (Buffer.Data, Number, Fixed64_Wire);
-      Append_Fixed64 (Buffer.Data, Value);
+      Append_Tag (Buffer, Number, Fixed64_Wire);
+      Append_Fixed64 (Buffer, Value);
    end Add_Fixed64;
 
    procedure Add_SFixed32 (Buffer : in out Message_Buffer; Number : Field_Number; Value : Integer_32) is
@@ -292,9 +367,9 @@ package body Protobuf is
 
    procedure Add_String (Buffer : in out Message_Buffer; Number : Field_Number; Value : String) is
    begin
-      Append_Tag (Buffer.Data, Number, Length_Delimited_Wire);
-      Append_Varint (Buffer.Data, Unsigned_64 (Value'Length));
-      Append (Buffer.Data, Value);
+      Append_Tag (Buffer, Number, Length_Delimited_Wire);
+      Append_Varint (Buffer, Unsigned_64 (Value'Length));
+      Append_Raw (Buffer, Value);
    end Add_String;
 
    procedure Add_Bytes (Buffer : in out Message_Buffer; Number : Field_Number; Value : String) is
@@ -310,16 +385,19 @@ package body Protobuf is
    procedure Add_Packed_Encoded
      (Buffer : in out Message_Buffer;
       Number : Field_Number;
-      Payload : Unbounded_String) is
-      Encoded : constant String := To_String (Payload);
+      Payload : Message_Buffer) is
    begin
-      Append_Tag (Buffer.Data, Number, Length_Delimited_Wire);
-      Append_Varint (Buffer.Data, Unsigned_64 (Encoded'Length));
-      Append (Buffer.Data, Encoded);
+      --  Splice the already-encoded payload bytes in directly; no intermediate
+      --  String copy is needed.
+      Append_Tag (Buffer, Number, Length_Delimited_Wire);
+      Append_Varint (Buffer, Unsigned_64 (Payload.Used));
+      if Payload.Used > 0 then
+         Append_Raw (Buffer, Payload.Storage (1 .. Payload.Used));
+      end if;
    end Add_Packed_Encoded;
 
    procedure Add_Packed_Int32 (Buffer : in out Message_Buffer; Number : Field_Number; Values : Int32_Array) is
-      Payload : Unbounded_String;
+      Payload : Message_Buffer;
    begin
       for V of Values loop
          Append_Varint (Payload, To_Unsigned_64 (Integer_64 (V)));
@@ -328,7 +406,7 @@ package body Protobuf is
    end Add_Packed_Int32;
 
    procedure Add_Packed_Int64 (Buffer : in out Message_Buffer; Number : Field_Number; Values : Int64_Array) is
-      Payload : Unbounded_String;
+      Payload : Message_Buffer;
    begin
       for V of Values loop
          Append_Varint (Payload, To_Unsigned_64 (V));
@@ -337,7 +415,7 @@ package body Protobuf is
    end Add_Packed_Int64;
 
    procedure Add_Packed_UInt32 (Buffer : in out Message_Buffer; Number : Field_Number; Values : UInt32_Array) is
-      Payload : Unbounded_String;
+      Payload : Message_Buffer;
    begin
       for V of Values loop
          Append_Varint (Payload, Unsigned_64 (V));
@@ -346,7 +424,7 @@ package body Protobuf is
    end Add_Packed_UInt32;
 
    procedure Add_Packed_UInt64 (Buffer : in out Message_Buffer; Number : Field_Number; Values : UInt64_Array) is
-      Payload : Unbounded_String;
+      Payload : Message_Buffer;
    begin
       for V of Values loop
          Append_Varint (Payload, V);
@@ -355,7 +433,7 @@ package body Protobuf is
    end Add_Packed_UInt64;
 
    procedure Add_Packed_SInt32 (Buffer : in out Message_Buffer; Number : Field_Number; Values : Int32_Array) is
-      Payload : Unbounded_String;
+      Payload : Message_Buffer;
    begin
       for V of Values loop
          Append_Varint (Payload, Unsigned_64 (ZigZag_Encode_32 (V)));
@@ -364,7 +442,7 @@ package body Protobuf is
    end Add_Packed_SInt32;
 
    procedure Add_Packed_SInt64 (Buffer : in out Message_Buffer; Number : Field_Number; Values : Int64_Array) is
-      Payload : Unbounded_String;
+      Payload : Message_Buffer;
    begin
       for V of Values loop
          Append_Varint (Payload, ZigZag_Encode_64 (V));
@@ -373,7 +451,7 @@ package body Protobuf is
    end Add_Packed_SInt64;
 
    procedure Add_Packed_Bool (Buffer : in out Message_Buffer; Number : Field_Number; Values : Bool_Array) is
-      Payload : Unbounded_String;
+      Payload : Message_Buffer;
    begin
       for V of Values loop
          if V then
@@ -391,7 +469,7 @@ package body Protobuf is
    end Add_Packed_Enum;
 
    procedure Add_Packed_Fixed32 (Buffer : in out Message_Buffer; Number : Field_Number; Values : Fixed32_Array) is
-      Payload : Unbounded_String;
+      Payload : Message_Buffer;
    begin
       for V of Values loop
          Append_Fixed32 (Payload, V);
@@ -400,7 +478,7 @@ package body Protobuf is
    end Add_Packed_Fixed32;
 
    procedure Add_Packed_Fixed64 (Buffer : in out Message_Buffer; Number : Field_Number; Values : Fixed64_Array) is
-      Payload : Unbounded_String;
+      Payload : Message_Buffer;
    begin
       for V of Values loop
          Append_Fixed64 (Payload, V);
@@ -409,7 +487,7 @@ package body Protobuf is
    end Add_Packed_Fixed64;
 
    procedure Add_Packed_SFixed32 (Buffer : in out Message_Buffer; Number : Field_Number; Values : SFixed32_Array) is
-      Payload : Unbounded_String;
+      Payload : Message_Buffer;
    begin
       for V of Values loop
          Append_Fixed32 (Payload, To_Unsigned_32 (V));
@@ -418,7 +496,7 @@ package body Protobuf is
    end Add_Packed_SFixed32;
 
    procedure Add_Packed_SFixed64 (Buffer : in out Message_Buffer; Number : Field_Number; Values : SFixed64_Array) is
-      Payload : Unbounded_String;
+      Payload : Message_Buffer;
    begin
       for V of Values loop
          Append_Fixed64 (Payload, To_Unsigned_64 (V));
@@ -427,7 +505,7 @@ package body Protobuf is
    end Add_Packed_SFixed64;
 
    procedure Add_Packed_Float (Buffer : in out Message_Buffer; Number : Field_Number; Values : Float_Array) is
-      Payload : Unbounded_String;
+      Payload : Message_Buffer;
    begin
       for V of Values loop
          Append_Fixed32 (Payload, Float_To_Bits (V));
@@ -436,7 +514,7 @@ package body Protobuf is
    end Add_Packed_Float;
 
    procedure Add_Packed_Double (Buffer : in out Message_Buffer; Number : Field_Number; Values : Double_Array) is
-      Payload : Unbounded_String;
+      Payload : Message_Buffer;
    begin
       for V of Values loop
          Append_Fixed64 (Payload, Double_To_Bits (V));

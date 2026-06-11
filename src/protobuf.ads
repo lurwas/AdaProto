@@ -1,4 +1,5 @@
 with Ada.Containers.Vectors;
+with Ada.Finalization;
 with Ada.Streams;
 with Ada.Strings.Unbounded;
 with Interfaces;
@@ -531,7 +532,17 @@ package Protobuf is
    function As_Message_Bytes (Field : Parsed_Field) return String;
 
 private
-   type Message_Buffer is limited record
-      Data : Ada.Strings.Unbounded.Unbounded_String;
+   --  Message_Buffer is a directly-indexed, geometrically-grown byte buffer.
+   --  Each encoder reserves the worst-case width of a field once and then
+   --  writes the bytes straight into Storage (1 .. Used) with no further
+   --  capacity checks -- something Unbounded_String cannot do because it has
+   --  no public reserve and re-checks capacity on every appended character.
+   type Byte_Array_Access is access String;
+
+   type Message_Buffer is new Ada.Finalization.Limited_Controlled with record
+      Storage : Byte_Array_Access := null;
+      Used    : Natural := 0;
    end record;
+
+   overriding procedure Finalize (Buffer : in out Message_Buffer);
 end Protobuf;
