@@ -19,7 +19,11 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y gnat gprbuild libaunit-dev protobuf-compiler libprotobuf-dev valgrind
+          # AUnit's dev package is versioned differently across Ubuntu images
+          # (e.g. libaunit-dev vs libaunitNN-dev); discover whichever is present.
+          AUNIT=$(apt-cache search --names-only libaunit | awk '$1 ~ /-dev$/ {print $1}' | sort -V | tail -n1)
+          echo "Selected AUnit dev package: ${AUNIT:?no libaunit*-dev package found}"
+          sudo apt-get install -y gnat gprbuild "$AUNIT" protobuf-compiler libprotobuf-dev valgrind
 
       - name: Regenerate fixtures
         run: tools/generate_fixtures.sh
@@ -53,7 +57,11 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y gnat gprbuild libaunit-dev protobuf-compiler libprotobuf-dev valgrind
+          # AUnit's dev package is versioned differently across Ubuntu images
+          # (e.g. libaunit-dev vs libaunitNN-dev); discover whichever is present.
+          AUNIT=$(apt-cache search --names-only libaunit | awk '$1 ~ /-dev$/ {print $1}' | sort -V | tail -n1)
+          echo "Selected AUnit dev package: ${AUNIT:?no libaunit*-dev package found}"
+          sudo apt-get install -y gnat gprbuild "$AUNIT" protobuf-compiler libprotobuf-dev valgrind
       - name: Build
         run: gprbuild -P protobuf_ada.gpr
       - name: Valgrind leak check
@@ -67,7 +75,9 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y gnat gprbuild libaunit-dev
+          AUNIT=$(apt-cache search --names-only libaunit | awk '$1 ~ /-dev$/ {print $1}' | sort -V | tail -n1)
+          echo "Selected AUnit dev package: ${AUNIT:?no libaunit*-dev package found}"
+          sudo apt-get install -y gnat gprbuild "$AUNIT"
       - name: Build
         run: gprbuild -P protobuf_ada.gpr
       - name: Fuzz harness smoke

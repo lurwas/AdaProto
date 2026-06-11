@@ -13,7 +13,9 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y gnat gprbuild libaunit-dev
+          AUNIT=$(apt-cache search --names-only libaunit | awk '$1 ~ /-dev$/ {print $1}' | sort -V | tail -n1)
+          echo "Selected AUnit dev package: ${AUNIT:?no libaunit*-dev package found}"
+          sudo apt-get install -y gnat gprbuild "$AUNIT"
           # gnatcov may come from non-default repositories on some systems.
           if apt-cache search '^gnatcov$' | grep -q gnatcov; then
             sudo apt-get install -y gnatcov
