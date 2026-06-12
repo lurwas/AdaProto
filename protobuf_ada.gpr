@@ -6,13 +6,14 @@ project Protobuf_Ada is
    for Object_Dir use "obj";
    for Exec_Dir use "bin";
 
-   for Main use ("protobuf_ada_test.adb", "protobuf_ada_junit.adb", "protobuf_ada_bench.adb", "protobuf_ada_fuzz.adb");
+   for Main use ("protobuf_ada_test.adb", "protobuf_ada_junit.adb", "protobuf_ada_bench.adb", "protobuf_ada_fuzz.adb", "conformance_runner.adb");
 
    package Builder is
       for Executable ("protobuf_ada_test.adb") use "protobuf-ada-test";
       for Executable ("protobuf_ada_junit.adb") use "protobuf-ada-junit";
       for Executable ("protobuf_ada_bench.adb") use "protobuf-ada-bench";
       for Executable ("protobuf_ada_fuzz.adb") use "protobuf-ada-fuzz";
+      for Executable ("conformance_runner.adb") use "conformance-runner";
    end Builder;
 
    package Compiler is
