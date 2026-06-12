@@ -14,6 +14,7 @@ with Interfaces;
 with JSON;
 with Protobuf;
 with Proto_JSON;
+with Proto_WKT;
 with Sample;
 
 package body Protobuf_Tests is
@@ -1468,6 +1469,75 @@ package body Protobuf_Tests is
       end;
    end Test_Generated_To_JSON;
 
+   --  Phase 3: well-known scalar wrapper types and Empty. On the wire each
+   --  wrapper is a message with field 1; in JSON it is the bare wrapped value.
+   procedure Test_WKT_Wrappers is
+      use Ada.Strings.Unbounded;
+   begin
+      --  Int32Value: wire-compatible, binary round-trip, JSON bare number.
+      declare
+         W   : constant Proto_WKT.Int32_Value := (Value => 5);
+         Ref : Protobuf.Message_Buffer;
+         D   : constant Proto_WKT.Int32_Value :=
+           Proto_WKT.From_JSON (JSON.Parse ("5"));
+      begin
+         Protobuf.Add_Int32 (Ref, 1, 5);
+         Assert (Proto_WKT.Serialize (W) = Protobuf.To_String (Ref),
+                 "Int32Value is a message with field 1");
+         Assert (Proto_WKT.Parse_Int32_Value (Proto_WKT.Serialize (W)).Value = 5,
+                 "Int32Value binary round-trips");
+         Assert (JSON.As_Number (Proto_WKT.To_JSON (W)) = "5",
+                 "Int32Value JSON is a bare number");
+         Assert (D.Value = 5, "Int32Value from a JSON number");
+      end;
+
+      --  Int64Value JSON is a bare string.
+      declare
+         W : constant Proto_WKT.Int64_Value := (Value => 9_999_999_999);
+         D : constant Proto_WKT.Int64_Value :=
+           Proto_WKT.From_JSON (JSON.Parse (Character'Val (34) & "42" & Character'Val (34)));
+      begin
+         Assert (JSON.As_String (Proto_WKT.To_JSON (W)) = "9999999999",
+                 "Int64Value JSON is a bare string");
+         Assert (D.Value = 42, "Int64Value from a JSON string");
+      end;
+
+      --  Bool, String, Bytes, Double.
+      declare
+         BW : constant Proto_WKT.Bool_Value := (Value => True);
+         SW : constant Proto_WKT.String_Value := (Value => To_Unbounded_String ("hi"));
+         YW : constant Proto_WKT.Bytes_Value := (Value => To_Unbounded_String ("AB"));
+         DW : constant Proto_WKT.Double_Value := (Value => 3.5);
+      begin
+         Assert (JSON.As_Boolean (Proto_WKT.To_JSON (BW)), "BoolValue JSON is a bool");
+         Assert (JSON.As_String (Proto_WKT.To_JSON (SW)) = "hi",
+                 "StringValue JSON is a bare string");
+         Assert (JSON.As_String (Proto_WKT.To_JSON (YW)) = "QUI=",
+                 "BytesValue JSON is base64");
+         Assert (Proto_WKT.Parse_String_Value (Proto_WKT.Serialize (SW)).Value
+                 = To_Unbounded_String ("hi"), "StringValue binary round-trips");
+         Assert (Long_Float'Value (JSON.As_Number (Proto_WKT.To_JSON (DW))) = 3.5,
+                 "DoubleValue JSON is a number");
+      end;
+
+      --  A present wrapper at its default value serializes to empty bytes.
+      declare
+         W : constant Proto_WKT.Int32_Value := (Value => 0);
+      begin
+         Assert (Proto_WKT.Serialize (W) = "", "default wrapper -> empty message");
+         Assert (Proto_WKT.Parse_Int32_Value ("").Value = 0,
+                 "empty message -> default wrapper value");
+      end;
+
+      --  Empty.
+      declare
+         E : constant Proto_WKT.Empty := (null record);
+      begin
+         Assert (Proto_WKT.Serialize (E) = "", "Empty serializes to nothing");
+         Assert (JSON.Serialize (Proto_WKT.To_JSON (E)) = "{}", "Empty JSON is {}");
+      end;
+   end Test_WKT_Wrappers;
+
    --  Phase 3: proto3 requires `string` fields to be valid UTF-8, but `bytes`
    --  fields may hold arbitrary octets.
    procedure Test_Generated_UTF8_Validation is
@@ -1859,6 +1929,7 @@ package body Protobuf_Tests is
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated to_json", Test_Generated_To_JSON'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated from_json", Test_Generated_From_JSON'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated utf8 validation", Test_Generated_UTF8_Validation'Access));
+         AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("wkt wrappers and empty", Test_WKT_Wrappers'Access));
       end if;
       return Registered_Suite;
    end Suite;

@@ -65,10 +65,22 @@ if not; `bytes` fields accept arbitrary octets.
 Unsupported constructs (nested type definitions, `optional`) raise a clear
 `Compile_Error` with line number.
 
+### Well-known types (`src/proto_wkt.*`)
+
+A runtime library of `google.protobuf.*` types with their binary wire
+(de)serialization and special proto3-JSON forms. Done so far:
+
+- `Empty` (wire: no fields; JSON: `{}`).
+- The nine scalar wrapper types (`Int32Value`, `StringValue`, `BytesValue`, …):
+  on the wire a message with field 1; in JSON the bare wrapped value
+  (e.g. `Int32Value{5}` <-> `5`, `BytesValue` <-> base64, 64-bit <-> string).
+
 ### Codegen roadmap (toward 100% proto3 + JSON)
 
-1. **3 (remaining)** well-known types (`Any`, `Timestamp`, `Duration`, `Struct`,
-   wrappers, `FieldMask`, `Empty`) and their special JSON forms.
+1. **3 (remaining)** the rest of the well-known types — `Timestamp`/`Duration`
+   (string forms), `FieldMask`, `Struct`/`Value`/`ListValue` (dynamic), `Any`
+   (type-URL registry) — plus wiring all of them into the generator so a field
+   of type `google.protobuf.X` resolves to `Proto_WKT.X`.
 2. **4** wire up Google's official conformance-test-runner protocol and drive
    the proto3 + JSON conformance suite to a green (or explicitly-documented) run.
 
