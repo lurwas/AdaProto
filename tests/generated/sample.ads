@@ -6,6 +6,7 @@ with JSON;
 with Ada.Containers.Vectors;
 with Ada.Finalization;
 with Ada.Containers.Ordered_Maps;
+with Proto_WKT;
 package Sample is
 
    subtype Color is Interfaces.Integer_32;
@@ -15,6 +16,17 @@ package Sample is
    Color_BLUE : constant Color := 3;
    function Color_To_JSON (V : Color) return JSON.JSON_Value;
    function Color_From_JSON (V : JSON.JSON_Value) return Color;
+
+   type Box;
+   type Box_Access is access Box;
+   type Box_Holder is new Ada.Finalization.Controlled with record
+      Ptr : Box_Access := null;
+   end record;
+   overriding procedure Adjust (H : in out Box_Holder);
+   overriding procedure Finalize (H : in out Box_Holder);
+   function To_Holder (Value : Box) return Box_Holder;
+   function Element (H : Box_Holder) return Box;
+   function Is_Empty (H : Box_Holder) return Boolean;
 
    type Person;
    type Person_Access is access Person;
@@ -104,6 +116,46 @@ package Sample is
    function Element (H : Choice_Holder) return Choice;
    function Is_Empty (H : Choice_Holder) return Boolean;
 
+   type Int32_Value_Access is access Proto_WKT.Int32_Value;
+   type Int32_Value_Holder is new Ada.Finalization.Controlled with record
+      Ptr : Int32_Value_Access := null;
+   end record;
+   overriding procedure Adjust (H : in out Int32_Value_Holder);
+   overriding procedure Finalize (H : in out Int32_Value_Holder);
+   function To_Holder (Value : Proto_WKT.Int32_Value) return Int32_Value_Holder;
+   function Element (H : Int32_Value_Holder) return Proto_WKT.Int32_Value;
+   function Is_Empty (H : Int32_Value_Holder) return Boolean;
+
+   type Duration_Access is access Proto_WKT.Duration;
+   type Duration_Holder is new Ada.Finalization.Controlled with record
+      Ptr : Duration_Access := null;
+   end record;
+   overriding procedure Adjust (H : in out Duration_Holder);
+   overriding procedure Finalize (H : in out Duration_Holder);
+   function To_Holder (Value : Proto_WKT.Duration) return Duration_Holder;
+   function Element (H : Duration_Holder) return Proto_WKT.Duration;
+   function Is_Empty (H : Duration_Holder) return Boolean;
+
+   type Timestamp_Access is access Proto_WKT.Timestamp;
+   type Timestamp_Holder is new Ada.Finalization.Controlled with record
+      Ptr : Timestamp_Access := null;
+   end record;
+   overriding procedure Adjust (H : in out Timestamp_Holder);
+   overriding procedure Finalize (H : in out Timestamp_Holder);
+   function To_Holder (Value : Proto_WKT.Timestamp) return Timestamp_Holder;
+   function Element (H : Timestamp_Holder) return Proto_WKT.Timestamp;
+   function Is_Empty (H : Timestamp_Holder) return Boolean;
+
+   type String_Value_Access is access Proto_WKT.String_Value;
+   type String_Value_Holder is new Ada.Finalization.Controlled with record
+      Ptr : String_Value_Access := null;
+   end record;
+   overriding procedure Adjust (H : in out String_Value_Holder);
+   overriding procedure Finalize (H : in out String_Value_Holder);
+   function To_Holder (Value : Proto_WKT.String_Value) return String_Value_Holder;
+   function Element (H : String_Value_Holder) return Proto_WKT.String_Value;
+   function Is_Empty (H : String_Value_Holder) return Boolean;
+
    use type Interfaces.Integer_32;
    use type Ada.Strings.Unbounded.Unbounded_String;
    use type Color;
@@ -114,12 +166,21 @@ package Sample is
    package Inner_Vectors is new Ada.Containers.Vectors (Positive, Inner_Holder);
    use type Tree_Holder;
    package Tree_Vectors is new Ada.Containers.Vectors (Positive, Tree_Holder);
+   use type String_Value_Holder;
+   package String_Value_Vectors is new Ada.Containers.Vectors (Positive, String_Value_Holder);
    use type Ada.Strings.Unbounded.Unbounded_String;
    use type Interfaces.Integer_32;
    package Unbounded_String_Integer_32_Maps is new Ada.Containers.Ordered_Maps (Ada.Strings.Unbounded.Unbounded_String, Interfaces.Integer_32);
    use type Interfaces.Integer_32;
    use type Inner_Holder;
    package Integer_32_Inner_Maps is new Ada.Containers.Ordered_Maps (Interfaces.Integer_32, Inner_Holder);
+
+   type Box is record
+      Count : Int32_Value_Holder;
+      Dur : Duration_Holder;
+      At_F : Timestamp_Holder;
+      Tags : String_Value_Vectors.Vector;
+   end record;
 
    type Person is record
       Id : Interfaces.Integer_32 := 0;
@@ -180,6 +241,11 @@ package Sample is
       Pick : Choice_Pick_Oneof;
       After : Boolean := False;
    end record;
+
+   function Serialize (Message : Box) return String;
+   function Parse_Box (Data : String) return Box;
+   function To_JSON (Message : Box) return JSON.JSON_Value;
+   function From_JSON (V : JSON.JSON_Value) return Box;
 
    function Serialize (Message : Person) return String;
    function Parse_Person (Data : String) return Person;

@@ -14,6 +14,7 @@ with Interfaces;
 with JSON;
 with Protobuf;
 with Proto_JSON;
+with Proto_WKT;
 with Sample;
 
 package body Protobuf_Tests is
@@ -1468,6 +1469,322 @@ package body Protobuf_Tests is
       end;
    end Test_Generated_To_JSON;
 
+   --  Phase 3: well-known scalar wrapper types and Empty. On the wire each
+   --  wrapper is a message with field 1; in JSON it is the bare wrapped value.
+   procedure Test_WKT_Wrappers is
+      use Ada.Strings.Unbounded;
+   begin
+      --  Int32Value: wire-compatible, binary round-trip, JSON bare number.
+      declare
+         W   : constant Proto_WKT.Int32_Value := (Value => 5);
+         Ref : Protobuf.Message_Buffer;
+         D   : constant Proto_WKT.Int32_Value :=
+           Proto_WKT.From_JSON (JSON.Parse ("5"));
+      begin
+         Protobuf.Add_Int32 (Ref, 1, 5);
+         Assert (Proto_WKT.Serialize (W) = Protobuf.To_String (Ref),
+                 "Int32Value is a message with field 1");
+         Assert (Proto_WKT.Parse_Int32_Value (Proto_WKT.Serialize (W)).Value = 5,
+                 "Int32Value binary round-trips");
+         Assert (JSON.As_Number (Proto_WKT.To_JSON (W)) = "5",
+                 "Int32Value JSON is a bare number");
+         Assert (D.Value = 5, "Int32Value from a JSON number");
+      end;
+
+      --  Int64Value JSON is a bare string.
+      declare
+         W : constant Proto_WKT.Int64_Value := (Value => 9_999_999_999);
+         D : constant Proto_WKT.Int64_Value :=
+           Proto_WKT.From_JSON (JSON.Parse (Character'Val (34) & "42" & Character'Val (34)));
+      begin
+         Assert (JSON.As_String (Proto_WKT.To_JSON (W)) = "9999999999",
+                 "Int64Value JSON is a bare string");
+         Assert (D.Value = 42, "Int64Value from a JSON string");
+      end;
+
+      --  Bool, String, Bytes, Double.
+      declare
+         BW : constant Proto_WKT.Bool_Value := (Value => True);
+         SW : constant Proto_WKT.String_Value := (Value => To_Unbounded_String ("hi"));
+         YW : constant Proto_WKT.Bytes_Value := (Value => To_Unbounded_String ("AB"));
+         DW : constant Proto_WKT.Double_Value := (Value => 3.5);
+      begin
+         Assert (JSON.As_Boolean (Proto_WKT.To_JSON (BW)), "BoolValue JSON is a bool");
+         Assert (JSON.As_String (Proto_WKT.To_JSON (SW)) = "hi",
+                 "StringValue JSON is a bare string");
+         Assert (JSON.As_String (Proto_WKT.To_JSON (YW)) = "QUI=",
+                 "BytesValue JSON is base64");
+         Assert (Proto_WKT.Parse_String_Value (Proto_WKT.Serialize (SW)).Value
+                 = To_Unbounded_String ("hi"), "StringValue binary round-trips");
+         Assert (Long_Float'Value (JSON.As_Number (Proto_WKT.To_JSON (DW))) = 3.5,
+                 "DoubleValue JSON is a number");
+      end;
+
+      --  A present wrapper at its default value serializes to empty bytes.
+      declare
+         W : constant Proto_WKT.Int32_Value := (Value => 0);
+      begin
+         Assert (Proto_WKT.Serialize (W) = "", "default wrapper -> empty message");
+         Assert (Proto_WKT.Parse_Int32_Value ("").Value = 0,
+                 "empty message -> default wrapper value");
+      end;
+
+      --  Empty.
+      declare
+         E : constant Proto_WKT.Empty := (null record);
+      begin
+         Assert (Proto_WKT.Serialize (E) = "", "Empty serializes to nothing");
+         Assert (JSON.Serialize (Proto_WKT.To_JSON (E)) = "{}", "Empty JSON is {}");
+      end;
+   end Test_WKT_Wrappers;
+
+   --  Phase 3: generated message fields of well-known types (Box), wired
+   --  through the generator to Proto_WKT (presence via generated holders).
+   procedure Test_Generated_WKT_Fields is
+      use Ada.Strings.Unbounded;
+      B : Sample.Box;
+   begin
+      B.Count := Sample.To_Holder (Proto_WKT.Int32_Value'(Value => 5));
+      B.Dur   := Sample.To_Holder
+        (Proto_WKT.Duration'(Seconds => 3, Nanos => 500_000_000));
+      B.At_F  := Sample.To_Holder
+        (Proto_WKT.Timestamp'(Seconds => 1_234_567_890, Nanos => 0));
+      B.Tags.Append
+        (Sample.To_Holder (Proto_WKT.String_Value'(Value => To_Unbounded_String ("hi"))));
+
+      --  JSON: each WKT field takes its special bare form.
+      declare
+         J : constant JSON.JSON_Value :=
+           JSON.Parse (JSON.Serialize (Sample.To_JSON (B)));
+         Tags : constant JSON.JSON_Value := JSON.Get (J, "tags");
+      begin
+         Assert (JSON.As_Number (JSON.Get (J, "count")) = "5",
+                 "Int32Value field -> bare JSON number");
+         Assert (JSON.As_String (JSON.Get (J, "dur")) = "3.500s",
+                 "Duration field -> JSON string");
+         Assert (JSON.As_String (JSON.Get (J, "at")) = "2009-02-13T23:31:30Z",
+                 "Timestamp field -> RFC 3339 string");
+         Assert (JSON.Length (Tags) = 1
+                 and then JSON.As_String (JSON.Element (Tags, 1)) = "hi",
+                 "repeated StringValue -> JSON array of strings");
+
+         --  From_JSON round-trips the WKT fields.
+         declare
+            D : constant Sample.Box := Sample.From_JSON (J);
+         begin
+            Assert (not D.Count.Is_Empty
+                    and then Sample.Element (D.Count).Value = 5,
+                    "Int32Value field from JSON");
+            Assert (Sample.Element (D.Dur).Seconds = 3
+                    and then Sample.Element (D.Dur).Nanos = 500_000_000,
+                    "Duration field from JSON");
+         end;
+      end;
+
+      --  Binary round-trip through the generated Serialize/Parse_Box.
+      declare
+         D : constant Sample.Box := Sample.Parse_Box (Sample.Serialize (B));
+      begin
+         Assert (not D.Count.Is_Empty
+                 and then Sample.Element (D.Count).Value = 5,
+                 "Int32Value field binary round-trip");
+         Assert (Sample.Element (D.At_F).Seconds = 1_234_567_890,
+                 "Timestamp field binary round-trip");
+         Assert (Natural (D.Tags.Length) = 1
+                 and then To_String (Sample.Element (D.Tags (1)).Value) = "hi",
+                 "repeated StringValue binary round-trip");
+      end;
+   end Test_Generated_WKT_Fields;
+
+   --  Phase 3: Any -- {"@type": url, ...}. Embedded well-known types use a
+   --  "value" member; the registry resolves the type_url to its JSON handlers.
+   procedure Test_WKT_Any is
+      use Ada.Strings.Unbounded;
+      Pfx : constant String := "type.googleapis.com/google.protobuf.";
+   begin
+      --  Any wrapping a Duration (a well-known type -> "value" form).
+      declare
+         D : constant Proto_WKT.Duration := (Seconds => 3, Nanos => 500_000_000);
+         A : constant Proto_WKT.Any :=
+           (Type_URL => To_Unbounded_String (Pfx & "Duration"),
+            Value    => To_Unbounded_String (Proto_WKT.Serialize (D)));
+         J : constant JSON.JSON_Value := Proto_WKT.To_JSON (A);
+      begin
+         Assert (JSON.As_String (JSON.Get (J, "@type")) = Pfx & "Duration",
+                 "Any carries @type");
+         Assert (JSON.As_String (JSON.Get (J, "value")) = "3.500s",
+                 "embedded WKT goes under value");
+         declare
+            A2 : constant Proto_WKT.Any := Proto_WKT.From_JSON (J);
+            D2 : constant Proto_WKT.Duration :=
+              Proto_WKT.Parse_Duration (To_String (A2.Value));
+         begin
+            Assert (D2.Seconds = 3 and then D2.Nanos = 500_000_000,
+                    "Any JSON round-trip preserves the embedded Duration");
+         end;
+      end;
+
+      --  Any wrapping an Int32Value.
+      declare
+         W : constant Proto_WKT.Int32_Value := (Value => 7);
+         A : constant Proto_WKT.Any :=
+           (Type_URL => To_Unbounded_String (Pfx & "Int32Value"),
+            Value    => To_Unbounded_String (Proto_WKT.Serialize (W)));
+         J : constant JSON.JSON_Value := Proto_WKT.To_JSON (A);
+      begin
+         Assert (JSON.As_Number (JSON.Get (J, "value")) = "7",
+                 "Any wrapping Int32Value -> value:7");
+      end;
+
+      --  Any's own binary round-trip (opaque type_url + bytes).
+      declare
+         A  : constant Proto_WKT.Any :=
+           (Type_URL => To_Unbounded_String ("foo/Bar"),
+            Value    => To_Unbounded_String ("xyz"));
+         A2 : constant Proto_WKT.Any := Proto_WKT.Parse_Any (Proto_WKT.Serialize (A));
+      begin
+         Assert (To_String (A2.Type_URL) = "foo/Bar"
+                 and then To_String (A2.Value) = "xyz", "Any binary round-trips");
+      end;
+   end Test_WKT_Any;
+
+   --  Phase 3: Struct / Value / ListValue -- dynamic, recursive JSON shapes.
+   --  Verified by value (Struct numbers are doubles, so a JSON integer survives
+   --  in value but not in text through a binary round-trip).
+   procedure Test_WKT_Struct_Value is
+      use type JSON.Value_Kind;
+      Q : constant Character := '"';
+      J : constant JSON.JSON_Value :=
+        JSON.Parse
+          ("{" & Q & "n" & Q & ":42," & Q & "s" & Q & ":" & Q & "hi" & Q & ","
+           & Q & "b" & Q & ":true," & Q & "z" & Q & ":null," & Q & "arr" & Q
+           & ":[1," & Q & "two" & Q & ",false,{" & Q & "k" & Q & ":9}]}");
+      S : constant Proto_WKT.Struct := (Val => J);
+   begin
+      --  JSON is pass-through.
+      Assert (JSON.Serialize (Proto_WKT.To_JSON (S)) = JSON.Serialize (J),
+              "Struct JSON is pass-through");
+
+      --  Binary round-trip preserves the recursive dynamic shape.
+      declare
+         D  : constant Proto_WKT.Struct :=
+           Proto_WKT.Parse_Struct (Proto_WKT.Serialize (S));
+         DJ : constant JSON.JSON_Value := Proto_WKT.To_JSON (D);
+         Arr : constant JSON.JSON_Value := JSON.Get (DJ, "arr");
+      begin
+         Assert (Long_Float'Value (JSON.As_Number (JSON.Get (DJ, "n"))) = 42.0,
+                 "Struct number value survives");
+         Assert (JSON.As_String (JSON.Get (DJ, "s")) = "hi", "Struct string");
+         Assert (JSON.As_Boolean (JSON.Get (DJ, "b")), "Struct bool");
+         Assert (JSON.Kind (JSON.Get (DJ, "z")) = JSON.JSON_Null, "Struct null");
+         Assert (JSON.Length (Arr) = 4, "nested ListValue length");
+         Assert (Long_Float'Value (JSON.As_Number (JSON.Element (Arr, 1))) = 1.0
+                 and then JSON.As_String (JSON.Element (Arr, 2)) = "two"
+                 and then not JSON.As_Boolean (JSON.Element (Arr, 3)),
+                 "nested array element values");
+         Assert (Long_Float'Value
+                   (JSON.As_Number (JSON.Get (JSON.Element (Arr, 4), "k"))) = 9.0,
+                 "deeply nested object inside the list");
+      end;
+
+      --  Scalar Value and a ListValue, on their own.
+      declare
+         V  : constant Proto_WKT.Value := (Val => JSON.Number ("3.5"));
+         DV : constant Proto_WKT.Value := Proto_WKT.Parse_Value (Proto_WKT.Serialize (V));
+         L  : constant Proto_WKT.List_Value := (Val => JSON.Parse ("[1,2,3]"));
+         DL : constant Proto_WKT.List_Value :=
+           Proto_WKT.Parse_List_Value (Proto_WKT.Serialize (L));
+      begin
+         Assert (Long_Float'Value (JSON.As_Number (Proto_WKT.To_JSON (DV))) = 3.5,
+                 "scalar Value round-trips");
+         Assert (JSON.Length (Proto_WKT.To_JSON (DL)) = 3, "ListValue round-trips");
+      end;
+   end Test_WKT_Struct_Value;
+
+   --  Phase 3: FieldMask -- a comma-joined string of lowerCamelCase paths.
+   procedure Test_WKT_FieldMask is
+      use Ada.Strings.Unbounded;
+      Q : constant Character := '"';
+      M : Proto_WKT.Field_Mask;
+   begin
+      M.Paths.Append (To_Unbounded_String ("user.display_name"));
+      M.Paths.Append (To_Unbounded_String ("photo"));
+      Assert (JSON.As_String (Proto_WKT.To_JSON (M)) = "user.displayName,photo",
+              "FieldMask -> camelCase comma string");
+      declare
+         D : constant Proto_WKT.Field_Mask :=
+           Proto_WKT.From_JSON (JSON.Parse (Q & "user.displayName,photo" & Q));
+      begin
+         Assert (Natural (D.Paths.Length) = 2
+                 and then To_String (D.Paths (1)) = "user.display_name"
+                 and then To_String (D.Paths (2)) = "photo",
+                 "FieldMask from JSON -> snake_case paths");
+      end;
+      declare
+         D : constant Proto_WKT.Field_Mask :=
+           Proto_WKT.Parse_Field_Mask (Proto_WKT.Serialize (M));
+      begin
+         Assert (Natural (D.Paths.Length) = 2
+                 and then To_String (D.Paths (1)) = "user.display_name",
+                 "FieldMask binary round-trips");
+      end;
+      declare
+         Empty : Proto_WKT.Field_Mask;
+      begin
+         Assert (JSON.As_String (Proto_WKT.To_JSON (Empty)) = "",
+                 "empty FieldMask -> empty string");
+      end;
+   end Test_WKT_FieldMask;
+
+   --  Phase 3: Duration and Timestamp well-known types and their string JSON.
+   procedure Test_WKT_Duration_Timestamp is
+      Q : constant Character := '"';
+      use type Proto_WKT.Duration;
+      use type Proto_WKT.Timestamp;
+   begin
+      --  Duration: 0/3/6/9 fractional digits, sign, round-trips.
+      declare
+         D1 : constant Proto_WKT.Duration := (Seconds => 3, Nanos => 500_000_000);
+         D2 : constant Proto_WKT.Duration := (Seconds => 1, Nanos => 0);
+         D3 : constant Proto_WKT.Duration := (Seconds => 0, Nanos => 1);
+         D4 : constant Proto_WKT.Duration := (Seconds => -5, Nanos => -250_000_000);
+         R1 : constant Proto_WKT.Duration := Proto_WKT.From_JSON (Proto_WKT.To_JSON (D1));
+         R4 : constant Proto_WKT.Duration := Proto_WKT.From_JSON (Proto_WKT.To_JSON (D4));
+      begin
+         Assert (JSON.As_String (Proto_WKT.To_JSON (D1)) = "3.500s", "duration .500");
+         Assert (JSON.As_String (Proto_WKT.To_JSON (D2)) = "1s", "duration whole");
+         Assert (JSON.As_String (Proto_WKT.To_JSON (D3)) = "0.000000001s",
+                 "duration single nano");
+         Assert (JSON.As_String (Proto_WKT.To_JSON (D4)) = "-5.250s",
+                 "negative duration");
+         Assert (R1 = D1 and then R4 = D4, "duration JSON round-trips");
+         Assert (Proto_WKT.Parse_Duration (Proto_WKT.Serialize (D1)) = D1,
+                 "duration binary round-trips");
+      end;
+
+      --  Timestamp: RFC 3339 in UTC, a famous epoch value, nanos, offset parse.
+      declare
+         T0 : constant Proto_WKT.Timestamp := (Seconds => 0, Nanos => 0);
+         T1 : constant Proto_WKT.Timestamp := (Seconds => 1_234_567_890, Nanos => 0);
+         T2 : constant Proto_WKT.Timestamp := (Seconds => 0, Nanos => 123_000_000);
+         R1 : constant Proto_WKT.Timestamp := Proto_WKT.From_JSON (Proto_WKT.To_JSON (T1));
+         RO : constant Proto_WKT.Timestamp :=
+           Proto_WKT.From_JSON (JSON.Parse (Q & "1970-01-01T01:00:00+01:00" & Q));
+      begin
+         Assert (JSON.As_String (Proto_WKT.To_JSON (T0)) = "1970-01-01T00:00:00Z",
+                 "epoch timestamp");
+         Assert (JSON.As_String (Proto_WKT.To_JSON (T1)) = "2009-02-13T23:31:30Z",
+                 "known timestamp (unix 1234567890)");
+         Assert (JSON.As_String (Proto_WKT.To_JSON (T2))
+                 = "1970-01-01T00:00:00.123Z", "timestamp with nanos");
+         Assert (R1 = T1, "timestamp JSON round-trips");
+         Assert (RO.Seconds = 0 and then RO.Nanos = 0,
+                 "timezone offset is applied (01:00+01:00 = epoch)");
+         Assert (Proto_WKT.Parse_Timestamp (Proto_WKT.Serialize (T1)) = T1,
+                 "timestamp binary round-trips");
+      end;
+   end Test_WKT_Duration_Timestamp;
+
    --  Phase 3: proto3 requires `string` fields to be valid UTF-8, but `bytes`
    --  fields may hold arbitrary octets.
    procedure Test_Generated_UTF8_Validation is
@@ -1859,6 +2176,12 @@ package body Protobuf_Tests is
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated to_json", Test_Generated_To_JSON'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated from_json", Test_Generated_From_JSON'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated utf8 validation", Test_Generated_UTF8_Validation'Access));
+         AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("wkt wrappers and empty", Test_WKT_Wrappers'Access));
+         AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("wkt duration and timestamp", Test_WKT_Duration_Timestamp'Access));
+         AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("wkt fieldmask", Test_WKT_FieldMask'Access));
+         AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("wkt struct value listvalue", Test_WKT_Struct_Value'Access));
+         AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("wkt any", Test_WKT_Any'Access));
+         AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated wkt fields", Test_Generated_WKT_Fields'Access));
       end if;
       return Registered_Suite;
    end Suite;

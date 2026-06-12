@@ -21,8 +21,9 @@ A `.proto` -> Ada code generator is being built toward full proto3 + JSON
 conformance, in phases. Build it with `gprbuild -P protoc_ada.gpr`; regenerate
 the checked-in sources with `tools/generate_ada.sh`.
 
-**Phases 1a + 1b (current).** Generates a typed Ada record per message plus
-`Serialize`/`Parse_<Message>` over the wire runtime. Supported:
+**The generator** produces a typed Ada package per `.proto`, with a record
+per message plus binary `Serialize`/`Parse_<Message>` over the wire runtime.
+Supported:
 
 - `syntax = "proto3";`, `package`, `import`/`option` (ignored), top-level
   `message` and `enum`.
@@ -65,18 +66,45 @@ if not; `bytes` fields accept arbitrary octets.
 Unsupported constructs (nested type definitions, `optional`) raise a clear
 `Compile_Error` with line number.
 
+### Well-known types (`src/proto_wkt.*`)
+
+A runtime library of `google.protobuf.*` types with their binary wire
+(de)serialization and special proto3-JSON forms. Done so far:
+
+- `Empty` (wire: no fields; JSON: `{}`).
+- The nine scalar wrapper types (`Int32Value`, `StringValue`, `BytesValue`, …):
+  on the wire a message with field 1; in JSON the bare wrapped value
+  (e.g. `Int32Value{5}` <-> `5`, `BytesValue` <-> base64, 64-bit <-> string).
+- `Duration` (`{seconds, nanos}`; JSON `"<secs>[.<frac>]s"` with 0/3/6/9 frac
+  digits and sign) and `Timestamp` (JSON RFC 3339, always emitted as UTC `…Z`;
+  parsing accepts a `Z` or a numeric offset).
+- `FieldMask` (repeated `paths`; JSON one comma-joined string of lowerCamelCase
+  paths).
+- `Struct`/`Value`/`ListValue` -- dynamic, recursive JSON-shaped values backed
+  by the JSON DOM (JSON is pass-through; binary is the recursive Value wire
+  encoding). Note: `Struct` numbers are doubles, per proto3.
+- `Any` -- binary is `{type_url, value}`; JSON is `{"@type": url, …}` resolved
+  through a type-name registry (well-known types under `"value"`, regular
+  messages inlined). All the WKTs above register themselves; generated code can
+  register its own message types via `Proto_WKT.Register_Any_Type`.
+
+**Generator integration**: a field of type `google.protobuf.X` resolves to
+`Proto_WKT.X` -- the generator emits a controlled holder over the external WKT
+type (presence), routes binary encode/decode through `Proto_WKT.Serialize` /
+`Proto_WKT.Parse_X`, and JSON through `Proto_WKT.To_JSON`/`From_JSON` (so the
+special forms apply). Supported for singular and repeated WKT fields; a WKT as
+a map value is rejected with a clear error (a follow-up).
+
 ### Codegen roadmap (toward 100% proto3 + JSON)
 
-1. **3 (remaining)** well-known types (`Any`, `Timestamp`, `Duration`, `Struct`,
-   wrappers, `FieldMask`, `Empty`) and their special JSON forms.
-2. **4** wire up Google's official conformance-test-runner protocol and drive
+1. **4** wire up Google's official conformance-test-runner protocol and drive
    the proto3 + JSON conformance suite to a green (or explicitly-documented) run.
 
 ## Explicitly not implemented (yet)
 
 - Groups (wire types 3/4): parser raises `Parse_Error` (a proto2-only feature
   removed from proto3, so rejecting them is correct).
-- JSON mapping, well-known types, reflection/descriptors, text format.
+- Reflection/descriptors and text format.
 - Proto2 field presence semantics and extensions.
 - `map`/`oneof` semantic helpers in generated code (maps are still parseable as
   nested message bytes via the runtime).

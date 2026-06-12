@@ -2,6 +2,18 @@ syntax = "proto3";
 
 package sample;
 
+import "google/protobuf/wrappers.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+
+// Phase 3: well-known type fields, wired through the generator to Proto_WKT.
+message Box {
+  google.protobuf.Int32Value         count = 1;
+  google.protobuf.Duration           dur   = 2;
+  google.protobuf.Timestamp          at    = 3;
+  repeated google.protobuf.StringValue tags = 4;
+}
+
 // Exercises the Phase 1a code generator: singular scalar fields of every
 // supported wire category.
 message Person {
