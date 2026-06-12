@@ -163,4 +163,84 @@ package body Proto_JSON is
    function To_Float (Text : String) return Interfaces.IEEE_Float_32 is
      (Interfaces.IEEE_Float_32 (To_Double (Text)));
 
+   ---------------------------------------------------------------------------
+   --  UTF-8 validation
+   ---------------------------------------------------------------------------
+
+   function Is_Valid_UTF8 (S : String) return Boolean is
+      I : Natural := S'First;
+
+      function B (K : Natural) return Natural is (Character'Pos (S (K)));
+
+      function Cont (K : Natural) return Boolean is
+        (K <= S'Last and then B (K) in 16#80# .. 16#BF#);
+   begin
+      while I <= S'Last loop
+         declare
+            C0 : constant Natural := B (I);
+         begin
+            if C0 < 16#80# then
+               I := I + 1;
+            elsif C0 in 16#C2# .. 16#DF# then            --  2-byte
+               if not Cont (I + 1) then
+                  return False;
+               end if;
+               I := I + 2;
+            elsif C0 = 16#E0# then                        --  3-byte, no overlong
+               if I + 2 > S'Last or else B (I + 1) not in 16#A0# .. 16#BF#
+                 or else not Cont (I + 2)
+               then
+                  return False;
+               end if;
+               I := I + 3;
+            elsif C0 = 16#ED# then                        --  3-byte, no surrogate
+               if I + 2 > S'Last or else B (I + 1) not in 16#80# .. 16#9F#
+                 or else not Cont (I + 2)
+               then
+                  return False;
+               end if;
+               I := I + 3;
+            elsif C0 in 16#E1# .. 16#EF# then             --  3-byte
+               if not Cont (I + 1) or else not Cont (I + 2) then
+                  return False;
+               end if;
+               I := I + 3;
+            elsif C0 = 16#F0# then                        --  4-byte, no overlong
+               if I + 3 > S'Last or else B (I + 1) not in 16#90# .. 16#BF#
+                 or else not Cont (I + 2) or else not Cont (I + 3)
+               then
+                  return False;
+               end if;
+               I := I + 4;
+            elsif C0 = 16#F4# then                        --  4-byte, <= U+10FFFF
+               if I + 3 > S'Last or else B (I + 1) not in 16#80# .. 16#8F#
+                 or else not Cont (I + 2) or else not Cont (I + 3)
+               then
+                  return False;
+               end if;
+               I := I + 4;
+            elsif C0 in 16#F1# .. 16#F3# then             --  4-byte
+               if not Cont (I + 1) or else not Cont (I + 2)
+                 or else not Cont (I + 3)
+               then
+                  return False;
+               end if;
+               I := I + 4;
+            else
+               return False;                              --  C0/C1/F5..FF
+            end if;
+         end;
+      end loop;
+      return True;
+   end Is_Valid_UTF8;
+
+   function Checked_UTF8 (S : String) return String is
+   begin
+      if Is_Valid_UTF8 (S) then
+         return S;
+      else
+         raise Decode_Error with "string field is not valid UTF-8";
+      end if;
+   end Checked_UTF8;
+
 end Proto_JSON;

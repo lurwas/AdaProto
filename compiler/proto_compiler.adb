@@ -645,11 +645,17 @@ package body Proto_Compiler is
       function Map_Pkg (Key_Ada, Val_Ada : String) return String is
         (Simple (Key_Ada) & "_" & Simple (Val_Ada) & "_Maps");
 
+      --  Build an Unbounded_String from a raw String expression, validating
+      --  UTF-8 for `string` (Suffix = "String") but not for `bytes`.
+      function Str_Decode (Suffix, Raw : String) return String is
+        (if Suffix = "Bytes" then "To_Unbounded_String (" & Raw & ")"
+         else "To_Unbounded_String (Proto_JSON.Checked_UTF8 (" & Raw & "))");
+
       --  Decode expression for a value of type T from a parsed field named Item.
       function Decode_Expr (T : Type_Info; Item : String) return String is
         (if T.Category = Cat_Str then
-            "To_Unbounded_String (Protobuf.As_" & To_String (T.Suffix)
-            & " (" & Item & "))"
+            Str_Decode (To_String (T.Suffix),
+                        "Protobuf.As_" & To_String (T.Suffix) & " (" & Item & ")")
          elsif T.Category = Cat_Message then
             "Parse_" & To_String (T.Ada_Type)
             & " (Protobuf.As_Message_Bytes (" & Item & "))"
@@ -1241,8 +1247,8 @@ package body Proto_Compiler is
                         Mem : constant String := Oneof_Member_Ident (F);
                         Val : constant String :=
                           (if T.Category = Cat_Str then
-                              "To_Unbounded_String (Protobuf.As_"
-                              & To_String (T.Suffix) & " (Item))"
+                              Str_Decode (To_String (T.Suffix),
+                                 "Protobuf.As_" & To_String (T.Suffix) & " (Item)")
                            elsif T.Category = Cat_Message then
                               "To_Holder (Parse_" & To_String (T.Ada_Type)
                               & " (Protobuf.As_Message_Bytes (Item)))"
@@ -1263,9 +1269,10 @@ package body Proto_Compiler is
                                        & To_String (T.Ada_Type)
                                        & " (Protobuf.As_Message_Bytes (Item))));");
                      elsif T.Category = Cat_Str then
-                        SL (Body_Text, "               Result." & C
-                                       & ".Append (To_Unbounded_String (Protobuf.As_"
-                                       & To_String (T.Suffix) & " (Item)));");
+                        SL (Body_Text, "               Result." & C & ".Append ("
+                                       & Str_Decode (To_String (T.Suffix),
+                                            "Protobuf.As_" & To_String (T.Suffix)
+                                            & " (Item)") & ");");
                      else
                         --  accept both packed and unpacked encodings.
                         SL (Body_Text, "               if Item.Kind = "
@@ -1287,9 +1294,10 @@ package body Proto_Compiler is
                         SL (Body_Text, "               end if;");
                      end if;
                   elsif T.Category = Cat_Str then
-                     SL (Body_Text, "               Result." & C
-                                    & " := To_Unbounded_String (Protobuf.As_"
-                                    & To_String (T.Suffix) & " (Item));");
+                     SL (Body_Text, "               Result." & C & " := "
+                                    & Str_Decode (To_String (T.Suffix),
+                                         "Protobuf.As_" & To_String (T.Suffix)
+                                         & " (Item)") & ";");
                   elsif T.Category = Cat_Message then
                      SL (Body_Text, "               Result." & C
                                     & " := To_Holder (Parse_" & To_String (T.Ada_Type)
@@ -1627,7 +1635,7 @@ package body Proto_Compiler is
                            return "To_Unbounded_String (Proto_JSON.From_Base64 "
                                   & "(JSON.As_String (" & FV & ")))";
                         else
-                           return "To_Unbounded_String (JSON.As_String (" & FV & "))";
+                           return Str_Decode (S, "JSON.As_String (" & FV & ")");
                         end if;
                      when Cat_Message =>
                         return Ada_Id (Proto) & "'(From_JSON (" & FV & "))";

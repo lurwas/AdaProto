@@ -198,7 +198,7 @@ package body Sample is
             when 1 =>
                Result.Id := Protobuf.As_Int32 (Item);
             when 2 =>
-               Result.Name := To_Unbounded_String (Protobuf.As_String (Item));
+               Result.Name := To_Unbounded_String (Proto_JSON.Checked_UTF8 (Protobuf.As_String (Item)));
             when 3 =>
                Result.Active := Protobuf.As_Bool (Item);
             when 4 =>
@@ -251,7 +251,7 @@ package body Sample is
          FV : JSON.JSON_Value := JSON.Get (V, "name");
       begin
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Name := To_Unbounded_String (JSON.As_String (FV));
+            Result.Name := To_Unbounded_String (Proto_JSON.Checked_UTF8 (JSON.As_String (FV)));
          end if;
       end;
       declare
@@ -396,7 +396,7 @@ package body Sample is
                   Result.Numbers.Append (Protobuf.As_Int32 (Item));
                end if;
             when 2 =>
-               Result.Tags.Append (To_Unbounded_String (Protobuf.As_String (Item)));
+               Result.Tags.Append (To_Unbounded_String (Proto_JSON.Checked_UTF8 (Protobuf.As_String (Item))));
             when 3 =>
                Result.Color_F := Protobuf.As_Int32 (Item);
             when 4 =>
@@ -471,7 +471,7 @@ package body Sample is
       begin
          if JSON.Kind (FV) = JSON.JSON_Array then
             for I in 1 .. JSON.Length (FV) loop
-               Result.Tags.Append (To_Unbounded_String (JSON.As_String (JSON.Element (FV, I))));
+               Result.Tags.Append (To_Unbounded_String (Proto_JSON.Checked_UTF8 (JSON.As_String (JSON.Element (FV, I)))));
             end loop;
          end if;
       end;
@@ -521,7 +521,7 @@ package body Sample is
             when 2 =>
                Result.Many.Append (To_Holder (Parse_Inner (Protobuf.As_Message_Bytes (Item))));
             when 3 =>
-               Result.Note := To_Unbounded_String (Protobuf.As_String (Item));
+               Result.Note := To_Unbounded_String (Proto_JSON.Checked_UTF8 (Protobuf.As_String (Item)));
             when others => null;
          end case;
       end loop;
@@ -573,7 +573,7 @@ package body Sample is
          FV : JSON.JSON_Value := JSON.Get (V, "note");
       begin
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Note := To_Unbounded_String (JSON.As_String (FV));
+            Result.Note := To_Unbounded_String (Proto_JSON.Checked_UTF8 (JSON.As_String (FV)));
          end if;
       end;
       return Result;
@@ -601,7 +601,7 @@ package body Sample is
             when 1 =>
                Result.X := Protobuf.As_Int32 (Item);
             when 2 =>
-               Result.Label := To_Unbounded_String (Protobuf.As_String (Item));
+               Result.Label := To_Unbounded_String (Proto_JSON.Checked_UTF8 (Protobuf.As_String (Item)));
             when others => null;
          end case;
       end loop;
@@ -634,7 +634,7 @@ package body Sample is
          FV : JSON.JSON_Value := JSON.Get (V, "label");
       begin
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Label := To_Unbounded_String (JSON.As_String (FV));
+            Result.Label := To_Unbounded_String (Proto_JSON.Checked_UTF8 (JSON.As_String (FV)));
          end if;
       end;
       return Result;
@@ -790,7 +790,7 @@ package body Sample is
                begin
                   for E of Ent loop
                      case E.Number is
-                        when 1 => K := To_Unbounded_String (Protobuf.As_String (E));
+                        when 1 => K := To_Unbounded_String (Proto_JSON.Checked_UTF8 (Protobuf.As_String (E)));
                         when 2 => V := Protobuf.As_Int32 (E);
                         when others => null;
                      end case;
@@ -908,11 +908,11 @@ package body Sample is
       for Item of Fields loop
          case Item.Number is
             when 1 =>
-               Result.Before := To_Unbounded_String (Protobuf.As_String (Item));
+               Result.Before := To_Unbounded_String (Proto_JSON.Checked_UTF8 (Protobuf.As_String (Item)));
             when 2 =>
                Result.Pick := (Which => Choice_Pick_Count, Count => Protobuf.As_Int32 (Item));
             when 3 =>
-               Result.Pick := (Which => Choice_Pick_Text, Text => To_Unbounded_String (Protobuf.As_String (Item)));
+               Result.Pick := (Which => Choice_Pick_Text, Text => To_Unbounded_String (Proto_JSON.Checked_UTF8 (Protobuf.As_String (Item))));
             when 4 =>
                Result.Pick := (Which => Choice_Pick_Inner, Inner_F => To_Holder (Parse_Inner (Protobuf.As_Message_Bytes (Item))));
             when 5 =>
@@ -948,7 +948,7 @@ package body Sample is
          FV : JSON.JSON_Value := JSON.Get (V, "before");
       begin
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Before := To_Unbounded_String (JSON.As_String (FV));
+            Result.Before := To_Unbounded_String (Proto_JSON.Checked_UTF8 (JSON.As_String (FV)));
          end if;
       end;
       declare
@@ -962,7 +962,7 @@ package body Sample is
          FV : JSON.JSON_Value := JSON.Get (V, "text");
       begin
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Pick := (Which => Choice_Pick_Text, Text => To_Unbounded_String (JSON.As_String (FV)));
+            Result.Pick := (Which => Choice_Pick_Text, Text => To_Unbounded_String (Proto_JSON.Checked_UTF8 (JSON.As_String (FV))));
          end if;
       end;
       declare

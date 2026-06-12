@@ -58,13 +58,17 @@ DOM and the `Proto_JSON` runtime helpers:
   `bytes` from standard or URL-safe base64; enums from name or number; map keys
   parsed from their string form; missing/null fields keep the default.
 
+**UTF-8 validation**: `string` fields are validated as well-formed UTF-8 when
+decoded (from the wire and from JSON) and rejected with `Proto_JSON.Decode_Error`
+if not; `bytes` fields accept arbitrary octets.
+
 Unsupported constructs (nested type definitions, `optional`) raise a clear
 `Compile_Error` with line number.
 
 ### Codegen roadmap (toward 100% proto3 + JSON)
 
-1. **3** well-known types (`Any`, `Timestamp`, `Duration`, `Struct`, wrappers,
-   `FieldMask`, `Empty`), UTF-8 validation of `string` fields.
+1. **3 (remaining)** well-known types (`Any`, `Timestamp`, `Duration`, `Struct`,
+   wrappers, `FieldMask`, `Empty`) and their special JSON forms.
 2. **4** wire up Google's official conformance-test-runner protocol and drive
    the proto3 + JSON conformance suite to a green (or explicitly-documented) run.
 

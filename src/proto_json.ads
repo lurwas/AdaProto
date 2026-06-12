@@ -19,6 +19,11 @@ package Proto_JSON is
    function To_Base64 (S : String) return String;
    function From_Base64 (S : String) return String;
 
+   --  proto3 requires `string` fields to be well-formed UTF-8. Checked_UTF8
+   --  returns S unchanged, or raises Decode_Error if it is not valid UTF-8.
+   function Is_Valid_UTF8 (S : String) return Boolean;
+   function Checked_UTF8 (S : String) return String;
+
    --  Parsing helpers for generated From_JSON code. The numeric text of a JSON
    --  value (proto3 JSON accepts numbers either bare or quoted as strings).
    function Scalar_Text (V : JSON.JSON_Value) return String;

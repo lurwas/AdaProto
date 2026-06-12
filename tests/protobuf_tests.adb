@@ -13,6 +13,7 @@ with Fixture_Loader;
 with Interfaces;
 with JSON;
 with Protobuf;
+with Proto_JSON;
 with Sample;
 
 package body Protobuf_Tests is
@@ -1467,6 +1468,53 @@ package body Protobuf_Tests is
       end;
    end Test_Generated_To_JSON;
 
+   --  Phase 3: proto3 requires `string` fields to be valid UTF-8, but `bytes`
+   --  fields may hold arbitrary octets.
+   procedure Test_Generated_UTF8_Validation is
+      use Ada.Strings.Unbounded;
+      E_Acute : constant String :=
+        Character'Val (16#C3#) & Character'Val (16#A9#);   --  "é"
+   begin
+      --  Valid UTF-8 in a string field round-trips.
+      declare
+         P : Sample.Person;
+      begin
+         P.Name := To_Unbounded_String (E_Acute);
+         Assert (To_String (Sample.Parse_Person (Sample.Serialize (P)).Name)
+                 = E_Acute, "valid UTF-8 string round-trips");
+      end;
+
+      --  Invalid UTF-8 bytes in a string field on the wire are rejected.
+      declare
+         Raw    : Protobuf.Message_Buffer;
+         Raised : Boolean := False;
+      begin
+         Protobuf.Add_String (Raw, 2, Character'Val (16#FF#) & "x");
+         begin
+            declare
+               Ignore : constant Sample.Person :=
+                 Sample.Parse_Person (Protobuf.To_String (Raw));
+            begin
+               null;
+            end;
+         exception
+            when Proto_JSON.Decode_Error => Raised := True;
+         end;
+         Assert (Raised, "invalid UTF-8 in a string field is rejected");
+      end;
+
+      --  bytes fields accept arbitrary (non-UTF-8) octets.
+      declare
+         Raw : Protobuf.Message_Buffer;
+         Bad : constant String :=
+           Character'Val (16#FF#) & Character'Val (16#FE#);
+      begin
+         Protobuf.Add_Bytes (Raw, 6, Bad);
+         Assert (To_String (Sample.Parse_Person (Protobuf.To_String (Raw)).Blob)
+                 = Bad, "bytes field accepts arbitrary octets");
+      end;
+   end Test_Generated_UTF8_Validation;
+
    --  Phase 2: generated From_JSON (JSON -> message). Round-trips through JSON
    --  and parses canonical JSON to check the inverse mapping rules.
    procedure Test_Generated_From_JSON is
@@ -1810,6 +1858,7 @@ package body Protobuf_Tests is
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("json library", Test_JSON_Library'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated to_json", Test_Generated_To_JSON'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated from_json", Test_Generated_From_JSON'Access));
+         AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated utf8 validation", Test_Generated_UTF8_Validation'Access));
       end if;
       return Registered_Suite;
    end Suite;
