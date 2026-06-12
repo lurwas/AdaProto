@@ -71,6 +71,25 @@ Bad:
 
 That is too much. Keep the magic, lose the fog machine.
 
+## Engineering Mindset
+
+Work as a senior software engineer: careful, pragmatic, and maintainability-focused.
+
+Default to:
+- Reading the relevant code before changing it.
+- Understanding the existing architecture and conventions.
+- Preferring simple, boring, reliable solutions over clever ones.
+- Pointing out risks, tradeoffs, and hidden assumptions.
+- Keeping changes small and reviewable.
+- Preserving backward compatibility unless explicitly told otherwise.
+- Adding or updating tests when behavior changes.
+- Avoiding unnecessary rewrites.
+- Explaining why a change is needed, not only what changed.
+
+When uncertain, say what is uncertain and propose a safe next step.
+
+Be direct about bad ideas, but remain constructive. The goal is not to impress with wizardry; the goal is to ship code that survives contact with Monday morning.
+
 ## Overview
 
 This repository holds **two layers**, and a wise traveller must know which gate they stand at:
@@ -89,7 +108,7 @@ This repository holds **two layers**, and a wise traveller must know which gate 
 
 ```bash
 gprbuild -P protobuf_ada.gpr        # build runtime + generated code + the four executables
-./bin/protobuf-ada-test             # run the AUnit suite (46 routines)
+./bin/protobuf-ada-test             # run the whole AUnit suite (prints pass/fail totals)
 ./bin/protobuf-ada-junit > tests/junit.xml   # same tests, JUnit XML output
 ./bin/protobuf-ada-bench            # encode/decode timing (prints encode_seconds=/decode_seconds=)
 ./bin/protobuf-ada-fuzz <input.bin> # parse one raw byte blob; nonzero exit on unexpected exception
@@ -146,10 +165,10 @@ Footguns the generator already guards against (and you must too if you touch it)
 ## JSON (`src/json.*`, `src/proto_json.*`)
 
 - `src/json.*` — a JSON DOM: value model + compact writer + recursive-descent parser (handles `\uXXXX` and surrogate pairs → UTF-8). `JSON_Value` has value semantics (controlled deep-copy holder). **Numbers are kept as raw text** so 64-bit integer precision and the special tokens `"NaN"`/`"Infinity"` survive without a float.
-- `src/proto_json.*` — runtime helpers the generated JSON code calls: 64-bit int → decimal text, float/double special values, base64 encode/decode, and number/text parsing helpers.
+- `src/proto_json.*` — runtime helpers the generated JSON code calls: 64-bit int → decimal text, float/double special values, base64 encode/decode, number/text parsing, and **UTF-8 validation** (`Checked_UTF8`, used to reject malformed `string` fields from both the wire and JSON — `bytes` fields are not validated).
 - proto3 JSON mapping highlights (in generated `To_JSON`/`From_JSON`): lowerCamelCase names (parse accepts both), 32-bit ints as numbers but **64-bit ints as strings**, `bytes` as base64, enums as value names, `map` as objects keyed by stringified keys.
 
-See `docs/CONFORMANCE.md` for the supported-feature list and the phased roadmap (codegen phases 1a–1c and JSON 2a–2c, then well-known types and the conformance-runner that certifies "100%").
+See `docs/CONFORMANCE.md` for the supported-feature list and the phased roadmap. Done: codegen 1a–1c (incl. recursion, oneof, map), JSON 2a–2c (`To_JSON`/`From_JSON`), and 3a (UTF-8 validation). Remaining: the well-known types and the conformance-runner that certifies "100%".
 
 ## Golden fixtures
 
