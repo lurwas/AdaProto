@@ -105,6 +105,17 @@ package Sample is
    function Element (H : Maps_Holder) return Maps;
    function Is_Empty (H : Maps_Holder) return Boolean;
 
+   type Opt;
+   type Opt_Access is access Opt;
+   type Opt_Holder is new Ada.Finalization.Controlled with record
+      Ptr : Opt_Access := null;
+   end record;
+   overriding procedure Adjust (H : in out Opt_Holder);
+   overriding procedure Finalize (H : in out Opt_Holder);
+   function To_Holder (Value : Opt) return Opt_Holder;
+   function Element (H : Opt_Holder) return Opt;
+   function Is_Empty (H : Opt_Holder) return Boolean;
+
    type Choice;
    type Choice_Access is access Choice;
    type Choice_Holder is new Ada.Finalization.Controlled with record
@@ -226,6 +237,14 @@ package Sample is
       Items : Integer_32_Inner_Maps.Map;
    end record;
 
+   type Opt is record
+      Maybe : Interfaces.Integer_32 := 0;
+      Maybe_Has : Boolean := False;
+      Note : Ada.Strings.Unbounded.Unbounded_String := Ada.Strings.Unbounded.Null_Unbounded_String;
+      Note_Has : Boolean := False;
+      Plain : Interfaces.Integer_32 := 0;
+   end record;
+
    type Choice_Pick_Selector is
      (Choice_Pick_Not_Set, Choice_Pick_Count, Choice_Pick_Text, Choice_Pick_Inner);
    type Choice_Pick_Oneof (Which : Choice_Pick_Selector := Choice_Pick_Not_Set) is record
@@ -281,6 +300,11 @@ package Sample is
    function Parse_Maps (Data : String) return Maps;
    function To_JSON (Message : Maps) return JSON.JSON_Value;
    function From_JSON (V : JSON.JSON_Value) return Maps;
+
+   function Serialize (Message : Opt) return String;
+   function Parse_Opt (Data : String) return Opt;
+   function To_JSON (Message : Opt) return JSON.JSON_Value;
+   function From_JSON (V : JSON.JSON_Value) return Opt;
 
    function Serialize (Message : Choice) return String;
    function Parse_Choice (Data : String) return Choice;

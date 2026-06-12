@@ -20,6 +20,7 @@ package body Proto_Compiler is
       Name       : Unbounded_String;
       Number     : Positive := 1;
       Repeated   : Boolean := False;
+      Optional   : Boolean := False;  --  proto3 explicit-presence scalar field
       Oneof      : Unbounded_String;  --  empty unless this field is in a oneof
       Is_Map     : Boolean := False;
       Map_Key    : Unbounded_String;  --  proto key type when Is_Map
@@ -284,8 +285,6 @@ package body Proto_Compiler is
                Adv;
             elsif At_Ident ("reserved") or else At_Ident ("option") then
                Skip_To_Semicolon;
-            elsif At_Ident ("optional") then
-               Err ("'optional' fields are not supported in this codegen phase");
             elsif At_Ident ("message") or else At_Ident ("enum") then
                Err ("nested '" & To_String (Cur.Text)
                     & "' is not supported in this codegen phase");
@@ -342,6 +341,9 @@ package body Proto_Compiler is
                begin
                   if At_Ident ("repeated") then
                      F.Repeated := True;
+                     Adv;
+                  elsif At_Ident ("optional") then
+                     F.Optional := True;
                      Adv;
                   end if;
                   F.Proto_Type := Parse_Dotted;
@@ -1144,6 +1146,10 @@ package body Proto_Compiler is
                         else
                            SL (Spec, "      " & C & " : " & To_String (T.Ada_Type)
                                      & " := " & To_String (T.Default) & ";");
+                           if F.Optional then
+                              SL (Spec, "      " & C
+                                        & "_Has : Boolean := False;");
+                           end if;
                         end if;
                      end;
                   end if;
@@ -1359,34 +1365,35 @@ package body Proto_Compiler is
                         SL (Body_Text, "      end if;");
                      end if;
                   else
-                     case T.Category is
-                        when Cat_Int =>
-                           SL (Body_Text, "      if Message." & C & " /= 0 then");
-                           SL (Body_Text, "         Protobuf.Add_" & To_String (T.Suffix)
-                                          & " (Buffer," & N & ", Message." & C & ");");
-                           SL (Body_Text, "      end if;");
-                        when Cat_Float =>
-                           SL (Body_Text, "      if Message." & C & " /= 0.0 then");
-                           SL (Body_Text, "         Protobuf.Add_" & To_String (T.Suffix)
-                                          & " (Buffer," & N & ", Message." & C & ");");
-                           SL (Body_Text, "      end if;");
-                        when Cat_Bool =>
-                           SL (Body_Text, "      if Message." & C & " then");
-                           SL (Body_Text, "         Protobuf.Add_" & To_String (T.Suffix)
-                                          & " (Buffer," & N & ", Message." & C & ");");
-                           SL (Body_Text, "      end if;");
-                        when Cat_Str =>
-                           SL (Body_Text, "      if Length (Message." & C & ") > 0 then");
-                           SL (Body_Text, "         Protobuf.Add_" & To_String (T.Suffix)
-                                          & " (Buffer," & N & ", To_String (Message."
-                                          & C & "));");
-                           SL (Body_Text, "      end if;");
-                        when Cat_Message =>
-                           SL (Body_Text, "      if not Message." & C & ".Is_Empty then");
-                           SL (Body_Text, "         Protobuf.Add_Message (Buffer," & N
-                                          & ", Serialize (Message." & C & ".Element));");
-                           SL (Body_Text, "      end if;");
-                     end case;
+                     declare
+                        Acc : constant String := "Message." & C;
+                        --  proto3 `optional` scalars are emitted by presence
+                        --  (even at the default value); others by non-default.
+                        Guard : constant String :=
+                          (if F.Optional and then T.Category /= Cat_Message then
+                              Acc & "_Has"
+                           else (case T.Category is
+                                    when Cat_Int     => Acc & " /= 0",
+                                    when Cat_Float   => Acc & " /= 0.0",
+                                    when Cat_Bool    => Acc,
+                                    when Cat_Str     => "Length (" & Acc & ") > 0",
+                                    when Cat_Message => "not " & Acc & ".Is_Empty"));
+                        Add_Stmt : constant String :=
+                          (case T.Category is
+                              when Cat_Str =>
+                                "Protobuf.Add_" & To_String (T.Suffix) & " (Buffer,"
+                                & N & ", To_String (" & Acc & "))",
+                              when Cat_Message =>
+                                "Protobuf.Add_Message (Buffer," & N
+                                & ", Serialize (" & Acc & ".Element))",
+                              when others =>
+                                "Protobuf.Add_" & To_String (T.Suffix) & " (Buffer,"
+                                & N & ", " & Acc & ")");
+                     begin
+                        SL (Body_Text, "      if " & Guard & " then");
+                        SL (Body_Text, "         " & Add_Stmt & ";");
+                        SL (Body_Text, "      end if;");
+                     end;
                   end if;
                end Emit_Encode;
 
@@ -1460,6 +1467,9 @@ package body Proto_Compiler is
                   else
                      SL (Body_Text, "               Result." & C & " := Protobuf.As_"
                                     & To_String (T.Suffix) & " (Item);");
+                  end if;
+                  if F.Optional and then T.Category /= Cat_Message then
+                     SL (Body_Text, "               Result." & C & "_Has := True;");
                   end if;
                end Emit_Decode;
 
@@ -1668,12 +1678,14 @@ package body Proto_Compiler is
                   else
                      declare
                         Guard : constant String :=
-                          (case T.Category is
-                              when Cat_Int     => "Message." & C & " /= 0",
-                              when Cat_Float   => "Message." & C & " /= 0.0",
-                              when Cat_Bool    => "Message." & C,
-                              when Cat_Str     => "Length (Message." & C & ") > 0",
-                              when Cat_Message => "not Message." & C & ".Is_Empty");
+                          (if F.Optional and then T.Category /= Cat_Message then
+                              "Message." & C & "_Has"
+                           else (case T.Category is
+                                    when Cat_Int     => "Message." & C & " /= 0",
+                                    when Cat_Float   => "Message." & C & " /= 0.0",
+                                    when Cat_Bool    => "Message." & C,
+                                    when Cat_Str  => "Length (Message." & C & ") > 0",
+                                    when Cat_Message => "not Message." & C & ".Is_Empty"));
                         Acc : constant String :=
                           (if T.Category = Cat_Message
                            then "Message." & C & ".Element"
@@ -1842,6 +1854,9 @@ package body Proto_Compiler is
                      SL (Body_Text, "         if JSON.Kind (FV) /= JSON.JSON_Null then");
                      SL (Body_Text, "            Result." & C & " := "
                                     & Stored_From_JSON (P, "FV") & ";");
+                     if F.Optional and then T.Category /= Cat_Message then
+                        SL (Body_Text, "            Result." & C & "_Has := True;");
+                     end if;
                      SL (Body_Text, "         end if;");
                   end if;
                   SL (Body_Text, "      end;");

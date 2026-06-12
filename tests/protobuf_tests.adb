@@ -2020,6 +2020,77 @@ package body Protobuf_Tests is
       end;
    end Test_Generated_From_JSON;
 
+   --  proto3 `optional`: explicit-presence scalars. The presence flag, not the
+   --  value, decides emission — so `maybe = 0` set explicitly is still wired
+   --  out, while a `plain` (no-presence) 0 is omitted.
+   procedure Test_Generated_Optional is
+      use Ada.Strings.Unbounded;
+   begin
+      --  Binary: an explicitly-set default-valued optional IS emitted; an
+      --  unset optional is omitted; presence survives a round-trip.
+      declare
+         O : Sample.Opt;
+      begin
+         Assert (Sample.Serialize (O) = "",
+                 "an all-default Opt with no presence set serializes to nothing");
+
+         O.Maybe := 0;
+         O.Maybe_Has := True;
+         declare
+            R : constant Sample.Opt := Sample.Parse_Opt (Sample.Serialize (O));
+         begin
+            Assert (R.Maybe_Has, "optional int32 set to 0 round-trips as present");
+            Assert (R.Maybe = 0, "its value is the default 0");
+            Assert (not R.Note_Has, "an untouched optional stays absent");
+         end;
+      end;
+
+      --  A non-default optional and a set optional string survive the round-trip.
+      declare
+         O : Sample.Opt;
+         R : Sample.Opt;
+      begin
+         O.Maybe := 7;
+         O.Maybe_Has := True;
+         O.Note := To_Unbounded_String ("hi");
+         O.Note_Has := True;
+         R := Sample.Parse_Opt (Sample.Serialize (O));
+         Assert (R.Maybe_Has and then R.Maybe = 7, "non-default optional round-trips");
+         Assert (R.Note_Has and then To_String (R.Note) = "hi",
+                 "optional string round-trips as present");
+      end;
+
+      --  A no-presence (implicit) field at its default is still omitted.
+      declare
+         O : Sample.Opt;
+      begin
+         O.Plain := 0;
+         Assert (Sample.Serialize (O) = "",
+                 "implicit-presence field at default 0 is omitted");
+      end;
+
+      --  JSON: presence governs the key. `maybe = 0` (present) appears as the
+      --  number 0; an absent optional has no key; round-trip preserves presence.
+      declare
+         O : Sample.Opt;
+         J : JSON.JSON_Value;
+         R : Sample.Opt;
+      begin
+         O.Maybe := 0;
+         O.Maybe_Has := True;
+         J := JSON.Parse (JSON.Serialize (Sample.To_JSON (O)));
+         Assert (JSON.Has (J, "maybe"), "present optional 0 emits its JSON key");
+         Assert (JSON.As_Number (JSON.Get (J, "maybe")) = "0",
+                 "present optional 0 -> JSON number 0");
+         Assert (not JSON.Has (J, "note"), "absent optional omits its JSON key");
+
+         R := Sample.From_JSON (J);
+         Assert (R.Maybe_Has and then R.Maybe = 0,
+                 "JSON-decoded present optional 0 is present");
+         Assert (not R.Note_Has, "JSON-decoded absent optional stays absent");
+      end;
+   end Test_Generated_Optional;
+
    --  Phase 2: the JSON DOM library (writer + recursive-descent parser).
    procedure Test_JSON_Library is
       use type JSON.Value_Kind;
@@ -2284,6 +2355,7 @@ package body Protobuf_Tests is
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("json library", Test_JSON_Library'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated to_json", Test_Generated_To_JSON'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated from_json", Test_Generated_From_JSON'Access));
+         AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated optional presence", Test_Generated_Optional'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated utf8 validation", Test_Generated_UTF8_Validation'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("wkt wrappers and empty", Test_WKT_Wrappers'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("wkt duration and timestamp", Test_WKT_Duration_Timestamp'Access));

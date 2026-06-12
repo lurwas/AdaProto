@@ -138,6 +138,22 @@ package body Sample is
    function Element (H : Maps_Holder) return Maps is (H.Ptr.all);
    function Is_Empty (H : Maps_Holder) return Boolean is (H.Ptr = null);
 
+   procedure Free_Opt is new Ada.Unchecked_Deallocation (Opt, Opt_Access);
+   overriding procedure Adjust (H : in out Opt_Holder) is
+   begin
+      if H.Ptr /= null then H.Ptr := new Opt'(H.Ptr.all); end if;
+   end Adjust;
+   overriding procedure Finalize (H : in out Opt_Holder) is
+   begin
+      Free_Opt (H.Ptr);
+   end Finalize;
+   function To_Holder (Value : Opt) return Opt_Holder is
+   begin
+      return H : Opt_Holder do H.Ptr := new Opt'(Value); end return;
+   end To_Holder;
+   function Element (H : Opt_Holder) return Opt is (H.Ptr.all);
+   function Is_Empty (H : Opt_Holder) return Boolean is (H.Ptr = null);
+
    procedure Free_Choice is new Ada.Unchecked_Deallocation (Choice, Choice_Access);
    overriding procedure Adjust (H : in out Choice_Holder) is
    begin
@@ -1055,6 +1071,86 @@ package body Sample is
                   Result.Items.Include (Interfaces.Integer_32 (Proto_JSON.To_Int64 (Kstr)), To_Holder (Inner'(From_JSON (VV))));
                end;
             end loop;
+         end if;
+      end;
+      return Result;
+   end From_JSON;
+
+   function Serialize (Message : Opt) return String is
+      Buffer : Protobuf.Message_Buffer;
+   begin
+      if Message.Maybe_Has then
+         Protobuf.Add_Int32 (Buffer, 1, Message.Maybe);
+      end if;
+      if Message.Note_Has then
+         Protobuf.Add_String (Buffer, 2, To_String (Message.Note));
+      end if;
+      if Message.Plain /= 0 then
+         Protobuf.Add_Int32 (Buffer, 3, Message.Plain);
+      end if;
+      return Protobuf.To_String (Buffer);
+   end Serialize;
+
+   function Parse_Opt (Data : String) return Opt is
+      Result : Opt;
+      Fields : constant Protobuf.Parsed_Field_Vectors.Vector :=
+        Protobuf.Parse_From_String (Data);
+   begin
+      for Item of Fields loop
+         case Item.Number is
+            when 1 =>
+               Result.Maybe := Protobuf.As_Int32 (Item);
+               Result.Maybe_Has := True;
+            when 2 =>
+               Result.Note := To_Unbounded_String (Proto_JSON.Checked_UTF8 (Protobuf.As_String (Item)));
+               Result.Note_Has := True;
+            when 3 =>
+               Result.Plain := Protobuf.As_Int32 (Item);
+            when others => null;
+         end case;
+      end loop;
+      return Result;
+   end Parse_Opt;
+
+   function To_JSON (Message : Opt) return JSON.JSON_Value is
+      Obj : JSON.JSON_Value := JSON.Empty_Object;
+   begin
+      if Message.Maybe_Has then
+         JSON.Insert (Obj, "maybe", JSON.Number (Proto_JSON.Image (Interfaces.Integer_64 (Message.Maybe))));
+      end if;
+      if Message.Note_Has then
+         JSON.Insert (Obj, "note", JSON.To_Value (To_String (Message.Note)));
+      end if;
+      if Message.Plain /= 0 then
+         JSON.Insert (Obj, "plain", JSON.Number (Proto_JSON.Image (Interfaces.Integer_64 (Message.Plain))));
+      end if;
+      return Obj;
+   end To_JSON;
+
+   function From_JSON (V : JSON.JSON_Value) return Opt is
+      Result : Opt;
+   begin
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "maybe");
+      begin
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.Maybe := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+            Result.Maybe_Has := True;
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "note");
+      begin
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.Note := To_Unbounded_String (Proto_JSON.Checked_UTF8 (JSON.As_String (FV)));
+            Result.Note_Has := True;
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "plain");
+      begin
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.Plain := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
          end if;
       end;
       return Result;

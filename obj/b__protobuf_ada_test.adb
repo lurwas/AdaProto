@@ -36,14 +36,14 @@ package body ada_main is
    E228 : Short_Integer; pragma Import (Ada, E228, "ada__streams__stream_io_E");
    E175 : Short_Integer; pragma Import (Ada, E175, "system__storage_pools_E");
    E173 : Short_Integer; pragma Import (Ada, E173, "system__finalization_masters_E");
-   E249 : Short_Integer; pragma Import (Ada, E249, "system__storage_pools__subpools_E");
+   E240 : Short_Integer; pragma Import (Ada, E240, "system__storage_pools__subpools_E");
    E218 : Short_Integer; pragma Import (Ada, E218, "ada__strings__unbounded_E");
    E135 : Short_Integer; pragma Import (Ada, E135, "ada__calendar_E");
    E142 : Short_Integer; pragma Import (Ada, E142, "ada__text_io_E");
    E177 : Short_Integer; pragma Import (Ada, E177, "system__pool_global_E");
    E226 : Short_Integer; pragma Import (Ada, E226, "system__regexp_E");
    E208 : Short_Integer; pragma Import (Ada, E208, "ada__directories_E");
-   E234 : Short_Integer; pragma Import (Ada, E234, "protobuf_E");
+   E257 : Short_Integer; pragma Import (Ada, E257, "protobuf_E");
    E111 : Short_Integer; pragma Import (Ada, E111, "aunit_E");
    E113 : Short_Integer; pragma Import (Ada, E113, "aunit__memory_E");
    E125 : Short_Integer; pragma Import (Ada, E125, "aunit__memory__utils_E");
@@ -58,7 +58,14 @@ package body ada_main is
    E195 : Short_Integer; pragma Import (Ada, E195, "aunit__reporter__text_E");
    E204 : Short_Integer; pragma Import (Ada, E204, "aunit__test_suites_E");
    E202 : Short_Integer; pragma Import (Ada, E202, "aunit__run_E");
-   E232 : Short_Integer; pragma Import (Ada, E232, "fixture_loader_E");
+   E266 : Short_Integer; pragma Import (Ada, E266, "fixture_loader_E");
+   E234 : Short_Integer; pragma Import (Ada, E234, "json_E");
+   E246 : Short_Integer; pragma Import (Ada, E246, "proto_json_E");
+   E232 : Short_Integer; pragma Import (Ada, E232, "conformance_E");
+   E263 : Short_Integer; pragma Import (Ada, E263, "conformance_test_E");
+   E261 : Short_Integer; pragma Import (Ada, E261, "conformance_harness_E");
+   E268 : Short_Integer; pragma Import (Ada, E268, "proto_wkt_E");
+   E270 : Short_Integer; pragma Import (Ada, E270, "sample_E");
    E206 : Short_Integer; pragma Import (Ada, E206, "protobuf_tests_E");
 
    Sec_Default_Sized_Stacks : array (1 .. 1) of aliased System.Secondary_Stack.SS_Stack (System.Parameters.Runtime_Default_Sec_Stack_Size);
@@ -77,136 +84,183 @@ package body ada_main is
          E206 := E206 - 1;
          F1;
       end;
-      E204 := E204 - 1;
+      E270 := E270 - 1;
       declare
          procedure F2;
-         pragma Import (Ada, F2, "aunit__test_suites__finalize_spec");
+         pragma Import (Ada, F2, "sample__finalize_spec");
       begin
          F2;
       end;
-      E195 := E195 - 1;
       declare
          procedure F3;
-         pragma Import (Ada, F3, "aunit__reporter__text__finalize_spec");
+         pragma Import (Ada, F3, "proto_wkt__finalize_body");
       begin
+         E268 := E268 - 1;
          F3;
       end;
-      E116 := E116 - 1;
-      E118 := E118 - 1;
       declare
          procedure F4;
-         pragma Import (Ada, F4, "aunit__simple_test_cases__finalize_spec");
+         pragma Import (Ada, F4, "proto_wkt__finalize_spec");
       begin
          F4;
       end;
+      E263 := E263 - 1;
       declare
          procedure F5;
-         pragma Import (Ada, F5, "aunit__test_filters__finalize_spec");
+         pragma Import (Ada, F5, "conformance_test__finalize_spec");
       begin
          F5;
       end;
-      E120 := E120 - 1;
+      E232 := E232 - 1;
       declare
          procedure F6;
-         pragma Import (Ada, F6, "aunit__assertions__finalize_spec");
+         pragma Import (Ada, F6, "conformance__finalize_spec");
       begin
          F6;
       end;
-      E127 := E127 - 1;
       declare
          procedure F7;
-         pragma Import (Ada, F7, "aunit__test_results__finalize_spec");
+         pragma Import (Ada, F7, "json__finalize_body");
       begin
+         E234 := E234 - 1;
          F7;
       end;
       declare
          procedure F8;
-         pragma Import (Ada, F8, "aunit__tests__finalize_spec");
+         pragma Import (Ada, F8, "json__finalize_spec");
       begin
-         E171 := E171 - 1;
          F8;
       end;
+      E204 := E204 - 1;
       declare
          procedure F9;
-         pragma Import (Ada, F9, "protobuf__finalize_body");
+         pragma Import (Ada, F9, "aunit__test_suites__finalize_spec");
       begin
-         E234 := E234 - 1;
          F9;
       end;
+      E195 := E195 - 1;
       declare
          procedure F10;
-         pragma Import (Ada, F10, "protobuf__finalize_spec");
+         pragma Import (Ada, F10, "aunit__reporter__text__finalize_spec");
       begin
          F10;
       end;
+      E116 := E116 - 1;
+      E118 := E118 - 1;
       declare
          procedure F11;
-         pragma Import (Ada, F11, "ada__directories__finalize_body");
+         pragma Import (Ada, F11, "aunit__simple_test_cases__finalize_spec");
       begin
-         E208 := E208 - 1;
          F11;
       end;
       declare
          procedure F12;
-         pragma Import (Ada, F12, "ada__directories__finalize_spec");
+         pragma Import (Ada, F12, "aunit__test_filters__finalize_spec");
       begin
          F12;
       end;
-      E226 := E226 - 1;
+      E120 := E120 - 1;
       declare
          procedure F13;
-         pragma Import (Ada, F13, "system__regexp__finalize_spec");
+         pragma Import (Ada, F13, "aunit__assertions__finalize_spec");
       begin
          F13;
       end;
-      E177 := E177 - 1;
+      E127 := E127 - 1;
       declare
          procedure F14;
-         pragma Import (Ada, F14, "system__pool_global__finalize_spec");
+         pragma Import (Ada, F14, "aunit__test_results__finalize_spec");
       begin
          F14;
       end;
-      E142 := E142 - 1;
       declare
          procedure F15;
-         pragma Import (Ada, F15, "ada__text_io__finalize_spec");
+         pragma Import (Ada, F15, "aunit__tests__finalize_spec");
       begin
+         E171 := E171 - 1;
          F15;
       end;
-      E218 := E218 - 1;
       declare
          procedure F16;
-         pragma Import (Ada, F16, "ada__strings__unbounded__finalize_spec");
+         pragma Import (Ada, F16, "protobuf__finalize_body");
       begin
+         E257 := E257 - 1;
          F16;
       end;
-      E249 := E249 - 1;
       declare
          procedure F17;
-         pragma Import (Ada, F17, "system__storage_pools__subpools__finalize_spec");
+         pragma Import (Ada, F17, "protobuf__finalize_spec");
       begin
          F17;
       end;
-      E173 := E173 - 1;
       declare
          procedure F18;
-         pragma Import (Ada, F18, "system__finalization_masters__finalize_spec");
+         pragma Import (Ada, F18, "ada__directories__finalize_body");
       begin
+         E208 := E208 - 1;
          F18;
       end;
-      E228 := E228 - 1;
       declare
          procedure F19;
-         pragma Import (Ada, F19, "ada__streams__stream_io__finalize_spec");
+         pragma Import (Ada, F19, "ada__directories__finalize_spec");
       begin
          F19;
       end;
+      E226 := E226 - 1;
       declare
          procedure F20;
-         pragma Import (Ada, F20, "system__file_io__finalize_body");
+         pragma Import (Ada, F20, "system__regexp__finalize_spec");
+      begin
+         F20;
+      end;
+      E177 := E177 - 1;
+      declare
+         procedure F21;
+         pragma Import (Ada, F21, "system__pool_global__finalize_spec");
+      begin
+         F21;
+      end;
+      E142 := E142 - 1;
+      declare
+         procedure F22;
+         pragma Import (Ada, F22, "ada__text_io__finalize_spec");
+      begin
+         F22;
+      end;
+      E218 := E218 - 1;
+      declare
+         procedure F23;
+         pragma Import (Ada, F23, "ada__strings__unbounded__finalize_spec");
+      begin
+         F23;
+      end;
+      E240 := E240 - 1;
+      declare
+         procedure F24;
+         pragma Import (Ada, F24, "system__storage_pools__subpools__finalize_spec");
+      begin
+         F24;
+      end;
+      E173 := E173 - 1;
+      declare
+         procedure F25;
+         pragma Import (Ada, F25, "system__finalization_masters__finalize_spec");
+      begin
+         F25;
+      end;
+      E228 := E228 - 1;
+      declare
+         procedure F26;
+         pragma Import (Ada, F26, "ada__streams__stream_io__finalize_spec");
+      begin
+         F26;
+      end;
+      declare
+         procedure F27;
+         pragma Import (Ada, F27, "system__file_io__finalize_body");
       begin
          E152 := E152 - 1;
-         F20;
+         F27;
       end;
       declare
          procedure Reraise_Library_Exception_If_Any;
@@ -370,7 +424,7 @@ package body ada_main is
       System.Finalization_Masters'Elab_Body;
       E173 := E173 + 1;
       System.Storage_Pools.Subpools'Elab_Spec;
-      E249 := E249 + 1;
+      E240 := E240 + 1;
       Ada.Strings.Unbounded'Elab_Spec;
       E218 := E218 + 1;
       Ada.Calendar'Elab_Spec;
@@ -388,7 +442,7 @@ package body ada_main is
       E208 := E208 + 1;
       Protobuf'Elab_Spec;
       Protobuf'Elab_Body;
-      E234 := E234 + 1;
+      E257 := E257 + 1;
       E113 := E113 + 1;
       E111 := E111 + 1;
       E125 := E125 + 1;
@@ -413,7 +467,25 @@ package body ada_main is
       Aunit.Test_Suites'Elab_Spec;
       E204 := E204 + 1;
       E202 := E202 + 1;
+      E266 := E266 + 1;
+      JSON'ELAB_SPEC;
+      JSON'ELAB_BODY;
+      E234 := E234 + 1;
+      Proto_Json'Elab_Spec;
+      E246 := E246 + 1;
+      Conformance'Elab_Spec;
+      Conformance'Elab_Body;
       E232 := E232 + 1;
+      Conformance_Test'Elab_Spec;
+      Conformance_Test'Elab_Body;
+      E263 := E263 + 1;
+      E261 := E261 + 1;
+      Proto_Wkt'Elab_Spec;
+      Proto_Wkt'Elab_Body;
+      E268 := E268 + 1;
+      Sample'Elab_Spec;
+      Sample'Elab_Body;
+      E270 := E270 + 1;
       Protobuf_Tests'Elab_Body;
       E206 := E206 + 1;
    end adainit;
@@ -455,6 +527,13 @@ package body ada_main is
 --  BEGIN Object file/option list
    --   /home/richard/src/Ada/protobuf-ada-best/obj/protobuf.o
    --   /home/richard/src/Ada/protobuf-ada-best/obj/fixture_loader.o
+   --   /home/richard/src/Ada/protobuf-ada-best/obj/json.o
+   --   /home/richard/src/Ada/protobuf-ada-best/obj/proto_json.o
+   --   /home/richard/src/Ada/protobuf-ada-best/obj/conformance.o
+   --   /home/richard/src/Ada/protobuf-ada-best/obj/conformance_test.o
+   --   /home/richard/src/Ada/protobuf-ada-best/obj/conformance_harness.o
+   --   /home/richard/src/Ada/protobuf-ada-best/obj/proto_wkt.o
+   --   /home/richard/src/Ada/protobuf-ada-best/obj/sample.o
    --   /home/richard/src/Ada/protobuf-ada-best/obj/protobuf_tests.o
    --   /home/richard/src/Ada/protobuf-ada-best/obj/protobuf_ada_test.o
    --   -L/home/richard/src/Ada/protobuf-ada-best/obj/

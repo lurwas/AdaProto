@@ -72,6 +72,15 @@ message Maps {
   map<int32, Inner>  items  = 2;
 }
 
+// proto3 `optional`: explicit-presence scalars. `maybe` set to its default
+// value (0) is still emitted/present; an absent `maybe` is omitted. `plain`
+// keeps no-presence (implicit) semantics for contrast.
+message Opt {
+  optional int32  maybe = 1;
+  optional string note  = 2;
+  int32           plain = 3;
+}
+
 // Phase 1c: a oneof with scalar, string, and message members.
 message Choice {
   string before = 1;

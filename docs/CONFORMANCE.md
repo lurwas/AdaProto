@@ -63,7 +63,13 @@ DOM and the `Proto_JSON` runtime helpers:
 decoded (from the wire and from JSON) and rejected with `Proto_JSON.Decode_Error`
 if not; `bytes` fields accept arbitrary octets.
 
-Unsupported constructs (nested type definitions, `optional`) raise a clear
+**proto3 `optional`**: explicit-presence scalar fields are supported. The
+generated record carries a `<field>_Has : Boolean` flag beside the value, and
+emission (wire and JSON) is governed by that flag rather than the value -- so an
+`optional` set to its default (e.g. `0`) is still written, while an absent one is
+omitted. Implicit-presence (no-`optional`) scalars keep the omit-at-default rule.
+
+Unsupported constructs (nested type definitions) raise a clear
 `Compile_Error` with line number.
 
 ### Well-known types (`src/proto_wkt.*`)
@@ -107,16 +113,17 @@ re-serializes it in the requested format across protobuf and JSON.
 To drive Google's official suite, point its `conformance-test-runner` at
 `bin/conformance-runner`. The catch: the suite exercises
 `protobuf_test_messages.proto3.TestAllTypesProto3`, which needs **nested type
-definitions** and proto3 **`optional`** -- generator features not yet built --
-so the harness currently handles a self-contained `conformance_test.TestMessage`
-and `skips` other message types. Closing that gap (nested types + `optional`)
-is what a certified end-to-end run additionally requires.
+definitions** -- proto3 **`optional`** is now supported, but nested message/enum
+definitions are not yet -- so the harness currently handles a self-contained
+`conformance_test.TestMessage` and `skips` other message types. Closing that
+remaining gap (nested types) is what a certified end-to-end run additionally
+requires.
 
 ### Codegen roadmap (toward 100% proto3 + JSON)
 
-1. Generator: nested message/enum definitions and proto3 `optional`, so
-   `TestAllTypesProto3` can be generated and the official conformance suite run
-   end-to-end. Also: well-known types as map values / oneof members.
+1. Generator: nested message/enum definitions, so `TestAllTypesProto3` can be
+   generated and the official conformance suite run end-to-end. Also: well-known
+   types as map values / oneof members. (proto3 `optional`: done.)
 
 ## Explicitly not implemented (yet)
 

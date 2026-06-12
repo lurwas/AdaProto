@@ -2,12 +2,19 @@
 b__protobuf_ada_test.o
 [PROJECT FILES]
 /home/richard/src/Ada/protobuf-ada-best/protobuf_ada.gpr
-20260309184838 8c4209959e72ebc108c78eee444b0c6e
+20260612154150 547ea91e27ae4c7b237ffbcbf6f82118
 /usr/share/gpr/aunit.gpr
 20260308151746 ec53d616a9aa6c4ad3f99e67d1417109
 [BOUND OBJECT FILES]
 /home/richard/src/Ada/protobuf-ada-best/obj/protobuf.o
 /home/richard/src/Ada/protobuf-ada-best/obj/fixture_loader.o
+/home/richard/src/Ada/protobuf-ada-best/obj/json.o
+/home/richard/src/Ada/protobuf-ada-best/obj/proto_json.o
+/home/richard/src/Ada/protobuf-ada-best/obj/conformance.o
+/home/richard/src/Ada/protobuf-ada-best/obj/conformance_test.o
+/home/richard/src/Ada/protobuf-ada-best/obj/conformance_harness.o
+/home/richard/src/Ada/protobuf-ada-best/obj/proto_wkt.o
+/home/richard/src/Ada/protobuf-ada-best/obj/sample.o
 /home/richard/src/Ada/protobuf-ada-best/obj/protobuf_tests.o
 /home/richard/src/Ada/protobuf-ada-best/obj/protobuf_ada_test.o
 [GENERATED SOURCE FILES]
