@@ -20,6 +20,9 @@ package body Proto_Compiler is
       Number     : Positive := 1;
       Repeated   : Boolean := False;
       Oneof      : Unbounded_String;  --  empty unless this field is in a oneof
+      Is_Map     : Boolean := False;
+      Map_Key    : Unbounded_String;  --  proto key type when Is_Map
+      Map_Value  : Unbounded_String;  --  proto value type when Is_Map
    end record;
 
    package Field_Vectors is new Ada.Containers.Vectors (Positive, Field_Def);
@@ -282,11 +285,28 @@ package body Proto_Compiler is
                Skip_To_Semicolon;
             elsif At_Ident ("optional") then
                Err ("'optional' fields are not supported in this codegen phase");
-            elsif At_Ident ("message") or else At_Ident ("enum")
-              or else At_Ident ("map")
-            then
+            elsif At_Ident ("message") or else At_Ident ("enum") then
                Err ("nested '" & To_String (Cur.Text)
                     & "' is not supported in this codegen phase");
+            elsif At_Ident ("map") then
+               Adv;  -- 'map'
+               Expect_Symbol ("<");
+               declare
+                  F : Field_Def;
+               begin
+                  F.Is_Map := True;
+                  F.Map_Key := To_Unbounded_String (Expect_Ident);
+                  Expect_Symbol (",");
+                  F.Map_Value := To_Unbounded_String (Expect_Ident);
+                  Expect_Symbol (">");
+                  F.Proto_Type := To_Unbounded_String ("map");
+                  F.Name := To_Unbounded_String (Expect_Ident);
+                  Expect_Symbol ("=");
+                  F.Number := Positive (Parse_Int);
+                  Skip_Field_Options;
+                  Expect_Symbol (";");
+                  M.Fields.Append (F);
+               end;
             elsif At_Ident ("oneof") then
                Adv;
                declare
@@ -595,13 +615,39 @@ package body Proto_Compiler is
       function Holder_Pkg (Ada_Type : String) return String is
         (Ada_Type & "_Holders");
 
+      function Simple (Ada_Type : String) return String is
+         Dot : Natural := 0;
+      begin
+         for I in Ada_Type'Range loop
+            if Ada_Type (I) = '.' then
+               Dot := I;
+            end if;
+         end loop;
+         return Ada_Type (Dot + 1 .. Ada_Type'Last);
+      end Simple;
+
+      function Map_Pkg (Key_Ada, Val_Ada : String) return String is
+        (Simple (Key_Ada) & "_" & Simple (Val_Ada) & "_Maps");
+
+      --  Decode expression for a value of type T from a parsed field named Item.
+      function Decode_Expr (T : Type_Info; Item : String) return String is
+        (if T.Category = Cat_Str then
+            "To_Unbounded_String (Protobuf.As_" & To_String (T.Suffix)
+            & " (" & Item & "))"
+         elsif T.Category = Cat_Message then
+            "Parse_" & To_String (T.Ada_Type)
+            & " (Protobuf.As_Message_Bytes (" & Item & "))"
+         else
+            "Protobuf.As_" & To_String (T.Suffix) & " (" & Item & ")");
+
       --  A field's Ada component identifier. For a singular field whose name
       --  equals its own (simple) type name, suffix "_F" so the component does
       --  not shadow the type mark (e.g. "color : Color" -> "Color_F : Color").
       function Field_Ident (F : Field_Def) return String is
          C : constant String := Ada_Id (To_String (F.Name));
       begin
-         if F.Repeated
+         if F.Is_Map
+           or else F.Repeated
            or else Resolve (To_String (F.Proto_Type)).Category = Cat_Message
          then
             return C;
@@ -661,9 +707,17 @@ package body Proto_Compiler is
          Vec_Types : String_Vectors.Vector;  --  scalar/enum repeated elem types
          Msg_Hold  : String_Vectors.Vector;  --  message types used singular
          Msg_Vec   : String_Vectors.Vector;  --  message types used repeated
+         Map_Top   : String_Vectors.Vector;  --  "Key|Val" maps, scalar/enum value
+         Map_Msg   : String_Vectors.Vector;  --  "Key|Val" maps, message value
          Has_Repeated        : Boolean := False;  --  any repeated -> with Vectors
          Has_Packed_Repeated : Boolean := False;  --  repeated scalar -> Wire_Type
          Need_Holders        : Boolean := False;
+         Has_Map             : Boolean := False;
+
+         function Bar_Before (S : String) return String is
+           (S (S'First .. Ada.Strings.Fixed.Index (S, "|") - 1));
+         function Bar_After (S : String) return String is
+           (S (Ada.Strings.Fixed.Index (S, "|") + 1 .. S'Last));
 
          N_Msgs : constant Natural := Natural (Msgs.Length);
          Order  : Nat_Vectors.Vector;
@@ -727,23 +781,39 @@ package body Proto_Compiler is
          --  Discover required container instances per field shape.
          for M of Msgs loop
             for F of M.Fields loop
-               declare
-                  T : constant Type_Info := Resolve (To_String (F.Proto_Type));
-               begin
-                  if F.Repeated then
-                     Has_Repeated := True;
-                     if T.Category = Cat_Message then
-                        Add_Once (Msg_Vec, To_String (T.Ada_Type));
+               if F.Is_Map then
+                  Has_Map := True;
+                  declare
+                     KT  : constant Type_Info := Resolve (To_String (F.Map_Key));
+                     VT  : constant Type_Info := Resolve (To_String (F.Map_Value));
+                     Key : constant String := To_String (KT.Ada_Type)
+                                              & "|" & To_String (VT.Ada_Type);
+                  begin
+                     if VT.Category = Cat_Message then
+                        Add_Once (Map_Msg, Key);
                      else
-                        Has_Packed_Repeated :=
-                          Has_Packed_Repeated or else T.Category /= Cat_Str;
-                        Add_Once (Vec_Types, To_String (T.Ada_Type));
+                        Add_Once (Map_Top, Key);
                      end if;
-                  elsif T.Category = Cat_Message then
-                     Need_Holders := True;
-                     Add_Once (Msg_Hold, To_String (T.Ada_Type));
-                  end if;
-               end;
+                  end;
+               else
+                  declare
+                     T : constant Type_Info := Resolve (To_String (F.Proto_Type));
+                  begin
+                     if F.Repeated then
+                        Has_Repeated := True;
+                        if T.Category = Cat_Message then
+                           Add_Once (Msg_Vec, To_String (T.Ada_Type));
+                        else
+                           Has_Packed_Repeated :=
+                             Has_Packed_Repeated or else T.Category /= Cat_Str;
+                           Add_Once (Vec_Types, To_String (T.Ada_Type));
+                        end if;
+                     elsif T.Category = Cat_Message then
+                        Need_Holders := True;
+                        Add_Once (Msg_Hold, To_String (T.Ada_Type));
+                     end if;
+                  end;
+               end if;
             end loop;
          end loop;
 
@@ -767,7 +837,11 @@ package body Proto_Compiler is
                end if;
                Active (K) := True;
                for F of Msgs (K).Fields loop
-                  if Is_Message (To_String (F.Proto_Type)) then
+                  if F.Is_Map then
+                     if Is_Message (To_String (F.Map_Value)) then
+                        Visit (Find_Msg (To_String (F.Map_Value)));
+                     end if;
+                  elsif Is_Message (To_String (F.Proto_Type)) then
                      Visit (Find_Msg (To_String (F.Proto_Type)));
                   end if;
                end loop;
@@ -792,6 +866,9 @@ package body Proto_Compiler is
          end if;
          if Need_Holders then
             SL (Spec, "with Ada.Containers.Indefinite_Holders;");
+         end if;
+         if Has_Map then
+            SL (Spec, "with Ada.Containers.Ordered_Maps;");
          end if;
          SL (Spec, "package " & Unit & " is");
          SL (Spec, "");
@@ -821,6 +898,23 @@ package body Proto_Compiler is
                       & To_String (T) & ");");
          end loop;
          if not Vec_Types.Is_Empty then
+            SL (Spec, "");
+         end if;
+
+         --  Maps with scalar/enum/string values (both element types available).
+         for E of Map_Top loop
+            declare
+               K : constant String := Bar_Before (To_String (E));
+               V : constant String := Bar_After (To_String (E));
+            begin
+               SL (Spec, "   use type " & K & ";");
+               SL (Spec, "   use type " & V & ";");
+               SL (Spec, "   package " & Map_Pkg (K, V)
+                         & " is new Ada.Containers.Ordered_Maps (" & K & ", "
+                         & V & ");");
+            end;
+         end loop;
+         if not Map_Top.Is_Empty then
             SL (Spec, "");
          end if;
 
@@ -875,28 +969,41 @@ package body Proto_Compiler is
 
                SL (Spec, "   type " & TName & " is record");
                for F of M.Fields loop
-                  declare
-                     T : constant Type_Info := Resolve (To_String (F.Proto_Type));
-                     C : constant String := Field_Ident (F);
-                  begin
-                     if Length (F.Oneof) > 0 then
-                        if not In_Set (Done_Oneofs, To_String (F.Oneof)) then
-                           Add_Once (Done_Oneofs, To_String (F.Oneof));
-                           SL (Spec, "      " & Ada_Id (To_String (F.Oneof))
-                                     & " : " & One_Type
-                                       (TName, To_String (F.Oneof)) & ";");
+                  if F.Is_Map then
+                     declare
+                        KT : constant Type_Info := Resolve (To_String (F.Map_Key));
+                        VT : constant Type_Info := Resolve (To_String (F.Map_Value));
+                     begin
+                        SL (Spec, "      " & Ada_Id (To_String (F.Name)) & " : "
+                                  & Map_Pkg (To_String (KT.Ada_Type),
+                                             To_String (VT.Ada_Type)) & ".Map;");
+                     end;
+                  else
+                     declare
+                        T : constant Type_Info := Resolve (To_String (F.Proto_Type));
+                        C : constant String := Field_Ident (F);
+                     begin
+                        if Length (F.Oneof) > 0 then
+                           if not In_Set (Done_Oneofs, To_String (F.Oneof)) then
+                              Add_Once (Done_Oneofs, To_String (F.Oneof));
+                              SL (Spec, "      " & Ada_Id (To_String (F.Oneof))
+                                        & " : " & One_Type
+                                          (TName, To_String (F.Oneof)) & ";");
+                           end if;
+                        elsif F.Repeated then
+                           SL (Spec, "      " & C & " : "
+                                     & Vector_Pkg (To_String (T.Ada_Type))
+                                     & ".Vector;");
+                        elsif T.Category = Cat_Message then
+                           SL (Spec, "      " & C & " : "
+                                     & Holder_Pkg (To_String (T.Ada_Type))
+                                     & ".Holder;");
+                        else
+                           SL (Spec, "      " & C & " : " & To_String (T.Ada_Type)
+                                     & " := " & To_String (T.Default) & ";");
                         end if;
-                     elsif F.Repeated then
-                        SL (Spec, "      " & C & " : "
-                                  & Vector_Pkg (To_String (T.Ada_Type)) & ".Vector;");
-                     elsif T.Category = Cat_Message then
-                        SL (Spec, "      " & C & " : "
-                                  & Holder_Pkg (To_String (T.Ada_Type)) & ".Holder;");
-                     else
-                        SL (Spec, "      " & C & " : " & To_String (T.Ada_Type)
-                                  & " := " & To_String (T.Default) & ";");
-                     end if;
-                  end;
+                     end;
+                  end if;
                end loop;
                SL (Spec, "   end record;");
 
@@ -914,6 +1021,20 @@ package body Proto_Compiler is
                             & " is new Ada.Containers.Vectors (Positive, "
                             & TName & ");");
                end if;
+               --  Maps whose value is this message type.
+               for E of Map_Msg loop
+                  if Bar_After (To_String (E)) = TName then
+                     declare
+                        K : constant String := Bar_Before (To_String (E));
+                     begin
+                        SL (Spec, "   use type " & K & ";");
+                        SL (Spec, "   use type " & TName & ";");
+                        SL (Spec, "   package " & Map_Pkg (K, TName)
+                                  & " is new Ada.Containers.Ordered_Maps ("
+                                  & K & ", " & TName & ");");
+                     end;
+                  end if;
+               end loop;
 
                SL (Spec, "");
                SL (Spec, "   function Serialize (Message : " & TName
@@ -1123,6 +1244,99 @@ package body Proto_Compiler is
                   SL (Body_Text, "      end case;");
                end Emit_Oneof_Encode;
 
+               --  A map field encodes as one length-delimited entry message per
+               --  pair (key = field 1, value = field 2, default omission inside).
+               procedure Emit_Map_Encode (F : Field_Def) is
+                  KT : constant Type_Info := Resolve (To_String (F.Map_Key));
+                  VT : constant Type_Info := Resolve (To_String (F.Map_Value));
+                  C  : constant String := Ada_Id (To_String (F.Name));
+                  N  : constant String := F.Number'Image;
+                  MP : constant String :=
+                    Map_Pkg (To_String (KT.Ada_Type), To_String (VT.Ada_Type));
+
+                  procedure Add_KV (T : Type_Info; Acc, FN : String) is
+                  begin
+                     case T.Category is
+                        when Cat_Int =>
+                           SL (Body_Text, "            if " & Acc & " /= 0 then");
+                           SL (Body_Text, "               Protobuf.Add_"
+                                          & To_String (T.Suffix) & " (Entry_Buf, " & FN
+                                          & ", " & Acc & ");");
+                           SL (Body_Text, "            end if;");
+                        when Cat_Float =>
+                           SL (Body_Text, "            if " & Acc & " /= 0.0 then");
+                           SL (Body_Text, "               Protobuf.Add_"
+                                          & To_String (T.Suffix) & " (Entry_Buf, " & FN
+                                          & ", " & Acc & ");");
+                           SL (Body_Text, "            end if;");
+                        when Cat_Bool =>
+                           SL (Body_Text, "            if " & Acc & " then");
+                           SL (Body_Text, "               Protobuf.Add_Bool (Entry_Buf, "
+                                          & FN & ", " & Acc & ");");
+                           SL (Body_Text, "            end if;");
+                        when Cat_Str =>
+                           SL (Body_Text, "            if Length (" & Acc & ") > 0 then");
+                           SL (Body_Text, "               Protobuf.Add_"
+                                          & To_String (T.Suffix) & " (Entry_Buf, " & FN
+                                          & ", To_String (" & Acc & "));");
+                           SL (Body_Text, "            end if;");
+                        when Cat_Message =>
+                           SL (Body_Text, "            Protobuf.Add_Message (Entry_Buf, "
+                                          & FN & ", Serialize (" & Acc & "));");
+                     end case;
+                  end Add_KV;
+               begin
+                  SL (Body_Text, "      for Cur in Message." & C & ".Iterate loop");
+                  SL (Body_Text, "         declare");
+                  SL (Body_Text, "            Entry_Buf : Protobuf.Message_Buffer;");
+                  SL (Body_Text, "            K : constant " & To_String (KT.Ada_Type)
+                                 & " := " & MP & ".Key (Cur);");
+                  SL (Body_Text, "            V : constant " & To_String (VT.Ada_Type)
+                                 & " := " & MP & ".Element (Cur);");
+                  SL (Body_Text, "         begin");
+                  Add_KV (KT, "K", "1");
+                  Add_KV (VT, "V", "2");
+                  SL (Body_Text, "            Protobuf.Add_Message (Buffer," & N
+                                 & ", Protobuf.To_String (Entry_Buf));");
+                  SL (Body_Text, "         end;");
+                  SL (Body_Text, "      end loop;");
+               end Emit_Map_Encode;
+
+               procedure Emit_Map_Decode (F : Field_Def) is
+                  KT : constant Type_Info := Resolve (To_String (F.Map_Key));
+                  VT : constant Type_Info := Resolve (To_String (F.Map_Value));
+                  C  : constant String := Ada_Id (To_String (F.Name));
+                  N  : constant String := F.Number'Image;
+               begin
+                  SL (Body_Text, "            when" & N & " =>");
+                  SL (Body_Text, "               declare");
+                  SL (Body_Text, "                  Ent : constant "
+                                 & "Protobuf.Parsed_Field_Vectors.Vector :=");
+                  SL (Body_Text, "                    Protobuf.Parse_From_String "
+                                 & "(Protobuf.As_Message_Bytes (Item));");
+                  SL (Body_Text, "                  K : " & To_String (KT.Ada_Type)
+                                 & " := " & To_String (KT.Default) & ";");
+                  if VT.Category = Cat_Message then
+                     SL (Body_Text, "                  V : " & To_String (VT.Ada_Type)
+                                    & ";");
+                  else
+                     SL (Body_Text, "                  V : " & To_String (VT.Ada_Type)
+                                    & " := " & To_String (VT.Default) & ";");
+                  end if;
+                  SL (Body_Text, "               begin");
+                  SL (Body_Text, "                  for E of Ent loop");
+                  SL (Body_Text, "                     case E.Number is");
+                  SL (Body_Text, "                        when 1 => K := "
+                                 & Decode_Expr (KT, "E") & ";");
+                  SL (Body_Text, "                        when 2 => V := "
+                                 & Decode_Expr (VT, "E") & ";");
+                  SL (Body_Text, "                        when others => null;");
+                  SL (Body_Text, "                     end case;");
+                  SL (Body_Text, "                  end loop;");
+                  SL (Body_Text, "                  Result." & C & ".Include (K, V);");
+                  SL (Body_Text, "               end;");
+               end Emit_Map_Decode;
+
                Encoded_Oneofs : String_Vectors.Vector;
             begin
                SL (Body_Text, "   function Serialize (Message : " & TName
@@ -1130,7 +1344,9 @@ package body Proto_Compiler is
                SL (Body_Text, "      Buffer : Protobuf.Message_Buffer;");
                SL (Body_Text, "   begin");
                for F of M.Fields loop
-                  if Length (F.Oneof) = 0 then
+                  if F.Is_Map then
+                     Emit_Map_Encode (F);
+                  elsif Length (F.Oneof) = 0 then
                      Emit_Encode (F);
                   elsif not In_Set (Encoded_Oneofs, To_String (F.Oneof)) then
                      Add_Once (Encoded_Oneofs, To_String (F.Oneof));
@@ -1150,7 +1366,11 @@ package body Proto_Compiler is
                SL (Body_Text, "      for Item of Fields loop");
                SL (Body_Text, "         case Item.Number is");
                for F of M.Fields loop
-                  Emit_Decode (F);
+                  if F.Is_Map then
+                     Emit_Map_Decode (F);
+                  else
+                     Emit_Decode (F);
+                  end if;
                end loop;
                SL (Body_Text, "            when others => null;");
                SL (Body_Text, "         end case;");

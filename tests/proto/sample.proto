@@ -46,6 +46,12 @@ message Inner {
   string label = 2;
 }
 
+// Phase 1c: maps with a scalar value and with a message value.
+message Maps {
+  map<string, int32> counts = 1;
+  map<int32, Inner>  items  = 2;
+}
+
 // Phase 1c: a oneof with scalar, string, and message members.
 message Choice {
   string before = 1;

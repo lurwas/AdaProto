@@ -215,6 +215,85 @@ package body Sample is
       return Result;
    end Parse_Outer;
 
+   function Serialize (Message : Maps) return String is
+      Buffer : Protobuf.Message_Buffer;
+   begin
+      for Cur in Message.Counts.Iterate loop
+         declare
+            Entry_Buf : Protobuf.Message_Buffer;
+            K : constant Ada.Strings.Unbounded.Unbounded_String := Unbounded_String_Integer_32_Maps.Key (Cur);
+            V : constant Interfaces.Integer_32 := Unbounded_String_Integer_32_Maps.Element (Cur);
+         begin
+            if Length (K) > 0 then
+               Protobuf.Add_String (Entry_Buf, 1, To_String (K));
+            end if;
+            if V /= 0 then
+               Protobuf.Add_Int32 (Entry_Buf, 2, V);
+            end if;
+            Protobuf.Add_Message (Buffer, 1, Protobuf.To_String (Entry_Buf));
+         end;
+      end loop;
+      for Cur in Message.Items.Iterate loop
+         declare
+            Entry_Buf : Protobuf.Message_Buffer;
+            K : constant Interfaces.Integer_32 := Integer_32_Inner_Maps.Key (Cur);
+            V : constant Inner := Integer_32_Inner_Maps.Element (Cur);
+         begin
+            if K /= 0 then
+               Protobuf.Add_Int32 (Entry_Buf, 1, K);
+            end if;
+            Protobuf.Add_Message (Entry_Buf, 2, Serialize (V));
+            Protobuf.Add_Message (Buffer, 2, Protobuf.To_String (Entry_Buf));
+         end;
+      end loop;
+      return Protobuf.To_String (Buffer);
+   end Serialize;
+
+   function Parse_Maps (Data : String) return Maps is
+      Result : Maps;
+      Fields : constant Protobuf.Parsed_Field_Vectors.Vector :=
+        Protobuf.Parse_From_String (Data);
+   begin
+      for Item of Fields loop
+         case Item.Number is
+            when 1 =>
+               declare
+                  Ent : constant Protobuf.Parsed_Field_Vectors.Vector :=
+                    Protobuf.Parse_From_String (Protobuf.As_Message_Bytes (Item));
+                  K : Ada.Strings.Unbounded.Unbounded_String := Ada.Strings.Unbounded.Null_Unbounded_String;
+                  V : Interfaces.Integer_32 := 0;
+               begin
+                  for E of Ent loop
+                     case E.Number is
+                        when 1 => K := To_Unbounded_String (Protobuf.As_String (E));
+                        when 2 => V := Protobuf.As_Int32 (E);
+                        when others => null;
+                     end case;
+                  end loop;
+                  Result.Counts.Include (K, V);
+               end;
+            when 2 =>
+               declare
+                  Ent : constant Protobuf.Parsed_Field_Vectors.Vector :=
+                    Protobuf.Parse_From_String (Protobuf.As_Message_Bytes (Item));
+                  K : Interfaces.Integer_32 := 0;
+                  V : Inner;
+               begin
+                  for E of Ent loop
+                     case E.Number is
+                        when 1 => K := Protobuf.As_Int32 (E);
+                        when 2 => V := Parse_Inner (Protobuf.As_Message_Bytes (E));
+                        when others => null;
+                     end case;
+                  end loop;
+                  Result.Items.Include (K, V);
+               end;
+            when others => null;
+         end case;
+      end loop;
+      return Result;
+   end Parse_Maps;
+
    function Serialize (Message : Choice) return String is
       Buffer : Protobuf.Message_Buffer;
    begin

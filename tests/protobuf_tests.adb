@@ -1325,6 +1325,47 @@ package body Protobuf_Tests is
       end;
    end Test_Generated_Oneof;
 
+   --  Phase 1c: map<K,V> as an Ada Ordered_Maps. Proves round-trip of a
+   --  scalar-valued map (including an entry whose value is the default) and a
+   --  message-valued map, and that an empty map emits nothing. Map ordering on
+   --  the wire is unspecified, so this round-trips rather than byte-compares.
+   procedure Test_Generated_Maps is
+      use Ada.Strings.Unbounded;
+      M  : Sample.Maps;
+      I1 : Sample.Inner;
+      I2 : Sample.Inner;
+   begin
+      M.Counts.Include (To_Unbounded_String ("a"), 1);
+      M.Counts.Include (To_Unbounded_String ("b"), 2);
+      M.Counts.Include (To_Unbounded_String ("c"), 0);  --  default value, still present
+      I1.X := 10;
+      I1.Label := To_Unbounded_String ("ten");
+      I2.X := 20;
+      M.Items.Include (5, I1);
+      M.Items.Include (6, I2);
+
+      declare
+         D : constant Sample.Maps := Sample.Parse_Maps (Sample.Serialize (M));
+      begin
+         Assert (Natural (D.Counts.Length) = 3, "string->int32 map size");
+         Assert (D.Counts.Element (To_Unbounded_String ("a")) = 1
+                 and then D.Counts.Element (To_Unbounded_String ("b")) = 2
+                 and then D.Counts.Element (To_Unbounded_String ("c")) = 0,
+                 "string->int32 map round-trips, including a default-valued entry");
+         Assert (Natural (D.Items.Length) = 2, "int32->message map size");
+         Assert (D.Items.Element (5).X = 10
+                 and then To_String (D.Items.Element (5).Label) = "ten"
+                 and then D.Items.Element (6).X = 20,
+                 "int32->message map round-trips");
+      end;
+
+      declare
+         Empty : Sample.Maps;
+      begin
+         Assert (Sample.Serialize (Empty) = "", "empty maps emit nothing");
+      end;
+   end Test_Generated_Maps;
+
    --  Exercises the reserve-once / geometrically-grown serialization buffer:
    --  many fields force several reallocations past the initial capacity, a
    --  maximal varint exercises the 10-byte worst case, and Clear+reuse must
@@ -1459,6 +1500,7 @@ package body Protobuf_Tests is
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated enums and repeated", Test_Generated_Enums_And_Repeated'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated nested messages", Test_Generated_Nested_Messages'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated oneof", Test_Generated_Oneof'Access));
+         AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated maps", Test_Generated_Maps'Access));
       end if;
       return Registered_Suite;
    end Suite;

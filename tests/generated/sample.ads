@@ -4,6 +4,7 @@ with Interfaces;
 with Ada.Strings.Unbounded;
 with Ada.Containers.Vectors;
 with Ada.Containers.Indefinite_Holders;
+with Ada.Containers.Ordered_Maps;
 package Sample is
 
    subtype Color is Interfaces.Integer_32;
@@ -18,6 +19,10 @@ package Sample is
    package Integer_32_Vectors is new Ada.Containers.Vectors (Positive, Interfaces.Integer_32);
    package Unbounded_String_Vectors is new Ada.Containers.Vectors (Positive, Ada.Strings.Unbounded.Unbounded_String);
    package Color_Vectors is new Ada.Containers.Vectors (Positive, Color);
+
+   use type Ada.Strings.Unbounded.Unbounded_String;
+   use type Interfaces.Integer_32;
+   package Unbounded_String_Integer_32_Maps is new Ada.Containers.Ordered_Maps (Ada.Strings.Unbounded.Unbounded_String, Interfaces.Integer_32);
 
    type Person is record
       Id : Interfaces.Integer_32 := 0;
@@ -56,6 +61,9 @@ package Sample is
    use type Inner;
    package Inner_Holders is new Ada.Containers.Indefinite_Holders (Inner);
    package Inner_Vectors is new Ada.Containers.Vectors (Positive, Inner);
+   use type Interfaces.Integer_32;
+   use type Inner;
+   package Integer_32_Inner_Maps is new Ada.Containers.Ordered_Maps (Interfaces.Integer_32, Inner);
 
    function Serialize (Message : Inner) return String;
    function Parse_Inner (Data : String) return Inner;
@@ -68,6 +76,14 @@ package Sample is
 
    function Serialize (Message : Outer) return String;
    function Parse_Outer (Data : String) return Outer;
+
+   type Maps is record
+      Counts : Unbounded_String_Integer_32_Maps.Map;
+      Items : Integer_32_Inner_Maps.Map;
+   end record;
+
+   function Serialize (Message : Maps) return String;
+   function Parse_Maps (Data : String) return Maps;
 
    type Choice_Pick_Selector is
      (Choice_Pick_Not_Set, Choice_Pick_Count, Choice_Pick_Text, Choice_Pick_Inner);

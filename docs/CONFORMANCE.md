@@ -34,6 +34,10 @@ the checked-in sources with `tools/generate_ada.sh`.
 - Nested (non-recursive) `message` fields: singular fields use
   `Indefinite_Holders` for presence, repeated use `Vectors`. Generated types
   are topologically ordered so a field's type is always declared first.
+- `oneof` -> a discriminated (variant) record; a set member is always written
+  (even at its default value) and last-seen wins on decode.
+- `map<K,V>` -> `Ordered_Maps`; encoded as repeated key(1)/value(2) entry
+  messages, with scalar/enum/string or message values.
 - proto3 default omission (default-valued scalars are not written).
 - Ada reserved-word field names are escaped (e.g. `delta` -> `Delta_F`), and
   field names that collide with their own type (`color : Color`) are escaped.
@@ -45,7 +49,7 @@ type), so that case needs access types -- a planned follow-up.
 
 ### Codegen roadmap (toward 100% proto3 + JSON)
 
-1. **1c (remaining)** `oneof`, `map<K,V>`, recursive messages via access types.
+1. **1c (remaining)** recursive/mutually-recursive messages via access types.
 3. **2** proto3 canonical JSON mapping (parse + serialize).
 4. **3** well-known types (`Any`, `Timestamp`, `Duration`, `Struct`, wrappers,
    `FieldMask`, `Empty`), UTF-8 validation of `string` fields.
