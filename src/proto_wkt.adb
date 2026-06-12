@@ -715,4 +715,182 @@ package body Proto_WKT is
    function From_JSON (V : JSON.JSON_Value) return Struct is ((Val => V));
    function From_JSON (V : JSON.JSON_Value) return List_Value is ((Val => V));
 
+   ---------------------------------------------------------------------------
+   --  Any: binary form and a type-name -> handler registry for JSON
+   ---------------------------------------------------------------------------
+
+   function Serialize (X : Any) return String is
+      B : Protobuf.Message_Buffer;
+   begin
+      if Length (X.Type_URL) > 0 then
+         Protobuf.Add_String (B, 1, To_String (X.Type_URL));
+      end if;
+      if Length (X.Value) > 0 then
+         Protobuf.Add_Bytes (B, 2, To_String (X.Value));
+      end if;
+      return Protobuf.To_String (B);
+   end Serialize;
+
+   function Parse_Any (Data : String) return Any is
+      R      : Any;
+      Fields : constant Protobuf.Parsed_Field_Vectors.Vector :=
+        Protobuf.Parse_From_String (Data);
+   begin
+      for F of Fields loop
+         if F.Number = 1 then
+            R.Type_URL := To_Unbounded_String (Protobuf.As_String (F));
+         elsif F.Number = 2 then
+            R.Value := To_Unbounded_String (Protobuf.As_Bytes (F));
+         end if;
+      end loop;
+      return R;
+   end Parse_Any;
+
+   type Reg_Entry is record
+      Name    : Unbounded_String;
+      To_J    : Any_To_JSON;
+      From_J  : Any_From_JSON;
+      Wrapped : Boolean;
+   end record;
+
+   package Reg_Vectors is new Ada.Containers.Vectors (Positive, Reg_Entry);
+   Registry : Reg_Vectors.Vector;
+
+   procedure Register_Any_Type
+     (Type_Name     : String;
+      To_J          : Any_To_JSON;
+      From_J        : Any_From_JSON;
+      Value_Wrapped : Boolean) is
+   begin
+      Registry.Append
+        ((To_Unbounded_String (Type_Name), To_J, From_J, Value_Wrapped));
+   end Register_Any_Type;
+
+   function Type_Name_Of (URL : String) return String is
+      Slash : Natural := URL'First - 1;
+   begin
+      for I in URL'Range loop
+         if URL (I) = '/' then
+            Slash := I;
+         end if;
+      end loop;
+      return URL (Slash + 1 .. URL'Last);
+   end Type_Name_Of;
+
+   function Find (Name : String) return Natural is
+   begin
+      for I in Registry.First_Index .. Registry.Last_Index loop
+         if To_String (Registry (I).Name) = Name then
+            return I;
+         end if;
+      end loop;
+      return 0;
+   end Find;
+
+   function To_JSON (X : Any) return JSON.JSON_Value is
+      Name   : constant String := Type_Name_Of (To_String (X.Type_URL));
+      Idx    : constant Natural := Find (Name);
+      Result : JSON.JSON_Value := JSON.Empty_Object;
+   begin
+      if Idx = 0 then
+         raise Unknown_Any_Type with Name;
+      end if;
+      JSON.Insert (Result, "@type", JSON.To_Value (To_String (X.Type_URL)));
+      declare
+         Embedded : constant JSON.JSON_Value :=
+           Registry (Idx).To_J (To_String (X.Value));
+      begin
+         if Registry (Idx).Wrapped then
+            JSON.Insert (Result, "value", Embedded);
+         else
+            for I in 1 .. JSON.Length (Embedded) loop
+               JSON.Insert (Result, JSON.Key (Embedded, I),
+                            JSON.Get (Embedded, JSON.Key (Embedded, I)));
+            end loop;
+         end if;
+      end;
+      return Result;
+   end To_JSON;
+
+   function From_JSON (V : JSON.JSON_Value) return Any is
+      URL  : constant String := JSON.As_String (JSON.Get (V, "@type"));
+      Idx  : constant Natural := Find (Type_Name_Of (URL));
+   begin
+      if Idx = 0 then
+         raise Unknown_Any_Type with Type_Name_Of (URL);
+      end if;
+      declare
+         Embedded : JSON.JSON_Value;
+      begin
+         if Registry (Idx).Wrapped then
+            Embedded := JSON.Get (V, "value");
+         else
+            Embedded := JSON.Empty_Object;
+            for I in 1 .. JSON.Length (V) loop
+               if JSON.Key (V, I) /= "@type" then
+                  JSON.Insert (Embedded, JSON.Key (V, I),
+                               JSON.Get (V, JSON.Key (V, I)));
+               end if;
+            end loop;
+         end if;
+         return (Type_URL => To_Unbounded_String (URL),
+                 Value    => To_Unbounded_String (Registry (Idx).From_J (Embedded)));
+      end;
+   end From_JSON;
+
+   ---------------------------------------------------------------------------
+   --  Per-WKT Any handlers (bytes <-> JSON) and their registration
+   ---------------------------------------------------------------------------
+
+   function Dur_TJ (B : String) return JSON.JSON_Value is (To_JSON (Parse_Duration (B)));
+   function Dur_FJ (V : JSON.JSON_Value) return String is (Serialize (Duration'(From_JSON (V))));
+   function Ts_TJ (B : String) return JSON.JSON_Value is (To_JSON (Parse_Timestamp (B)));
+   function Ts_FJ (V : JSON.JSON_Value) return String is (Serialize (Timestamp'(From_JSON (V))));
+   function Fm_TJ (B : String) return JSON.JSON_Value is (To_JSON (Parse_Field_Mask (B)));
+   function Fm_FJ (V : JSON.JSON_Value) return String is (Serialize (Field_Mask'(From_JSON (V))));
+   function Em_TJ (B : String) return JSON.JSON_Value is (To_JSON (Parse_Empty (B)));
+   function Em_FJ (V : JSON.JSON_Value) return String is (Serialize (Empty'(From_JSON (V))));
+   function St_TJ (B : String) return JSON.JSON_Value is (To_JSON (Parse_Struct (B)));
+   function St_FJ (V : JSON.JSON_Value) return String is (Serialize (Struct'(From_JSON (V))));
+   function Va_TJ (B : String) return JSON.JSON_Value is (To_JSON (Parse_Value (B)));
+   function Va_FJ (V : JSON.JSON_Value) return String is (Serialize (Value'(From_JSON (V))));
+   function Lv_TJ (B : String) return JSON.JSON_Value is (To_JSON (Parse_List_Value (B)));
+   function Lv_FJ (V : JSON.JSON_Value) return String is (Serialize (List_Value'(From_JSON (V))));
+
+   function I32_TJ (B : String) return JSON.JSON_Value is (To_JSON (Parse_Int32_Value (B)));
+   function I32_FJ (V : JSON.JSON_Value) return String is (Serialize (Int32_Value'(From_JSON (V))));
+   function I64_TJ (B : String) return JSON.JSON_Value is (To_JSON (Parse_Int64_Value (B)));
+   function I64_FJ (V : JSON.JSON_Value) return String is (Serialize (Int64_Value'(From_JSON (V))));
+   function U32_TJ (B : String) return JSON.JSON_Value is (To_JSON (Parse_UInt32_Value (B)));
+   function U32_FJ (V : JSON.JSON_Value) return String is (Serialize (UInt32_Value'(From_JSON (V))));
+   function U64_TJ (B : String) return JSON.JSON_Value is (To_JSON (Parse_UInt64_Value (B)));
+   function U64_FJ (V : JSON.JSON_Value) return String is (Serialize (UInt64_Value'(From_JSON (V))));
+   function Fl_TJ (B : String) return JSON.JSON_Value is (To_JSON (Parse_Float_Value (B)));
+   function Fl_FJ (V : JSON.JSON_Value) return String is (Serialize (Float_Value'(From_JSON (V))));
+   function Db_TJ (B : String) return JSON.JSON_Value is (To_JSON (Parse_Double_Value (B)));
+   function Db_FJ (V : JSON.JSON_Value) return String is (Serialize (Double_Value'(From_JSON (V))));
+   function Bo_TJ (B : String) return JSON.JSON_Value is (To_JSON (Parse_Bool_Value (B)));
+   function Bo_FJ (V : JSON.JSON_Value) return String is (Serialize (Bool_Value'(From_JSON (V))));
+   function Sv_TJ (B : String) return JSON.JSON_Value is (To_JSON (Parse_String_Value (B)));
+   function Sv_FJ (V : JSON.JSON_Value) return String is (Serialize (String_Value'(From_JSON (V))));
+   function By_TJ (B : String) return JSON.JSON_Value is (To_JSON (Parse_Bytes_Value (B)));
+   function By_FJ (V : JSON.JSON_Value) return String is (Serialize (Bytes_Value'(From_JSON (V))));
+
+begin
+   Register_Any_Type ("google.protobuf.Duration",    Dur_TJ'Access, Dur_FJ'Access, True);
+   Register_Any_Type ("google.protobuf.Timestamp",   Ts_TJ'Access,  Ts_FJ'Access,  True);
+   Register_Any_Type ("google.protobuf.FieldMask",   Fm_TJ'Access,  Fm_FJ'Access,  True);
+   Register_Any_Type ("google.protobuf.Empty",       Em_TJ'Access,  Em_FJ'Access,  False);
+   Register_Any_Type ("google.protobuf.Struct",      St_TJ'Access,  St_FJ'Access,  True);
+   Register_Any_Type ("google.protobuf.Value",       Va_TJ'Access,  Va_FJ'Access,  True);
+   Register_Any_Type ("google.protobuf.ListValue",   Lv_TJ'Access,  Lv_FJ'Access,  True);
+   Register_Any_Type ("google.protobuf.Int32Value",  I32_TJ'Access, I32_FJ'Access, True);
+   Register_Any_Type ("google.protobuf.Int64Value",  I64_TJ'Access, I64_FJ'Access, True);
+   Register_Any_Type ("google.protobuf.UInt32Value", U32_TJ'Access, U32_FJ'Access, True);
+   Register_Any_Type ("google.protobuf.UInt64Value", U64_TJ'Access, U64_FJ'Access, True);
+   Register_Any_Type ("google.protobuf.FloatValue",  Fl_TJ'Access,  Fl_FJ'Access,  True);
+   Register_Any_Type ("google.protobuf.DoubleValue", Db_TJ'Access,  Db_FJ'Access,  True);
+   Register_Any_Type ("google.protobuf.BoolValue",   Bo_TJ'Access,  Bo_FJ'Access,  True);
+   Register_Any_Type ("google.protobuf.StringValue", Sv_TJ'Access,  Sv_FJ'Access,  True);
+   Register_Any_Type ("google.protobuf.BytesValue",  By_TJ'Access,  By_FJ'Access,  True);
 end Proto_WKT;

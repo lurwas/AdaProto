@@ -1538,6 +1538,58 @@ package body Protobuf_Tests is
       end;
    end Test_WKT_Wrappers;
 
+   --  Phase 3: Any -- {"@type": url, ...}. Embedded well-known types use a
+   --  "value" member; the registry resolves the type_url to its JSON handlers.
+   procedure Test_WKT_Any is
+      use Ada.Strings.Unbounded;
+      Pfx : constant String := "type.googleapis.com/google.protobuf.";
+   begin
+      --  Any wrapping a Duration (a well-known type -> "value" form).
+      declare
+         D : constant Proto_WKT.Duration := (Seconds => 3, Nanos => 500_000_000);
+         A : constant Proto_WKT.Any :=
+           (Type_URL => To_Unbounded_String (Pfx & "Duration"),
+            Value    => To_Unbounded_String (Proto_WKT.Serialize (D)));
+         J : constant JSON.JSON_Value := Proto_WKT.To_JSON (A);
+      begin
+         Assert (JSON.As_String (JSON.Get (J, "@type")) = Pfx & "Duration",
+                 "Any carries @type");
+         Assert (JSON.As_String (JSON.Get (J, "value")) = "3.500s",
+                 "embedded WKT goes under value");
+         declare
+            A2 : constant Proto_WKT.Any := Proto_WKT.From_JSON (J);
+            D2 : constant Proto_WKT.Duration :=
+              Proto_WKT.Parse_Duration (To_String (A2.Value));
+         begin
+            Assert (D2.Seconds = 3 and then D2.Nanos = 500_000_000,
+                    "Any JSON round-trip preserves the embedded Duration");
+         end;
+      end;
+
+      --  Any wrapping an Int32Value.
+      declare
+         W : constant Proto_WKT.Int32_Value := (Value => 7);
+         A : constant Proto_WKT.Any :=
+           (Type_URL => To_Unbounded_String (Pfx & "Int32Value"),
+            Value    => To_Unbounded_String (Proto_WKT.Serialize (W)));
+         J : constant JSON.JSON_Value := Proto_WKT.To_JSON (A);
+      begin
+         Assert (JSON.As_Number (JSON.Get (J, "value")) = "7",
+                 "Any wrapping Int32Value -> value:7");
+      end;
+
+      --  Any's own binary round-trip (opaque type_url + bytes).
+      declare
+         A  : constant Proto_WKT.Any :=
+           (Type_URL => To_Unbounded_String ("foo/Bar"),
+            Value    => To_Unbounded_String ("xyz"));
+         A2 : constant Proto_WKT.Any := Proto_WKT.Parse_Any (Proto_WKT.Serialize (A));
+      begin
+         Assert (To_String (A2.Type_URL) = "foo/Bar"
+                 and then To_String (A2.Value) = "xyz", "Any binary round-trips");
+      end;
+   end Test_WKT_Any;
+
    --  Phase 3: Struct / Value / ListValue -- dynamic, recursive JSON shapes.
    --  Verified by value (Struct numbers are doubles, so a JSON integer survives
    --  in value but not in text through a binary round-trip).
@@ -2070,6 +2122,7 @@ package body Protobuf_Tests is
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("wkt duration and timestamp", Test_WKT_Duration_Timestamp'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("wkt fieldmask", Test_WKT_FieldMask'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("wkt struct value listvalue", Test_WKT_Struct_Value'Access));
+         AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("wkt any", Test_WKT_Any'Access));
       end if;
       return Registered_Suite;
    end Suite;

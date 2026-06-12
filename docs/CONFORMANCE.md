@@ -83,12 +83,16 @@ A runtime library of `google.protobuf.*` types with their binary wire
 - `Struct`/`Value`/`ListValue` -- dynamic, recursive JSON-shaped values backed
   by the JSON DOM (JSON is pass-through; binary is the recursive Value wire
   encoding). Note: `Struct` numbers are doubles, per proto3.
+- `Any` -- binary is `{type_url, value}`; JSON is `{"@type": url, …}` resolved
+  through a type-name registry (well-known types under `"value"`, regular
+  messages inlined). All the WKTs above register themselves; generated code can
+  register its own message types via `Proto_WKT.Register_Any_Type`.
 
 ### Codegen roadmap (toward 100% proto3 + JSON)
 
-1. **3 (remaining)** `Any` (type-URL registry), plus wiring all the well-known
-   types into the generator so a field of type `google.protobuf.X` resolves to
-   `Proto_WKT.X`.
+1. **3 (remaining)** wire all the well-known types into the generator so a
+   field of type `google.protobuf.X` resolves to `Proto_WKT.X` (the runtime
+   types and their JSON/binary forms are done).
 2. **4** wire up Google's official conformance-test-runner protocol and drive
    the proto3 + JSON conformance suite to a green (or explicitly-documented) run.
 
@@ -96,7 +100,7 @@ A runtime library of `google.protobuf.*` types with their binary wire
 
 - Groups (wire types 3/4): parser raises `Parse_Error` (a proto2-only feature
   removed from proto3, so rejecting them is correct).
-- Reflection/descriptors, text format, and `Any` (the remaining WKT).
+- Reflection/descriptors and text format.
 - Proto2 field presence semantics and extensions.
 - `map`/`oneof` semantic helpers in generated code (maps are still parseable as
   nested message bytes via the runtime).

@@ -149,5 +149,38 @@ package Proto_WKT is
    function From_JSON (V : JSON.JSON_Value) return Struct;
    function From_JSON (V : JSON.JSON_Value) return List_Value;
 
+   ---------------------------------------------------------------------------
+   --  Any ({ type_url:string=1, value:bytes=2 }). JSON is an object with a
+   --  "@type" member; the embedded message's fields are either inlined (regular
+   --  messages) or placed under "value" (well-known types). The mapping needs a
+   --  registry of type-name -> (bytes<->JSON) handlers; the WKTs above register
+   --  themselves, and generated code can register its own message types.
+   ---------------------------------------------------------------------------
+
+   type Any is record
+      Type_URL : U.Unbounded_String;
+      Value    : U.Unbounded_String;   --  serialized embedded message bytes
+   end record;
+
+   function Serialize (X : Any) return String;
+   function Parse_Any (Data : String) return Any;
+   function To_JSON (X : Any) return JSON.JSON_Value;
+   function From_JSON (V : JSON.JSON_Value) return Any;
+
+   type Any_To_JSON is access function (Bytes : String) return JSON.JSON_Value;
+   type Any_From_JSON is access function (V : JSON.JSON_Value) return String;
+
+   --  Register handlers for the fully-qualified message name (the part of a
+   --  type_url after the last '/', e.g. "google.protobuf.Duration").
+   --  Value_Wrapped selects the JSON shape: True -> {"@type", "value": <json>}
+   --  (well-known types); False -> {"@type", <inlined object fields>}.
+   procedure Register_Any_Type
+     (Type_Name     : String;
+      To_J          : Any_To_JSON;
+      From_J        : Any_From_JSON;
+      Value_Wrapped : Boolean);
+
+   Unknown_Any_Type : exception;
+
 end Proto_WKT;
 
