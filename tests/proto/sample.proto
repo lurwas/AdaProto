@@ -32,3 +32,16 @@ message Bag {
   Color           color   = 3;
   repeated Color  palette = 4;
 }
+
+// Phase 1c: nested (non-recursive) message fields. Outer is declared BEFORE
+// Inner on purpose, to exercise topological ordering of generated types.
+message Outer {
+  Inner          one  = 1;
+  repeated Inner many = 2;
+  string         note = 3;
+}
+
+message Inner {
+  int32  x     = 1;
+  string label = 2;
+}

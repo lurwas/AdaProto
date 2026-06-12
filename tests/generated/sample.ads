@@ -3,6 +3,7 @@
 with Interfaces;
 with Ada.Strings.Unbounded;
 with Ada.Containers.Vectors;
+with Ada.Containers.Indefinite_Holders;
 package Sample is
 
    subtype Color is Interfaces.Integer_32;
@@ -47,6 +48,26 @@ package Sample is
 
    function Serialize (Message : Bag) return String;
    function Parse_Bag (Data : String) return Bag;
+
+   type Inner is record
+      X : Interfaces.Integer_32 := 0;
+      Label : Ada.Strings.Unbounded.Unbounded_String := Ada.Strings.Unbounded.Null_Unbounded_String;
+   end record;
+   use type Inner;
+   package Inner_Holders is new Ada.Containers.Indefinite_Holders (Inner);
+   package Inner_Vectors is new Ada.Containers.Vectors (Positive, Inner);
+
+   function Serialize (Message : Inner) return String;
+   function Parse_Inner (Data : String) return Inner;
+
+   type Outer is record
+      One : Inner_Holders.Holder;
+      Many : Inner_Vectors.Vector;
+      Note : Ada.Strings.Unbounded.Unbounded_String := Ada.Strings.Unbounded.Null_Unbounded_String;
+   end record;
+
+   function Serialize (Message : Outer) return String;
+   function Parse_Outer (Data : String) return Outer;
 
 end Sample;
 

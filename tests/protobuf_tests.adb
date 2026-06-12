@@ -1183,6 +1183,61 @@ package body Protobuf_Tests is
       end;
    end Test_Generated_Enums_And_Repeated;
 
+   --  Phase 1c: nested (non-recursive) message fields via Indefinite_Holders
+   --  (singular, with presence) and Vectors (repeated). Proves topological
+   --  ordering, delegated encode/decode, and message-field presence semantics.
+   procedure Test_Generated_Nested_Messages is
+      use Ada.Strings.Unbounded;
+      I1 : Sample.Inner;
+      I2 : Sample.Inner;
+      O  : Sample.Outer;
+      Reference : Protobuf.Message_Buffer;
+   begin
+      I1.X := 5;
+      I1.Label := To_Unbounded_String ("hi");
+      I2.X := 9;
+      I2.Label := To_Unbounded_String ("yo");
+      O.One := Sample.Inner_Holders.To_Holder (I1);
+      O.Many.Append (I2);
+      O.Many.Append (I1);
+      O.Note := To_Unbounded_String ("note");
+
+      --  Wire compatibility: a singular message is one length-delimited field;
+      --  a repeated message is one length-delimited field per element.
+      Protobuf.Add_Message (Reference, 1, Sample.Serialize (I1));
+      Protobuf.Add_Message (Reference, 2, Sample.Serialize (I2));
+      Protobuf.Add_Message (Reference, 2, Sample.Serialize (I1));
+      Protobuf.Add_String  (Reference, 3, "note");
+      Assert (Sample.Serialize (O) = Protobuf.To_String (Reference),
+              "nested message encoder matches hand-composed bytes");
+
+      --  Round-trip.
+      declare
+         D : constant Sample.Outer := Sample.Parse_Outer (Sample.Serialize (O));
+      begin
+         Assert (not D.One.Is_Empty, "singular nested message is present");
+         Assert (D.One.Element.X = 5
+                 and then To_String (D.One.Element.Label) = "hi",
+                 "singular nested message round-trips");
+         Assert (Natural (D.Many.Length) = 2, "repeated message count");
+         Assert (D.Many (1).X = 9 and then D.Many (2).X = 5,
+                 "repeated nested messages round-trip in order");
+         Assert (To_String (D.Note) = "note",
+                 "scalar field after message fields round-trips");
+      end;
+
+      --  Presence: an absent singular message is not serialized and stays
+      --  absent after a round-trip.
+      declare
+         Empty : Sample.Outer;
+         D     : constant Sample.Outer :=
+           Sample.Parse_Outer (Sample.Serialize (Empty));
+      begin
+         Assert (Sample.Serialize (Empty) = "", "empty Outer omits all fields");
+         Assert (D.One.Is_Empty, "absent singular message stays absent");
+      end;
+   end Test_Generated_Nested_Messages;
+
    --  Exercises the reserve-once / geometrically-grown serialization buffer:
    --  many fields force several reallocations past the initial capacity, a
    --  maximal varint exercises the 10-byte worst case, and Clear+reuse must
@@ -1315,6 +1370,7 @@ package body Protobuf_Tests is
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("serialization buffer growth and reuse", Test_Serialization_Buffer_Growth_And_Reuse'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated types roundtrip", Test_Generated_Types_Roundtrip'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated enums and repeated", Test_Generated_Enums_And_Repeated'Access));
+         AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated nested messages", Test_Generated_Nested_Messages'Access));
       end if;
       return Registered_Suite;
    end Suite;

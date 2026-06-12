@@ -46,6 +46,8 @@ package body Proto_Compiler is
 
    package String_Vectors is new Ada.Containers.Vectors (Positive, Unbounded_String);
 
+   package Nat_Vectors is new Ada.Containers.Vectors (Positive, Positive);
+
    ---------------------------------------------------------------------------
    --  Lexer
    ---------------------------------------------------------------------------
@@ -343,7 +345,7 @@ package body Proto_Compiler is
    --  Type mapping
    ---------------------------------------------------------------------------
 
-   type Type_Category is (Cat_Int, Cat_Float, Cat_Bool, Cat_Str);
+   type Type_Category is (Cat_Int, Cat_Float, Cat_Bool, Cat_Str, Cat_Message);
 
    type Type_Info is record
       Ada_Type   : Unbounded_String;
@@ -531,8 +533,19 @@ package body Proto_Compiler is
          return False;
       end Is_Enum;
 
+      function Is_Message (Proto : String) return Boolean is
+      begin
+         for M of Msgs loop
+            if To_String (M.Name) = Proto then
+               return True;
+            end if;
+         end loop;
+         return False;
+      end Is_Message;
+
       --  Resolve a field's proto type to Ada/runtime info. Enums are encoded
-      --  exactly as int32 on the wire; only the Ada component type differs.
+      --  exactly as int32 on the wire; message fields carry the Ada record type
+      --  name in Ada_Type (the holder/vector wrappers are derived from it).
       function Resolve (Proto : String) return Type_Info is
          Found : Boolean;
          T     : constant Type_Info := Map_Scalar (Proto, Found);
@@ -541,12 +554,17 @@ package body Proto_Compiler is
             return T;
          elsif Is_Enum (Proto) then
             return Info (Ada_Id (Proto), "0", "Int32", "Int32_Array", Cat_Int);
+         elsif Is_Message (Proto) then
+            return Info (Ada_Id (Proto), "", "Message", "", Cat_Message);
          else
             raise Compile_Error
               with "field type '" & Proto
-                   & "' is not a scalar or enum (messages/maps: later phase)";
+                   & "' is not a scalar, enum, or message";
          end if;
       end Resolve;
+
+      function Holder_Pkg (Ada_Type : String) return String is
+        (Ada_Type & "_Holders");
 
       --  A field's Ada component identifier. For a singular field whose name
       --  equals its own (simple) type name, suffix "_F" so the component does
@@ -554,7 +572,9 @@ package body Proto_Compiler is
       function Field_Ident (F : Field_Def) return String is
          C : constant String := Ada_Id (To_String (F.Name));
       begin
-         if F.Repeated then
+         if F.Repeated
+           or else Resolve (To_String (F.Proto_Type)).Category = Cat_Message
+         then
             return C;
          end if;
          declare
@@ -587,8 +607,16 @@ package body Proto_Compiler is
          File_Base : constant String := To_Lower (Unit);
          Spec      : Unbounded_String;
          Body_Text : Unbounded_String;
-         Vec_Types : String_Vectors.Vector;  --  distinct element Ada types
-         Has_Repeated : Boolean := False;
+
+         Vec_Types : String_Vectors.Vector;  --  scalar/enum repeated elem types
+         Msg_Hold  : String_Vectors.Vector;  --  message types used singular
+         Msg_Vec   : String_Vectors.Vector;  --  message types used repeated
+         Has_Repeated        : Boolean := False;  --  any repeated -> with Vectors
+         Has_Packed_Repeated : Boolean := False;  --  repeated scalar -> Wire_Type
+         Need_Holders        : Boolean := False;
+
+         N_Msgs : constant Natural := Natural (Msgs.Length);
+         Order  : Nat_Vectors.Vector;
 
          procedure SL (To : in out Unbounded_String; Line : String) is
          begin
@@ -596,25 +624,89 @@ package body Proto_Compiler is
             Append (To, NL);
          end SL;
 
-         procedure Note_Vector (Ada_Type : String) is
+         function In_Set (S : String_Vectors.Vector; V : String) return Boolean is
          begin
-            Has_Repeated := True;
-            for T of Vec_Types loop
-               if To_String (T) = Ada_Type then
-                  return;
+            for E of S loop
+               if To_String (E) = V then
+                  return True;
                end if;
             end loop;
-            Vec_Types.Append (To_Unbounded_String (Ada_Type));
-         end Note_Vector;
+            return False;
+         end In_Set;
+
+         procedure Add_Once (S : in out String_Vectors.Vector; V : String) is
+         begin
+            if not In_Set (S, V) then
+               S.Append (To_Unbounded_String (V));
+            end if;
+         end Add_Once;
+
+         function Find_Msg (Proto : String) return Natural is
+         begin
+            for K in Msgs.First_Index .. Msgs.Last_Index loop
+               if To_String (Msgs (K).Name) = Proto then
+                  return K;
+               end if;
+            end loop;
+            return 0;
+         end Find_Msg;
       begin
-         --  Discover which vector instances are needed.
+         --  Discover required container instances per field shape.
          for M of Msgs loop
             for F of M.Fields loop
-               if F.Repeated then
-                  Note_Vector (To_String (Resolve (To_String (F.Proto_Type)).Ada_Type));
-               end if;
+               declare
+                  T : constant Type_Info := Resolve (To_String (F.Proto_Type));
+               begin
+                  if F.Repeated then
+                     Has_Repeated := True;
+                     if T.Category = Cat_Message then
+                        Add_Once (Msg_Vec, To_String (T.Ada_Type));
+                     else
+                        Has_Packed_Repeated :=
+                          Has_Packed_Repeated or else T.Category /= Cat_Str;
+                        Add_Once (Vec_Types, To_String (T.Ada_Type));
+                     end if;
+                  elsif T.Category = Cat_Message then
+                     Need_Holders := True;
+                     Add_Once (Msg_Hold, To_String (T.Ada_Type));
+                  end if;
+               end;
             end loop;
          end loop;
+
+         --  Topologically order messages so a message-typed field's type is
+         --  declared first. A cycle means recursion, which Indefinite_Holders
+         --  cannot express (the instantiation needs a complete type).
+         declare
+            Visited : array (1 .. N_Msgs) of Boolean := (others => False);
+            Active  : array (1 .. N_Msgs) of Boolean := (others => False);
+
+            procedure Visit (K : Positive) is
+            begin
+               if Active (K) then
+                  raise Compile_Error
+                    with "message '" & To_String (Msgs (K).Name)
+                         & "' is recursive/mutually-recursive, which is not "
+                         & "supported with Indefinite_Holders (needs access types)";
+               end if;
+               if Visited (K) then
+                  return;
+               end if;
+               Active (K) := True;
+               for F of Msgs (K).Fields loop
+                  if Is_Message (To_String (F.Proto_Type)) then
+                     Visit (Find_Msg (To_String (F.Proto_Type)));
+                  end if;
+               end loop;
+               Active (K) := False;
+               Visited (K) := True;
+               Order.Append (K);
+            end Visit;
+         begin
+            for K in 1 .. N_Msgs loop
+               Visit (K);
+            end loop;
+         end;
 
          --  Specification ---------------------------------------------------
          SL (Spec, "--  Generated by protoc-ada from "
@@ -624,6 +716,9 @@ package body Proto_Compiler is
          SL (Spec, "with Ada.Strings.Unbounded;");
          if Has_Repeated then
             SL (Spec, "with Ada.Containers.Vectors;");
+         end if;
+         if Need_Holders then
+            SL (Spec, "with Ada.Containers.Indefinite_Holders;");
          end if;
          SL (Spec, "package " & Unit & " is");
          SL (Spec, "");
@@ -643,28 +738,24 @@ package body Proto_Compiler is
             end;
          end loop;
 
-         --  Make each element type's "=" visible for the vector instances.
+         --  Scalar/enum repeated element vectors (element types available now).
          for T of Vec_Types loop
             SL (Spec, "   use type " & To_String (T) & ";");
          end loop;
-
-         --  Vector instances for repeated fields.
          for T of Vec_Types loop
-            declare
-               Ada_Type : constant String := To_String (T);
-            begin
-               SL (Spec, "   package " & Vector_Pkg (Ada_Type)
-                         & " is new Ada.Containers.Vectors (Positive, "
-                         & Ada_Type & ");");
-            end;
+            SL (Spec, "   package " & Vector_Pkg (To_String (T))
+                      & " is new Ada.Containers.Vectors (Positive, "
+                      & To_String (T) & ");");
          end loop;
-         if Has_Repeated then
+         if not Vec_Types.Is_Empty then
             SL (Spec, "");
          end if;
 
-         --  Message record types + subprogram declarations.
-         for M of Msgs loop
+         --  Message record types (topo order) + their container instances +
+         --  subprogram declarations.
+         for OI in Order.First_Index .. Order.Last_Index loop
             declare
+               M     : constant Message_Def := Msgs (Order (OI));
                TName : constant String := Ada_Id (To_String (M.Name));
             begin
                SL (Spec, "   type " & TName & " is record");
@@ -676,6 +767,9 @@ package body Proto_Compiler is
                      if F.Repeated then
                         SL (Spec, "      " & C & " : "
                                   & Vector_Pkg (To_String (T.Ada_Type)) & ".Vector;");
+                     elsif T.Category = Cat_Message then
+                        SL (Spec, "      " & C & " : "
+                                  & Holder_Pkg (To_String (T.Ada_Type)) & ".Holder;");
                      else
                         SL (Spec, "      " & C & " : " & To_String (T.Ada_Type)
                                   & " := " & To_String (T.Default) & ";");
@@ -683,6 +777,22 @@ package body Proto_Compiler is
                   end;
                end loop;
                SL (Spec, "   end record;");
+
+               --  Container instances over this message type, for later users.
+               if In_Set (Msg_Hold, TName) or else In_Set (Msg_Vec, TName) then
+                  SL (Spec, "   use type " & TName & ";");
+               end if;
+               if In_Set (Msg_Hold, TName) then
+                  SL (Spec, "   package " & Holder_Pkg (TName)
+                            & " is new Ada.Containers.Indefinite_Holders ("
+                            & TName & ");");
+               end if;
+               if In_Set (Msg_Vec, TName) then
+                  SL (Spec, "   package " & Vector_Pkg (TName)
+                            & " is new Ada.Containers.Vectors (Positive, "
+                            & TName & ");");
+               end if;
+
                SL (Spec, "");
                SL (Spec, "   function Serialize (Message : " & TName
                          & ") return String;");
@@ -699,14 +809,15 @@ package body Proto_Compiler is
          SL (Body_Text, "with Interfaces; use Interfaces;");
          SL (Body_Text, "with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;");
          SL (Body_Text, "with Protobuf;");
-         if Has_Repeated then
+         if Has_Packed_Repeated then
             SL (Body_Text, "use type Protobuf.Wire_Type;");
          end if;
          SL (Body_Text, "package body " & Unit & " is");
          SL (Body_Text, "");
 
-         for M of Msgs loop
+         for OI in Order.First_Index .. Order.Last_Index loop
             declare
+               M     : constant Message_Def := Msgs (Order (OI));
                TName : constant String := Ada_Id (To_String (M.Name));
 
                --  Encode one field into Buffer.
@@ -716,7 +827,14 @@ package body Proto_Compiler is
                   N : constant String := F.Number'Image;
                begin
                   if F.Repeated then
-                     if T.Category = Cat_Str then
+                     if T.Category = Cat_Message then
+                        SL (Body_Text, "      for I in Message." & C
+                                       & ".First_Index .. Message." & C
+                                       & ".Last_Index loop");
+                        SL (Body_Text, "         Protobuf.Add_Message (Buffer," & N
+                                       & ", Serialize (Message." & C & " (I)));");
+                        SL (Body_Text, "      end loop;");
+                     elsif T.Category = Cat_Str then
                         --  repeated string/bytes: one length-delimited field each.
                         SL (Body_Text, "      for I in Message." & C
                                        & ".First_Index .. Message." & C
@@ -764,6 +882,11 @@ package body Proto_Compiler is
                                           & " (Buffer," & N & ", To_String (Message."
                                           & C & "));");
                            SL (Body_Text, "      end if;");
+                        when Cat_Message =>
+                           SL (Body_Text, "      if not Message." & C & ".Is_Empty then");
+                           SL (Body_Text, "         Protobuf.Add_Message (Buffer," & N
+                                          & ", Serialize (Message." & C & ".Element));");
+                           SL (Body_Text, "      end if;");
                      end case;
                   end if;
                end Emit_Encode;
@@ -776,7 +899,11 @@ package body Proto_Compiler is
                begin
                   SL (Body_Text, "            when" & N & " =>");
                   if F.Repeated then
-                     if T.Category = Cat_Str then
+                     if T.Category = Cat_Message then
+                        SL (Body_Text, "               Result." & C
+                                       & ".Append (Parse_" & To_String (T.Ada_Type)
+                                       & " (Protobuf.As_Message_Bytes (Item)));");
+                     elsif T.Category = Cat_Str then
                         SL (Body_Text, "               Result." & C
                                        & ".Append (To_Unbounded_String (Protobuf.As_"
                                        & To_String (T.Suffix) & " (Item)));");
@@ -804,6 +931,11 @@ package body Proto_Compiler is
                      SL (Body_Text, "               Result." & C
                                     & " := To_Unbounded_String (Protobuf.As_"
                                     & To_String (T.Suffix) & " (Item));");
+                  elsif T.Category = Cat_Message then
+                     SL (Body_Text, "               Result." & C & " := "
+                                    & Holder_Pkg (To_String (T.Ada_Type))
+                                    & ".To_Holder (Parse_" & To_String (T.Ada_Type)
+                                    & " (Protobuf.As_Message_Bytes (Item)));");
                   else
                      SL (Body_Text, "               Result." & C & " := Protobuf.As_"
                                     & To_String (T.Suffix) & " (Item);");

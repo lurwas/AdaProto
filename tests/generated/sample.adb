@@ -152,5 +152,68 @@ package body Sample is
       return Result;
    end Parse_Bag;
 
+   function Serialize (Message : Inner) return String is
+      Buffer : Protobuf.Message_Buffer;
+   begin
+      if Message.X /= 0 then
+         Protobuf.Add_Int32 (Buffer, 1, Message.X);
+      end if;
+      if Length (Message.Label) > 0 then
+         Protobuf.Add_String (Buffer, 2, To_String (Message.Label));
+      end if;
+      return Protobuf.To_String (Buffer);
+   end Serialize;
+
+   function Parse_Inner (Data : String) return Inner is
+      Result : Inner;
+      Fields : constant Protobuf.Parsed_Field_Vectors.Vector :=
+        Protobuf.Parse_From_String (Data);
+   begin
+      for Item of Fields loop
+         case Item.Number is
+            when 1 =>
+               Result.X := Protobuf.As_Int32 (Item);
+            when 2 =>
+               Result.Label := To_Unbounded_String (Protobuf.As_String (Item));
+            when others => null;
+         end case;
+      end loop;
+      return Result;
+   end Parse_Inner;
+
+   function Serialize (Message : Outer) return String is
+      Buffer : Protobuf.Message_Buffer;
+   begin
+      if not Message.One.Is_Empty then
+         Protobuf.Add_Message (Buffer, 1, Serialize (Message.One.Element));
+      end if;
+      for I in Message.Many.First_Index .. Message.Many.Last_Index loop
+         Protobuf.Add_Message (Buffer, 2, Serialize (Message.Many (I)));
+      end loop;
+      if Length (Message.Note) > 0 then
+         Protobuf.Add_String (Buffer, 3, To_String (Message.Note));
+      end if;
+      return Protobuf.To_String (Buffer);
+   end Serialize;
+
+   function Parse_Outer (Data : String) return Outer is
+      Result : Outer;
+      Fields : constant Protobuf.Parsed_Field_Vectors.Vector :=
+        Protobuf.Parse_From_String (Data);
+   begin
+      for Item of Fields loop
+         case Item.Number is
+            when 1 =>
+               Result.One := Inner_Holders.To_Holder (Parse_Inner (Protobuf.As_Message_Bytes (Item)));
+            when 2 =>
+               Result.Many.Append (Parse_Inner (Protobuf.As_Message_Bytes (Item)));
+            when 3 =>
+               Result.Note := To_Unbounded_String (Protobuf.As_String (Item));
+            when others => null;
+         end case;
+      end loop;
+      return Result;
+   end Parse_Outer;
+
 end Sample;
 

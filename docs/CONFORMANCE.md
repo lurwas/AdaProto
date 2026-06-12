@@ -31,15 +31,21 @@ the checked-in sources with `tools/generate_ada.sh`.
 - `enum` fields (open enums: int32-valued subtype + named constants).
 - `repeated` scalar/enum fields (packed encode; both packed and unpacked
   decode accepted) and `repeated string`/`bytes`.
+- Nested (non-recursive) `message` fields: singular fields use
+  `Indefinite_Holders` for presence, repeated use `Vectors`. Generated types
+  are topologically ordered so a field's type is always declared first.
 - proto3 default omission (default-valued scalars are not written).
 - Ada reserved-word field names are escaped (e.g. `delta` -> `Delta_F`), and
   field names that collide with their own type (`color : Color`) are escaped.
 
 Unsupported constructs raise a clear `Compile_Error` with line number.
+Recursive/mutually-recursive messages are detected and rejected: pure
+`Indefinite_Holders` cannot break the cycle (instantiation needs a complete
+type), so that case needs access types -- a planned follow-up.
 
 ### Codegen roadmap (toward 100% proto3 + JSON)
 
-1. **1c** nested/recursive messages, `oneof`, `map<K,V>`, default-value edge cases.
+1. **1c (remaining)** `oneof`, `map<K,V>`, recursive messages via access types.
 3. **2** proto3 canonical JSON mapping (parse + serialize).
 4. **3** well-known types (`Any`, `Timestamp`, `Duration`, `Struct`, wrappers,
    `FieldMask`, `Empty`), UTF-8 validation of `string` fields.
