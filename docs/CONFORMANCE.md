@@ -95,10 +95,28 @@ type (presence), routes binary encode/decode through `Proto_WKT.Serialize` /
 special forms apply). Supported for singular and repeated WKT fields; a WKT as
 a map value is rejected with a clear error (a follow-up).
 
+### Conformance runner (`bin/conformance-runner`)
+
+A testee that speaks Google's conformance-test-runner protocol: it reads a
+4-byte little-endian length then that many bytes of a `ConformanceRequest` from
+stdin, and writes a `ConformanceResponse` the same way, looping until stdin
+closes. `tests/proto/conformance.proto` is the real subset (matching wire field
+numbers); `Conformance_Harness.Handle` (unit-tested) parses the payload and
+re-serializes it in the requested format across protobuf and JSON.
+
+To drive Google's official suite, point its `conformance-test-runner` at
+`bin/conformance-runner`. The catch: the suite exercises
+`protobuf_test_messages.proto3.TestAllTypesProto3`, which needs **nested type
+definitions** and proto3 **`optional`** -- generator features not yet built --
+so the harness currently handles a self-contained `conformance_test.TestMessage`
+and `skips` other message types. Closing that gap (nested types + `optional`)
+is what a certified end-to-end run additionally requires.
+
 ### Codegen roadmap (toward 100% proto3 + JSON)
 
-1. **4** wire up Google's official conformance-test-runner protocol and drive
-   the proto3 + JSON conformance suite to a green (or explicitly-documented) run.
+1. Generator: nested message/enum definitions and proto3 `optional`, so
+   `TestAllTypesProto3` can be generated and the official conformance suite run
+   end-to-end. Also: well-known types as map values / oneof members.
 
 ## Explicitly not implemented (yet)
 

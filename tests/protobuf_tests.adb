@@ -16,6 +16,9 @@ with Protobuf;
 with Proto_JSON;
 with Proto_WKT;
 with Sample;
+with Conformance;
+with Conformance_test;
+with Conformance_Harness;
 
 package body Protobuf_Tests is
    use AUnit.Assertions;
@@ -1538,6 +1541,112 @@ package body Protobuf_Tests is
       end;
    end Test_WKT_Wrappers;
 
+   --  Phase 4: the conformance harness -- one ConformanceRequest dispatched to
+   --  one ConformanceResponse (parse + reserialize across binary and JSON).
+   procedure Test_Conformance_Harness is
+      use Ada.Strings.Unbounded;
+      use type Conformance.ConformanceResponse_Result_Selector;
+      use type Conformance_test.TestMessage_Choice_Selector;
+
+      Known : constant String := "conformance_test.TestMessage";
+
+      function Sample_Message return Conformance_test.TestMessage is
+         M : Conformance_test.TestMessage;
+      begin
+         M.I32 := 42;
+         M.S := To_Unbounded_String ("hi");
+         M.Color_F := Conformance_test.Color_C_RED;
+         M.Nums.Append (1);
+         M.Nums.Append (2);
+         M.Choice := (Which => Conformance_test.TestMessage_Choice_Ci, Ci => 9);
+         M.Counts.Include (To_Unbounded_String ("a"), 5);
+         return M;
+      end Sample_Message;
+
+      M : constant Conformance_test.TestMessage := Sample_Message;
+   begin
+      --  protobuf in -> JSON out: the response JSON decodes back to M.
+      declare
+         Req  : Conformance.ConformanceRequest;
+         Resp : Conformance.ConformanceResponse;
+      begin
+         Req.Message_type := To_Unbounded_String (Known);
+         Req.Requested_output_format := Conformance.WireFormat_JSON;
+         Req.Payload :=
+           (Which            => Conformance.ConformanceRequest_Payload_Protobuf_payload,
+            Protobuf_payload =>
+              To_Unbounded_String (Conformance_test.Serialize (M)));
+         Resp := Conformance_Harness.Handle (Req);
+         Assert (Resp.Result.Which
+                 = Conformance.ConformanceResponse_Result_Json_payload,
+                 "protobuf->JSON yields a json_payload result");
+         declare
+            D : constant Conformance_test.TestMessage :=
+              Conformance_test.From_JSON
+                (JSON.Parse (To_String (Resp.Result.Json_payload)));
+         begin
+            Assert (D.I32 = 42 and then To_String (D.S) = "hi"
+                    and then D.Color_F = Conformance_test.Color_C_RED
+                    and then Natural (D.Nums.Length) = 2
+                    and then D.Choice.Which = Conformance_test.TestMessage_Choice_Ci
+                    and then D.Choice.Ci = 9
+                    and then D.Counts.Element (To_Unbounded_String ("a")) = 5,
+                    "round-trip through the JSON output is faithful");
+         end;
+      end;
+
+      --  JSON in -> protobuf out: the response bytes decode back to M.
+      declare
+         Req  : Conformance.ConformanceRequest;
+         Resp : Conformance.ConformanceResponse;
+      begin
+         Req.Message_type := To_Unbounded_String (Known);
+         Req.Requested_output_format := Conformance.WireFormat_PROTOBUF;
+         Req.Payload :=
+           (Which        => Conformance.ConformanceRequest_Payload_Json_payload,
+            Json_payload => To_Unbounded_String
+              (JSON.Serialize (Conformance_test.To_JSON (M))));
+         Resp := Conformance_Harness.Handle (Req);
+         Assert (Resp.Result.Which
+                 = Conformance.ConformanceResponse_Result_Protobuf_payload,
+                 "JSON->protobuf yields a protobuf_payload result");
+         declare
+            D : constant Conformance_test.TestMessage :=
+              Conformance_test.Parse_TestMessage
+                (To_String (Resp.Result.Protobuf_payload));
+         begin
+            Assert (D.I32 = 42 and then D.Choice.Ci = 9, "JSON->protobuf is faithful");
+         end;
+      end;
+
+      --  Unknown message type is skipped.
+      declare
+         Req  : Conformance.ConformanceRequest;
+         Resp : Conformance.ConformanceResponse;
+      begin
+         Req.Message_type := To_Unbounded_String ("some.other.Type");
+         Resp := Conformance_Harness.Handle (Req);
+         Assert (Resp.Result.Which = Conformance.ConformanceResponse_Result_Skipped,
+                 "an unknown message type is skipped");
+      end;
+
+      --  A malformed JSON payload becomes a parse_error, not a crash.
+      declare
+         Req  : Conformance.ConformanceRequest;
+         Resp : Conformance.ConformanceResponse;
+      begin
+         Req.Message_type := To_Unbounded_String (Known);
+         Req.Requested_output_format := Conformance.WireFormat_JSON;
+         Req.Payload :=
+           (Which        => Conformance.ConformanceRequest_Payload_Json_payload,
+            Json_payload => To_Unbounded_String ("{ not json"));
+         Resp := Conformance_Harness.Handle (Req);
+         Assert (Resp.Result.Which
+                 = Conformance.ConformanceResponse_Result_Parse_error,
+                 "malformed JSON yields a parse_error");
+      end;
+   end Test_Conformance_Harness;
+
    --  Phase 3: generated message fields of well-known types (Box), wired
    --  through the generator to Proto_WKT (presence via generated holders).
    procedure Test_Generated_WKT_Fields is
@@ -2182,6 +2291,7 @@ package body Protobuf_Tests is
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("wkt struct value listvalue", Test_WKT_Struct_Value'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("wkt any", Test_WKT_Any'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated wkt fields", Test_Generated_WKT_Fields'Access));
+         AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("conformance harness", Test_Conformance_Harness'Access));
       end if;
       return Registered_Suite;
    end Suite;

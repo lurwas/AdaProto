@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package conformance;
+
+// A subset of google's conformance.proto, with the real field numbers, so a
+// testee built from it speaks the official conformance-test-runner protocol.
+
+enum WireFormat {
+  UNSPECIFIED = 0;
+  PROTOBUF    = 1;
+  JSON        = 2;
+  JSPB        = 3;
+  TEXT_FORMAT = 4;
+}
+
+message ConformanceRequest {
+  oneof payload {
+    bytes  protobuf_payload = 1;
+    string json_payload     = 2;
+    string jspb_payload     = 7;
+    string text_payload     = 8;
+  }
+  WireFormat requested_output_format = 3;
+  string     message_type            = 4;
+}
+
+message ConformanceResponse {
+  oneof result {
+    string parse_error     = 1;
+    string serialize_error = 6;
+    string runtime_error   = 2;
+    bytes  protobuf_payload = 3;
+    string json_payload    = 4;
+    string skipped         = 5;
+    string text_payload    = 10;
+  }
+}
