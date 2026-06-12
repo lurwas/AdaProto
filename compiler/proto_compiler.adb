@@ -19,6 +19,7 @@ package body Proto_Compiler is
       Name       : Unbounded_String;
       Number     : Positive := 1;
       Repeated   : Boolean := False;
+      Oneof      : Unbounded_String;  --  empty unless this field is in a oneof
    end record;
 
    package Field_Vectors is new Ada.Containers.Vectors (Positive, Field_Def);
@@ -282,10 +283,38 @@ package body Proto_Compiler is
             elsif At_Ident ("optional") then
                Err ("'optional' fields are not supported in this codegen phase");
             elsif At_Ident ("message") or else At_Ident ("enum")
-              or else At_Ident ("oneof") or else At_Ident ("map")
+              or else At_Ident ("map")
             then
                Err ("nested '" & To_String (Cur.Text)
                     & "' is not supported in this codegen phase");
+            elsif At_Ident ("oneof") then
+               Adv;
+               declare
+                  OName : constant String := Expect_Ident;
+               begin
+                  Expect_Symbol ("{");
+                  while not At_Symbol ("}") and then Cur.Kind /= T_EOF loop
+                     if At_Symbol (";") then
+                        Adv;
+                     elsif At_Ident ("option") then
+                        Skip_To_Semicolon;
+                     else
+                        declare
+                           F : Field_Def;
+                        begin
+                           F.Proto_Type := To_Unbounded_String (Expect_Ident);
+                           F.Name := To_Unbounded_String (Expect_Ident);
+                           Expect_Symbol ("=");
+                           F.Number := Positive (Parse_Int);
+                           Skip_Field_Options;
+                           Expect_Symbol (";");
+                           F.Oneof := To_Unbounded_String (OName);
+                           M.Fields.Append (F);
+                        end;
+                     end if;
+                  end loop;
+                  Expect_Symbol ("}");
+               end;
             else
                declare
                   F : Field_Def;
@@ -595,6 +624,27 @@ package body Proto_Compiler is
          end;
       end Field_Ident;
 
+      --  Identifier for a oneof variant member. Unlike a regular message field
+      --  (which is wrapped in a holder), a oneof member's component type is the
+      --  bare type, so a name equal to that type must be escaped.
+      function Oneof_Member_Ident (F : Field_Def) return String is
+         C    : constant String := Ada_Id (To_String (F.Name));
+         Full : constant String :=
+           To_String (Resolve (To_String (F.Proto_Type)).Ada_Type);
+         Dot  : Natural := 0;
+      begin
+         for I in Full'Range loop
+            if Full (I) = '.' then
+               Dot := I;
+            end if;
+         end loop;
+         if To_Lower (C) = To_Lower (Full (Dot + 1 .. Full'Last)) then
+            return C & "_F";
+         else
+            return C;
+         end if;
+      end Oneof_Member_Ident;
+
    begin
       Parse (Toks, Pkg, Msgs, Enums);
       for E of Enums loop
@@ -650,6 +700,29 @@ package body Proto_Compiler is
             end loop;
             return 0;
          end Find_Msg;
+
+         --  oneof generated-identifier helpers (TName = the message Ada type).
+         function Sel_Type (TName, O : String) return String is
+           (TName & "_" & Cap (O) & "_Selector");
+         function One_Type (TName, O : String) return String is
+           (TName & "_" & Cap (O) & "_Oneof");
+         function Lit_NotSet (TName, O : String) return String is
+           (TName & "_" & Cap (O) & "_Not_Set");
+         function Lit_Mem (TName, O, Member : String) return String is
+           (TName & "_" & Cap (O) & "_" & Cap (Member));
+
+         function Oneof_Names (M : Message_Def) return String_Vectors.Vector is
+            R : String_Vectors.Vector;
+         begin
+            for F of M.Fields loop
+               if Length (F.Oneof) > 0
+                 and then not In_Set (R, To_String (F.Oneof))
+               then
+                  R.Append (F.Oneof);
+               end if;
+            end loop;
+            return R;
+         end Oneof_Names;
       begin
          --  Discover required container instances per field shape.
          for M of Msgs loop
@@ -757,14 +830,63 @@ package body Proto_Compiler is
             declare
                M     : constant Message_Def := Msgs (Order (OI));
                TName : constant String := Ada_Id (To_String (M.Name));
+               Done_Oneofs : String_Vectors.Vector;
             begin
+               --  A discriminated (variant) record per oneof, declared before
+               --  the message record that embeds it.
+               for O of Oneof_Names (M) loop
+                  declare
+                     ON   : constant String := To_String (O);
+                     Lits : Unbounded_String := To_Unbounded_String
+                       ("     (" & Lit_NotSet (TName, ON));
+                  begin
+                     for F of M.Fields loop
+                        if To_String (F.Oneof) = ON then
+                           Append (Lits, ", "
+                                   & Lit_Mem (TName, ON, To_String (F.Name)));
+                        end if;
+                     end loop;
+                     Append (Lits, ")");
+                     SL (Spec, "   type " & Sel_Type (TName, ON) & " is");
+                     SL (Spec, To_String (Lits) & ";");
+                     SL (Spec, "   type " & One_Type (TName, ON) & " (Which : "
+                               & Sel_Type (TName, ON) & " := "
+                               & Lit_NotSet (TName, ON) & ") is record");
+                     SL (Spec, "      case Which is");
+                     SL (Spec, "         when " & Lit_NotSet (TName, ON)
+                               & " => null;");
+                     for F of M.Fields loop
+                        if To_String (F.Oneof) = ON then
+                           declare
+                              T : constant Type_Info :=
+                                Resolve (To_String (F.Proto_Type));
+                           begin
+                              SL (Spec, "         when "
+                                        & Lit_Mem (TName, ON, To_String (F.Name))
+                                        & " => " & Oneof_Member_Ident (F)
+                                        & " : " & To_String (T.Ada_Type) & ";");
+                           end;
+                        end if;
+                     end loop;
+                     SL (Spec, "      end case;");
+                     SL (Spec, "   end record;");
+                  end;
+               end loop;
+
                SL (Spec, "   type " & TName & " is record");
                for F of M.Fields loop
                   declare
                      T : constant Type_Info := Resolve (To_String (F.Proto_Type));
                      C : constant String := Field_Ident (F);
                   begin
-                     if F.Repeated then
+                     if Length (F.Oneof) > 0 then
+                        if not In_Set (Done_Oneofs, To_String (F.Oneof)) then
+                           Add_Once (Done_Oneofs, To_String (F.Oneof));
+                           SL (Spec, "      " & Ada_Id (To_String (F.Oneof))
+                                     & " : " & One_Type
+                                       (TName, To_String (F.Oneof)) & ";");
+                        end if;
+                     elsif F.Repeated then
                         SL (Spec, "      " & C & " : "
                                   & Vector_Pkg (To_String (T.Ada_Type)) & ".Vector;");
                      elsif T.Category = Cat_Message then
@@ -898,6 +1020,27 @@ package body Proto_Compiler is
                   N : constant String := F.Number'Image;
                begin
                   SL (Body_Text, "            when" & N & " =>");
+                  if Length (F.Oneof) > 0 then
+                     declare
+                        ON  : constant String := To_String (F.Oneof);
+                        Mem : constant String := Oneof_Member_Ident (F);
+                        Val : constant String :=
+                          (if T.Category = Cat_Str then
+                              "To_Unbounded_String (Protobuf.As_"
+                              & To_String (T.Suffix) & " (Item))"
+                           elsif T.Category = Cat_Message then
+                              "Parse_" & To_String (T.Ada_Type)
+                              & " (Protobuf.As_Message_Bytes (Item))"
+                           else
+                              "Protobuf.As_" & To_String (T.Suffix) & " (Item)");
+                     begin
+                        SL (Body_Text, "               Result." & Ada_Id (ON)
+                                       & " := (Which => "
+                                       & Lit_Mem (TName, ON, To_String (F.Name))
+                                       & ", " & Mem & " => " & Val & ");");
+                     end;
+                     return;
+                  end if;
                   if F.Repeated then
                      if T.Category = Cat_Message then
                         SL (Body_Text, "               Result." & C
@@ -942,13 +1085,57 @@ package body Proto_Compiler is
                   end if;
                end Emit_Decode;
 
+               --  Encode an entire oneof: at most one member is set (always
+               --  emitted, even at its default value).
+               procedure Emit_Oneof_Encode (ON : String) is
+               begin
+                  SL (Body_Text, "      case Message." & Ada_Id (ON) & ".Which is");
+                  SL (Body_Text, "         when " & Lit_NotSet (TName, ON)
+                                 & " => null;");
+                  for F of M.Fields loop
+                     if To_String (F.Oneof) = ON then
+                        declare
+                           T   : constant Type_Info :=
+                             Resolve (To_String (F.Proto_Type));
+                           Mem : constant String := Oneof_Member_Ident (F);
+                           N   : constant String := F.Number'Image;
+                           Acc : constant String :=
+                             "Message." & Ada_Id (ON) & "." & Mem;
+                        begin
+                           SL (Body_Text, "         when "
+                                          & Lit_Mem (TName, ON, To_String (F.Name))
+                                          & " =>");
+                           if T.Category = Cat_Str then
+                              SL (Body_Text, "            Protobuf.Add_"
+                                             & To_String (T.Suffix) & " (Buffer," & N
+                                             & ", To_String (" & Acc & "));");
+                           elsif T.Category = Cat_Message then
+                              SL (Body_Text, "            Protobuf.Add_Message (Buffer,"
+                                             & N & ", Serialize (" & Acc & "));");
+                           else
+                              SL (Body_Text, "            Protobuf.Add_"
+                                             & To_String (T.Suffix) & " (Buffer," & N
+                                             & ", " & Acc & ");");
+                           end if;
+                        end;
+                     end if;
+                  end loop;
+                  SL (Body_Text, "      end case;");
+               end Emit_Oneof_Encode;
+
+               Encoded_Oneofs : String_Vectors.Vector;
             begin
                SL (Body_Text, "   function Serialize (Message : " & TName
                               & ") return String is");
                SL (Body_Text, "      Buffer : Protobuf.Message_Buffer;");
                SL (Body_Text, "   begin");
                for F of M.Fields loop
-                  Emit_Encode (F);
+                  if Length (F.Oneof) = 0 then
+                     Emit_Encode (F);
+                  elsif not In_Set (Encoded_Oneofs, To_String (F.Oneof)) then
+                     Add_Once (Encoded_Oneofs, To_String (F.Oneof));
+                     Emit_Oneof_Encode (To_String (F.Oneof));
+                  end if;
                end loop;
                SL (Body_Text, "      return Protobuf.To_String (Buffer);");
                SL (Body_Text, "   end Serialize;");

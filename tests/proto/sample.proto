@@ -45,3 +45,14 @@ message Inner {
   int32  x     = 1;
   string label = 2;
 }
+
+// Phase 1c: a oneof with scalar, string, and message members.
+message Choice {
+  string before = 1;
+  oneof pick {
+    int32  count = 2;
+    string text  = 3;
+    Inner  inner = 4;
+  }
+  bool after = 5;
+}

@@ -69,5 +69,24 @@ package Sample is
    function Serialize (Message : Outer) return String;
    function Parse_Outer (Data : String) return Outer;
 
+   type Choice_Pick_Selector is
+     (Choice_Pick_Not_Set, Choice_Pick_Count, Choice_Pick_Text, Choice_Pick_Inner);
+   type Choice_Pick_Oneof (Which : Choice_Pick_Selector := Choice_Pick_Not_Set) is record
+      case Which is
+         when Choice_Pick_Not_Set => null;
+         when Choice_Pick_Count => Count : Interfaces.Integer_32;
+         when Choice_Pick_Text => Text : Ada.Strings.Unbounded.Unbounded_String;
+         when Choice_Pick_Inner => Inner_F : Inner;
+      end case;
+   end record;
+   type Choice is record
+      Before : Ada.Strings.Unbounded.Unbounded_String := Ada.Strings.Unbounded.Null_Unbounded_String;
+      Pick : Choice_Pick_Oneof;
+      After : Boolean := False;
+   end record;
+
+   function Serialize (Message : Choice) return String;
+   function Parse_Choice (Data : String) return Choice;
+
 end Sample;
 

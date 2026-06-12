@@ -215,5 +215,49 @@ package body Sample is
       return Result;
    end Parse_Outer;
 
+   function Serialize (Message : Choice) return String is
+      Buffer : Protobuf.Message_Buffer;
+   begin
+      if Length (Message.Before) > 0 then
+         Protobuf.Add_String (Buffer, 1, To_String (Message.Before));
+      end if;
+      case Message.Pick.Which is
+         when Choice_Pick_Not_Set => null;
+         when Choice_Pick_Count =>
+            Protobuf.Add_Int32 (Buffer, 2, Message.Pick.Count);
+         when Choice_Pick_Text =>
+            Protobuf.Add_String (Buffer, 3, To_String (Message.Pick.Text));
+         when Choice_Pick_Inner =>
+            Protobuf.Add_Message (Buffer, 4, Serialize (Message.Pick.Inner_F));
+      end case;
+      if Message.After then
+         Protobuf.Add_Bool (Buffer, 5, Message.After);
+      end if;
+      return Protobuf.To_String (Buffer);
+   end Serialize;
+
+   function Parse_Choice (Data : String) return Choice is
+      Result : Choice;
+      Fields : constant Protobuf.Parsed_Field_Vectors.Vector :=
+        Protobuf.Parse_From_String (Data);
+   begin
+      for Item of Fields loop
+         case Item.Number is
+            when 1 =>
+               Result.Before := To_Unbounded_String (Protobuf.As_String (Item));
+            when 2 =>
+               Result.Pick := (Which => Choice_Pick_Count, Count => Protobuf.As_Int32 (Item));
+            when 3 =>
+               Result.Pick := (Which => Choice_Pick_Text, Text => To_Unbounded_String (Protobuf.As_String (Item)));
+            when 4 =>
+               Result.Pick := (Which => Choice_Pick_Inner, Inner_F => Parse_Inner (Protobuf.As_Message_Bytes (Item)));
+            when 5 =>
+               Result.After := Protobuf.As_Bool (Item);
+            when others => null;
+         end case;
+      end loop;
+      return Result;
+   end Parse_Choice;
+
 end Sample;
 

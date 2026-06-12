@@ -1238,6 +1238,93 @@ package body Protobuf_Tests is
       end;
    end Test_Generated_Nested_Messages;
 
+   --  Phase 1c: oneof as an Ada discriminated record. Proves wire-compat (a
+   --  member is just its field number), round-trip of scalar/string/message
+   --  members, that a member set to its default value is still emitted, and
+   --  that an unset oneof emits nothing.
+   procedure Test_Generated_Oneof is
+      use Ada.Strings.Unbounded;
+      use type Sample.Choice_Pick_Selector;
+   begin
+      --  Scalar member, with regular fields on either side.
+      declare
+         C   : Sample.Choice;
+         Ref : Protobuf.Message_Buffer;
+      begin
+         C.Before := To_Unbounded_String ("b");
+         C.Pick   := (Which => Sample.Choice_Pick_Count, Count => 7);
+         C.After  := True;
+         Protobuf.Add_String (Ref, 1, "b");
+         Protobuf.Add_Int32  (Ref, 2, 7);
+         Protobuf.Add_Bool   (Ref, 5, True);
+         Assert (Sample.Serialize (C) = Protobuf.To_String (Ref),
+                 "oneof scalar member is wire-compatible");
+         declare
+            D : constant Sample.Choice := Sample.Parse_Choice (Sample.Serialize (C));
+         begin
+            Assert (D.Pick.Which = Sample.Choice_Pick_Count
+                    and then D.Pick.Count = 7, "oneof count round-trips");
+            Assert (To_String (D.Before) = "b" and then D.After,
+                    "fields around the oneof round-trip");
+         end;
+      end;
+
+      --  String member.
+      declare
+         C : Sample.Choice;
+      begin
+         C.Pick := (Which => Sample.Choice_Pick_Text,
+                    Text  => To_Unbounded_String ("hello"));
+         declare
+            D : constant Sample.Choice := Sample.Parse_Choice (Sample.Serialize (C));
+         begin
+            Assert (D.Pick.Which = Sample.Choice_Pick_Text
+                    and then To_String (D.Pick.Text) = "hello",
+                    "oneof string member round-trips");
+         end;
+      end;
+
+      --  Message member.
+      declare
+         C : Sample.Choice;
+         I : Sample.Inner;
+      begin
+         I.X := 3;
+         I.Label := To_Unbounded_String ("z");
+         C.Pick := (Which => Sample.Choice_Pick_Inner, Inner_F => I);
+         declare
+            D : constant Sample.Choice := Sample.Parse_Choice (Sample.Serialize (C));
+         begin
+            Assert (D.Pick.Which = Sample.Choice_Pick_Inner
+                    and then D.Pick.Inner_F.X = 3
+                    and then To_String (D.Pick.Inner_F.Label) = "z",
+                    "oneof message member round-trips");
+         end;
+      end;
+
+      --  A oneof member set to its default value is still serialized.
+      declare
+         C : Sample.Choice;
+      begin
+         C.Pick := (Which => Sample.Choice_Pick_Count, Count => 0);
+         declare
+            S : constant String := Sample.Serialize (C);
+            D : constant Sample.Choice := Sample.Parse_Choice (S);
+         begin
+            Assert (S'Length > 0, "default-valued oneof member is still emitted");
+            Assert (D.Pick.Which = Sample.Choice_Pick_Count and then D.Pick.Count = 0,
+                    "default-valued oneof member round-trips as set, not unset");
+         end;
+      end;
+
+      --  An unset oneof emits nothing.
+      declare
+         C : Sample.Choice;
+      begin
+         Assert (Sample.Serialize (C) = "", "unset oneof emits nothing");
+      end;
+   end Test_Generated_Oneof;
+
    --  Exercises the reserve-once / geometrically-grown serialization buffer:
    --  many fields force several reallocations past the initial capacity, a
    --  maximal varint exercises the 10-byte worst case, and Clear+reuse must
@@ -1371,6 +1458,7 @@ package body Protobuf_Tests is
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated types roundtrip", Test_Generated_Types_Roundtrip'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated enums and repeated", Test_Generated_Enums_And_Repeated'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated nested messages", Test_Generated_Nested_Messages'Access));
+         AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated oneof", Test_Generated_Oneof'Access));
       end if;
       return Registered_Suite;
    end Suite;
