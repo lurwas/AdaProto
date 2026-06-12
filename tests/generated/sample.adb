@@ -2,6 +2,8 @@
 with Interfaces; use Interfaces;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Protobuf;
+with JSON;
+with Proto_JSON;
 with Ada.Unchecked_Deallocation;
 use type Protobuf.Wire_Type;
 package body Sample is
@@ -134,6 +136,17 @@ package body Sample is
    function Element (H : Choice_Holder) return Choice is (H.Ptr.all);
    function Is_Empty (H : Choice_Holder) return Boolean is (H.Ptr = null);
 
+   function Color_To_JSON (V : Color) return JSON.JSON_Value is
+   begin
+      case V is
+         when 0 => return JSON.To_Value ("COLOR_UNSPECIFIED");
+         when 1 => return JSON.To_Value ("RED");
+         when 2 => return JSON.To_Value ("GREEN");
+         when 3 => return JSON.To_Value ("BLUE");
+         when others => return JSON.Number (Proto_JSON.Image (Interfaces.Integer_64 (V)));
+      end case;
+   end Color_To_JSON;
+
    function Serialize (Message : Person) return String is
       Buffer : Protobuf.Message_Buffer;
    begin
@@ -183,6 +196,30 @@ package body Sample is
       return Result;
    end Parse_Person;
 
+   function To_JSON (Message : Person) return JSON.JSON_Value is
+      Obj : JSON.JSON_Value := JSON.Empty_Object;
+   begin
+      if Message.Id /= 0 then
+         JSON.Insert (Obj, "id", JSON.Number (Proto_JSON.Image (Interfaces.Integer_64 (Message.Id))));
+      end if;
+      if Length (Message.Name) > 0 then
+         JSON.Insert (Obj, "name", JSON.To_Value (To_String (Message.Name)));
+      end if;
+      if Message.Active then
+         JSON.Insert (Obj, "active", JSON.To_Value (Message.Active));
+      end if;
+      if Message.Balance /= 0.0 then
+         JSON.Insert (Obj, "balance", Proto_JSON.Double_To_JSON (Message.Balance));
+      end if;
+      if Message.Delta_F /= 0 then
+         JSON.Insert (Obj, "delta", JSON.To_Value (Proto_JSON.Image (Message.Delta_F)));
+      end if;
+      if Length (Message.Blob) > 0 then
+         JSON.Insert (Obj, "blob", JSON.To_Value (Proto_JSON.To_Base64 (To_String (Message.Blob))));
+      end if;
+      return Obj;
+   end To_JSON;
+
    function Serialize (Message : Pair) return String is
       Buffer : Protobuf.Message_Buffer;
    begin
@@ -211,6 +248,18 @@ package body Sample is
       end loop;
       return Result;
    end Parse_Pair;
+
+   function To_JSON (Message : Pair) return JSON.JSON_Value is
+      Obj : JSON.JSON_Value := JSON.Empty_Object;
+   begin
+      if Message.First /= 0 then
+         JSON.Insert (Obj, "first", JSON.Number (Proto_JSON.Image (Interfaces.Unsigned_64 (Message.First))));
+      end if;
+      if Message.Second /= 0 then
+         JSON.Insert (Obj, "second", JSON.Number (Proto_JSON.Image (Interfaces.Unsigned_64 (Message.Second))));
+      end if;
+      return Obj;
+   end To_JSON;
 
    function Serialize (Message : Bag) return String is
       Buffer : Protobuf.Message_Buffer;
@@ -281,6 +330,45 @@ package body Sample is
       return Result;
    end Parse_Bag;
 
+   function To_JSON (Message : Bag) return JSON.JSON_Value is
+      Obj : JSON.JSON_Value := JSON.Empty_Object;
+   begin
+      if not Message.Numbers.Is_Empty then
+         declare
+            Arr : JSON.JSON_Value := JSON.Empty_Array;
+         begin
+            for I in Message.Numbers.First_Index .. Message.Numbers.Last_Index loop
+               JSON.Append (Arr, JSON.Number (Proto_JSON.Image (Interfaces.Integer_64 (Message.Numbers.Element (I)))));
+            end loop;
+            JSON.Insert (Obj, "numbers", Arr);
+         end;
+      end if;
+      if not Message.Tags.Is_Empty then
+         declare
+            Arr : JSON.JSON_Value := JSON.Empty_Array;
+         begin
+            for I in Message.Tags.First_Index .. Message.Tags.Last_Index loop
+               JSON.Append (Arr, JSON.To_Value (To_String (Message.Tags.Element (I))));
+            end loop;
+            JSON.Insert (Obj, "tags", Arr);
+         end;
+      end if;
+      if Message.Color_F /= 0 then
+         JSON.Insert (Obj, "color", Color_To_JSON (Message.Color_F));
+      end if;
+      if not Message.Palette.Is_Empty then
+         declare
+            Arr : JSON.JSON_Value := JSON.Empty_Array;
+         begin
+            for I in Message.Palette.First_Index .. Message.Palette.Last_Index loop
+               JSON.Append (Arr, Color_To_JSON (Message.Palette.Element (I)));
+            end loop;
+            JSON.Insert (Obj, "palette", Arr);
+         end;
+      end if;
+      return Obj;
+   end To_JSON;
+
    function Serialize (Message : Outer) return String is
       Buffer : Protobuf.Message_Buffer;
    begin
@@ -315,6 +403,28 @@ package body Sample is
       return Result;
    end Parse_Outer;
 
+   function To_JSON (Message : Outer) return JSON.JSON_Value is
+      Obj : JSON.JSON_Value := JSON.Empty_Object;
+   begin
+      if not Message.One.Is_Empty then
+         JSON.Insert (Obj, "one", To_JSON (Message.One.Element));
+      end if;
+      if not Message.Many.Is_Empty then
+         declare
+            Arr : JSON.JSON_Value := JSON.Empty_Array;
+         begin
+            for I in Message.Many.First_Index .. Message.Many.Last_Index loop
+               JSON.Append (Arr, To_JSON (Element (Message.Many (I))));
+            end loop;
+            JSON.Insert (Obj, "many", Arr);
+         end;
+      end if;
+      if Length (Message.Note) > 0 then
+         JSON.Insert (Obj, "note", JSON.To_Value (To_String (Message.Note)));
+      end if;
+      return Obj;
+   end To_JSON;
+
    function Serialize (Message : Inner) return String is
       Buffer : Protobuf.Message_Buffer;
    begin
@@ -343,6 +453,18 @@ package body Sample is
       end loop;
       return Result;
    end Parse_Inner;
+
+   function To_JSON (Message : Inner) return JSON.JSON_Value is
+      Obj : JSON.JSON_Value := JSON.Empty_Object;
+   begin
+      if Message.X /= 0 then
+         JSON.Insert (Obj, "x", JSON.Number (Proto_JSON.Image (Interfaces.Integer_64 (Message.X))));
+      end if;
+      if Length (Message.Label) > 0 then
+         JSON.Insert (Obj, "label", JSON.To_Value (To_String (Message.Label)));
+      end if;
+      return Obj;
+   end To_JSON;
 
    function Serialize (Message : Tree) return String is
       Buffer : Protobuf.Message_Buffer;
@@ -382,6 +504,31 @@ package body Sample is
       end loop;
       return Result;
    end Parse_Tree;
+
+   function To_JSON (Message : Tree) return JSON.JSON_Value is
+      Obj : JSON.JSON_Value := JSON.Empty_Object;
+   begin
+      if Message.Value /= 0 then
+         JSON.Insert (Obj, "value", JSON.Number (Proto_JSON.Image (Interfaces.Integer_64 (Message.Value))));
+      end if;
+      if not Message.Left.Is_Empty then
+         JSON.Insert (Obj, "left", To_JSON (Message.Left.Element));
+      end if;
+      if not Message.Right.Is_Empty then
+         JSON.Insert (Obj, "right", To_JSON (Message.Right.Element));
+      end if;
+      if not Message.Children.Is_Empty then
+         declare
+            Arr : JSON.JSON_Value := JSON.Empty_Array;
+         begin
+            for I in Message.Children.First_Index .. Message.Children.Last_Index loop
+               JSON.Append (Arr, To_JSON (Element (Message.Children (I))));
+            end loop;
+            JSON.Insert (Obj, "children", Arr);
+         end;
+      end if;
+      return Obj;
+   end To_JSON;
 
    function Serialize (Message : Maps) return String is
       Buffer : Protobuf.Message_Buffer;
@@ -462,6 +609,32 @@ package body Sample is
       return Result;
    end Parse_Maps;
 
+   function To_JSON (Message : Maps) return JSON.JSON_Value is
+      Obj : JSON.JSON_Value := JSON.Empty_Object;
+   begin
+      if not Message.Counts.Is_Empty then
+         declare
+            M2 : JSON.JSON_Value := JSON.Empty_Object;
+         begin
+            for Cur in Message.Counts.Iterate loop
+               JSON.Insert (M2, To_String (Unbounded_String_Integer_32_Maps.Key (Cur)), JSON.Number (Proto_JSON.Image (Interfaces.Integer_64 (Unbounded_String_Integer_32_Maps.Element (Cur)))));
+            end loop;
+            JSON.Insert (Obj, "counts", M2);
+         end;
+      end if;
+      if not Message.Items.Is_Empty then
+         declare
+            M2 : JSON.JSON_Value := JSON.Empty_Object;
+         begin
+            for Cur in Message.Items.Iterate loop
+               JSON.Insert (M2, Proto_JSON.Image (Interfaces.Integer_64 (Integer_32_Inner_Maps.Key (Cur))), To_JSON (Element (Integer_32_Inner_Maps.Element (Cur))));
+            end loop;
+            JSON.Insert (Obj, "items", M2);
+         end;
+      end if;
+      return Obj;
+   end To_JSON;
+
    function Serialize (Message : Choice) return String is
       Buffer : Protobuf.Message_Buffer;
    begin
@@ -505,6 +678,24 @@ package body Sample is
       end loop;
       return Result;
    end Parse_Choice;
+
+   function To_JSON (Message : Choice) return JSON.JSON_Value is
+      Obj : JSON.JSON_Value := JSON.Empty_Object;
+   begin
+      if Length (Message.Before) > 0 then
+         JSON.Insert (Obj, "before", JSON.To_Value (To_String (Message.Before)));
+      end if;
+      case Message.Pick.Which is
+         when Choice_Pick_Not_Set => null;
+         when Choice_Pick_Count => JSON.Insert (Obj, "count", JSON.Number (Proto_JSON.Image (Interfaces.Integer_64 (Message.Pick.Count))));
+         when Choice_Pick_Text => JSON.Insert (Obj, "text", JSON.To_Value (To_String (Message.Pick.Text)));
+         when Choice_Pick_Inner => JSON.Insert (Obj, "inner", To_JSON (Message.Pick.Inner_F.Element));
+      end case;
+      if Message.After then
+         JSON.Insert (Obj, "after", JSON.To_Value (Message.After));
+      end if;
+      return Obj;
+   end To_JSON;
 
 end Sample;
 

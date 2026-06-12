@@ -44,12 +44,20 @@ the checked-in sources with `tools/generate_ada.sh`.
 - Ada reserved-word field names are escaped (e.g. `delta` -> `Delta_F`), and
   field names that collide with their own type (`color : Color`) are escaped.
 
+Each message also gets `To_JSON` (proto3 -> JSON), via the `JSON` DOM and the
+`Proto_JSON` runtime helpers: lowerCamelCase field names, 32-bit ints as JSON
+numbers, 64-bit ints as JSON strings, `bytes` as base64, `bool`/float/double
+(non-finite floats as "NaN"/"Infinity"/"-Infinity"), enums as their value
+names (unknown values as numbers), repeated as arrays, `map` as objects keyed
+by the stringified key, nested messages as nested objects, the active `oneof`
+member as its own field, and default-valued fields omitted.
+
 Unsupported constructs (nested type definitions, `optional`) raise a clear
 `Compile_Error` with line number.
 
 ### Codegen roadmap (toward 100% proto3 + JSON)
 
-1. **2** proto3 canonical JSON mapping (parse + serialize).
+1. **2 (remaining)** JSON parsing (`From_JSON`): the inverse mapping.
 2. **3** well-known types (`Any`, `Timestamp`, `Duration`, `Struct`, wrappers,
    `FieldMask`, `Empty`), UTF-8 validation of `string` fields.
 3. **4** wire up Google's official conformance-test-runner protocol and drive

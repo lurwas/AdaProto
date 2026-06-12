@@ -1369,6 +1369,104 @@ package body Protobuf_Tests is
       end;
    end Test_Generated_Maps;
 
+   --  Phase 2: generated To_JSON implements the proto3 JSON mapping. Each case
+   --  serializes to JSON text, parses it back, and checks the mapping rules.
+   procedure Test_Generated_To_JSON is
+      use Ada.Strings.Unbounded;
+   begin
+      --  Scalars: 32-bit int as number, int64 as string, bytes as base64,
+      --  bool, string, double (round-trips numerically).
+      declare
+         P : Sample.Person;
+         J : JSON.JSON_Value;
+      begin
+         P.Id := 42;
+         P.Name := To_Unbounded_String ("alice");
+         P.Active := True;
+         P.Balance := 3.5;
+         P.Delta_F := -7;
+         P.Blob := To_Unbounded_String ("AB");
+         J := JSON.Parse (JSON.Serialize (Sample.To_JSON (P)));
+         Assert (JSON.As_Number (JSON.Get (J, "id")) = "42", "int32 -> JSON number");
+         Assert (JSON.As_String (JSON.Get (J, "name")) = "alice", "string field");
+         Assert (JSON.As_Boolean (JSON.Get (J, "active")), "bool field");
+         Assert (JSON.As_String (JSON.Get (J, "delta")) = "-7",
+                 "int64 -> JSON string");
+         Assert (JSON.As_String (JSON.Get (J, "blob")) = "QUI=",
+                 "bytes -> base64");
+         Assert (Long_Float'Value (JSON.As_Number (JSON.Get (J, "balance"))) = 3.5,
+                 "double round-trips through JSON number");
+      end;
+
+      --  Enum as name, repeated scalar/enum as arrays.
+      declare
+         B : Sample.Bag;
+         J : JSON.JSON_Value;
+      begin
+         B.Numbers.Append (1);
+         B.Numbers.Append (2);
+         B.Color_F := Sample.Color_GREEN;
+         B.Palette.Append (Sample.Color_RED);
+         J := JSON.Parse (JSON.Serialize (Sample.To_JSON (B)));
+         Assert (JSON.As_String (JSON.Get (J, "color")) = "GREEN",
+                 "enum -> JSON name");
+         Assert (JSON.Length (JSON.Get (J, "numbers")) = 2
+                 and then JSON.As_Number
+                            (JSON.Element (JSON.Get (J, "numbers"), 1)) = "1",
+                 "repeated int -> JSON array");
+         Assert (JSON.As_String (JSON.Element (JSON.Get (J, "palette"), 1)) = "RED",
+                 "repeated enum -> JSON array of names");
+      end;
+
+      --  Map: object keyed by stringified key; message value nests.
+      declare
+         M  : Sample.Maps;
+         I1 : Sample.Inner;
+         J  : JSON.JSON_Value;
+      begin
+         M.Counts.Include (To_Unbounded_String ("a"), 1);
+         I1.X := 10;
+         M.Items.Include (5, Sample.To_Holder (I1));
+         J := JSON.Parse (JSON.Serialize (Sample.To_JSON (M)));
+         Assert (JSON.As_Number (JSON.Get (JSON.Get (J, "counts"), "a")) = "1",
+                 "map<string,int32> -> JSON object");
+         Assert (JSON.As_Number
+                   (JSON.Get (JSON.Get (JSON.Get (J, "items"), "5"), "x")) = "10",
+                 "map<int32,msg> -> JSON object with stringified int key");
+      end;
+
+      --  Nested message and oneof member.
+      declare
+         O  : Sample.Outer;
+         I1 : Sample.Inner;
+         C  : Sample.Choice;
+         JO : JSON.JSON_Value;
+         JC : JSON.JSON_Value;
+      begin
+         I1.X := 5;
+         O.One := Sample.To_Holder (I1);
+         O.Note := To_Unbounded_String ("n");
+         JO := JSON.Parse (JSON.Serialize (Sample.To_JSON (O)));
+         Assert (JSON.As_Number (JSON.Get (JSON.Get (JO, "one"), "x")) = "5",
+                 "singular nested message -> nested JSON object");
+
+         C.Before := To_Unbounded_String ("b");
+         C.Pick := (Which => Sample.Choice_Pick_Count, Count => 7);
+         JC := JSON.Parse (JSON.Serialize (Sample.To_JSON (C)));
+         Assert (JSON.As_Number (JSON.Get (JC, "count")) = "7",
+                 "oneof member -> its own JSON field");
+         Assert (not JSON.Has (JC, "text"), "inactive oneof members omitted");
+      end;
+
+      --  Default-valued fields are omitted.
+      declare
+         P : Sample.Person;
+      begin
+         Assert (JSON.Serialize (Sample.To_JSON (P)) = "{}",
+                 "an all-default message is an empty JSON object");
+      end;
+   end Test_Generated_To_JSON;
+
    --  Phase 2: the JSON DOM library (writer + recursive-descent parser).
    procedure Test_JSON_Library is
       use type JSON.Value_Kind;
@@ -1631,6 +1729,7 @@ package body Protobuf_Tests is
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated maps", Test_Generated_Maps'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated recursive message", Test_Generated_Recursive'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("json library", Test_JSON_Library'Access));
+         AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated to_json", Test_Generated_To_JSON'Access));
       end if;
       return Registered_Suite;
    end Suite;

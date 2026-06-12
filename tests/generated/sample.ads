@@ -2,6 +2,7 @@
 --  Do not edit by hand.
 with Interfaces;
 with Ada.Strings.Unbounded;
+with JSON;
 with Ada.Containers.Vectors;
 with Ada.Finalization;
 with Ada.Containers.Ordered_Maps;
@@ -12,6 +13,7 @@ package Sample is
    Color_RED : constant Color := 1;
    Color_GREEN : constant Color := 2;
    Color_BLUE : constant Color := 3;
+   function Color_To_JSON (V : Color) return JSON.JSON_Value;
 
    type Person;
    type Person_Access is access Person;
@@ -180,27 +182,35 @@ package Sample is
 
    function Serialize (Message : Person) return String;
    function Parse_Person (Data : String) return Person;
+   function To_JSON (Message : Person) return JSON.JSON_Value;
 
    function Serialize (Message : Pair) return String;
    function Parse_Pair (Data : String) return Pair;
+   function To_JSON (Message : Pair) return JSON.JSON_Value;
 
    function Serialize (Message : Bag) return String;
    function Parse_Bag (Data : String) return Bag;
+   function To_JSON (Message : Bag) return JSON.JSON_Value;
 
    function Serialize (Message : Outer) return String;
    function Parse_Outer (Data : String) return Outer;
+   function To_JSON (Message : Outer) return JSON.JSON_Value;
 
    function Serialize (Message : Inner) return String;
    function Parse_Inner (Data : String) return Inner;
+   function To_JSON (Message : Inner) return JSON.JSON_Value;
 
    function Serialize (Message : Tree) return String;
    function Parse_Tree (Data : String) return Tree;
+   function To_JSON (Message : Tree) return JSON.JSON_Value;
 
    function Serialize (Message : Maps) return String;
    function Parse_Maps (Data : String) return Maps;
+   function To_JSON (Message : Maps) return JSON.JSON_Value;
 
    function Serialize (Message : Choice) return String;
    function Parse_Choice (Data : String) return Choice;
+   function To_JSON (Message : Choice) return JSON.JSON_Value;
 
 end Sample;
 

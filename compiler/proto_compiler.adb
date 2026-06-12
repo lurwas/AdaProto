@@ -9,6 +9,7 @@ with Ada.Text_IO;
 package body Proto_Compiler is
 
    NL : constant Character := ASCII.LF;
+   Q  : constant Character := '"';   --  a double quote, for emitting Ada string literals
 
    ---------------------------------------------------------------------------
    --  AST
@@ -496,6 +497,24 @@ package body Proto_Compiler is
       end if;
    end Ada_Id;
 
+   --  proto3 JSON field name: snake_case -> lowerCamelCase.
+   function Json_Name (Proto_Name : String) return String is
+      R : Unbounded_String;
+      Upper_Next : Boolean := False;
+   begin
+      for C of Proto_Name loop
+         if C = '_' then
+            Upper_Next := True;
+         elsif Upper_Next then
+            Append (R, To_Upper (C));
+            Upper_Next := False;
+         else
+            Append (R, C);
+         end if;
+      end loop;
+      return To_String (R);
+   end Json_Name;
+
    function Ada_Unit_Name (Dotted : String) return String is
       R : Unbounded_String;
       At_Start : Boolean := True;
@@ -814,6 +833,7 @@ package body Proto_Compiler is
          SL (Spec, "--  Do not edit by hand.");
          SL (Spec, "with Interfaces;");
          SL (Spec, "with Ada.Strings.Unbounded;");
+         SL (Spec, "with JSON;");
          if Has_Repeated then
             SL (Spec, "with Ada.Containers.Vectors;");
          end if;
@@ -837,6 +857,8 @@ package body Proto_Compiler is
                             & " : constant " & EName & " :="
                             & V.Number'Image & ";");
                end loop;
+               SL (Spec, "   function " & EName & "_To_JSON (V : " & EName
+                         & ") return JSON.JSON_Value;");
                SL (Spec, "");
             end;
          end loop;
@@ -1024,6 +1046,8 @@ package body Proto_Compiler is
                          & ") return String;");
                SL (Spec, "   function Parse_" & TName
                          & " (Data : String) return " & TName & ";");
+               SL (Spec, "   function To_JSON (Message : " & TName
+                         & ") return JSON.JSON_Value;");
                SL (Spec, "");
             end;
          end loop;
@@ -1035,6 +1059,8 @@ package body Proto_Compiler is
          SL (Body_Text, "with Interfaces; use Interfaces;");
          SL (Body_Text, "with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;");
          SL (Body_Text, "with Protobuf;");
+         SL (Body_Text, "with JSON;");
+         SL (Body_Text, "with Proto_JSON;");
          if N_Msgs > 0 then
             SL (Body_Text, "with Ada.Unchecked_Deallocation;");
          end if;
@@ -1075,6 +1101,28 @@ package body Proto_Compiler is
                               & "_Holder) return " & TName & " is (H.Ptr.all);");
                SL (Body_Text, "   function Is_Empty (H : " & TName
                               & "_Holder) return Boolean is (H.Ptr = null);");
+               SL (Body_Text, "");
+            end;
+         end loop;
+
+         --  Enum -> JSON: known values render as their name, unknown as number.
+         for E of Enums loop
+            declare
+               EName : constant String := Ada_Id (To_String (E.Name));
+            begin
+               SL (Body_Text, "   function " & EName & "_To_JSON (V : " & EName
+                              & ") return JSON.JSON_Value is");
+               SL (Body_Text, "   begin");
+               SL (Body_Text, "      case V is");
+               for Val of E.Values loop
+                  SL (Body_Text, "         when" & Val.Number'Image & " => return "
+                                 & "JSON.To_Value (" & Q & To_String (Val.Name) & Q
+                                 & ");");
+               end loop;
+               SL (Body_Text, "         when others => return JSON.Number "
+                              & "(Proto_JSON.Image (Interfaces.Integer_64 (V)));");
+               SL (Body_Text, "      end case;");
+               SL (Body_Text, "   end " & EName & "_To_JSON;");
                SL (Body_Text, "");
             end;
          end loop;
@@ -1366,7 +1414,161 @@ package body Proto_Compiler is
                   SL (Body_Text, "               end;");
                end Emit_Map_Decode;
 
+               --  JSON value expression for a scalar/enum/message Acc, per the
+               --  proto3 JSON mapping (64-bit ints as strings, bytes as base64,
+               --  enums as names, float specials as strings).
+               function JSON_Expr (Proto, Acc : String) return String is
+                  T : constant Type_Info := Resolve (Proto);
+                  S : constant String := To_String (T.Suffix);
+               begin
+                  if Is_Enum (Proto) then
+                     return Ada_Id (Proto) & "_To_JSON (" & Acc & ")";
+                  end if;
+                  case T.Category is
+                     when Cat_Int =>
+                        if S = "Int32" or else S = "SInt32" or else S = "SFixed32"
+                        then
+                           return "JSON.Number (Proto_JSON.Image "
+                                  & "(Interfaces.Integer_64 (" & Acc & ")))";
+                        elsif S = "UInt32" or else S = "Fixed32" then
+                           return "JSON.Number (Proto_JSON.Image "
+                                  & "(Interfaces.Unsigned_64 (" & Acc & ")))";
+                        else  --  64-bit -> string
+                           return "JSON.To_Value (Proto_JSON.Image (" & Acc & "))";
+                        end if;
+                     when Cat_Float =>
+                        return (if S = "Float" then "Proto_JSON.Float_To_JSON ("
+                                else "Proto_JSON.Double_To_JSON (") & Acc & ")";
+                     when Cat_Bool =>
+                        return "JSON.To_Value (" & Acc & ")";
+                     when Cat_Str =>
+                        if S = "Bytes" then
+                           return "JSON.To_Value (Proto_JSON.To_Base64 "
+                                  & "(To_String (" & Acc & ")))";
+                        else
+                           return "JSON.To_Value (To_String (" & Acc & "))";
+                        end if;
+                     when Cat_Message =>
+                        return "To_JSON (" & Acc & ")";
+                  end case;
+               end JSON_Expr;
+
+               procedure Emit_To_JSON_Field (F : Field_Def) is
+                  T  : constant Type_Info := Resolve (To_String (F.Proto_Type));
+                  C  : constant String := Field_Ident (F);
+                  JN : constant String := Json_Name (To_String (F.Name));
+                  P  : constant String := To_String (F.Proto_Type);
+               begin
+                  if F.Repeated then
+                     SL (Body_Text, "      if not Message." & C & ".Is_Empty then");
+                     SL (Body_Text, "         declare");
+                     SL (Body_Text, "            Arr : JSON.JSON_Value := JSON.Empty_Array;");
+                     SL (Body_Text, "         begin");
+                     SL (Body_Text, "            for I in Message." & C
+                                    & ".First_Index .. Message." & C
+                                    & ".Last_Index loop");
+                     SL (Body_Text, "               JSON.Append (Arr, "
+                                    & JSON_Expr
+                                        (P, (if T.Category = Cat_Message then
+                                                "Element (Message." & C & " (I))"
+                                             else "Message." & C & ".Element (I)"))
+                                    & ");");
+                     SL (Body_Text, "            end loop;");
+                     SL (Body_Text, "            JSON.Insert (Obj, " & Q & JN & Q
+                                    & ", Arr);");
+                     SL (Body_Text, "         end;");
+                     SL (Body_Text, "      end if;");
+                  else
+                     declare
+                        Guard : constant String :=
+                          (case T.Category is
+                              when Cat_Int     => "Message." & C & " /= 0",
+                              when Cat_Float   => "Message." & C & " /= 0.0",
+                              when Cat_Bool    => "Message." & C,
+                              when Cat_Str     => "Length (Message." & C & ") > 0",
+                              when Cat_Message => "not Message." & C & ".Is_Empty");
+                        Acc : constant String :=
+                          (if T.Category = Cat_Message
+                           then "Message." & C & ".Element"
+                           else "Message." & C);
+                     begin
+                        SL (Body_Text, "      if " & Guard & " then");
+                        SL (Body_Text, "         JSON.Insert (Obj, " & Q & JN & Q
+                                       & ", " & JSON_Expr (P, Acc) & ");");
+                        SL (Body_Text, "      end if;");
+                     end;
+                  end if;
+               end Emit_To_JSON_Field;
+
+               procedure Emit_Oneof_JSON (ON : String) is
+               begin
+                  SL (Body_Text, "      case Message." & Ada_Id (ON) & ".Which is");
+                  SL (Body_Text, "         when " & Lit_NotSet (TName, ON)
+                                 & " => null;");
+                  for F of M.Fields loop
+                     if To_String (F.Oneof) = ON then
+                        declare
+                           P   : constant String := To_String (F.Proto_Type);
+                           Mem : constant String := Oneof_Member_Ident (F);
+                           Base : constant String :=
+                             "Message." & Ada_Id (ON) & "." & Mem;
+                           Acc : constant String :=
+                             (if Resolve (P).Category = Cat_Message
+                              then Base & ".Element" else Base);
+                        begin
+                           SL (Body_Text, "         when "
+                                          & Lit_Mem (TName, ON, To_String (F.Name))
+                                          & " => JSON.Insert (Obj, " & Q
+                                          & Json_Name (To_String (F.Name)) & Q & ", "
+                                          & JSON_Expr (P, Acc) & ");");
+                        end;
+                     end if;
+                  end loop;
+                  SL (Body_Text, "      end case;");
+               end Emit_Oneof_JSON;
+
+               procedure Emit_Map_JSON (F : Field_Def) is
+                  KT : constant Type_Info := Resolve (To_String (F.Map_Key));
+                  C  : constant String := Ada_Id (To_String (F.Name));
+                  JN : constant String := Json_Name (To_String (F.Name));
+                  MP : constant String :=
+                    Map_Pkg (To_String (KT.Ada_Type),
+                             To_String (Resolve (To_String (F.Map_Value)).Ada_Type));
+                  Key_Str : constant String :=
+                    (case KT.Category is
+                        when Cat_Str  => "To_String (" & MP & ".Key (Cur))",
+                        when Cat_Bool =>
+                          "(if " & MP & ".Key (Cur) then " & Q & "true" & Q
+                          & " else " & Q & "false" & Q & ")",
+                        when others   =>
+                          (if Index (KT.Ada_Type, "Unsigned") > 0
+                           then "Proto_JSON.Image (Interfaces.Unsigned_64 ("
+                           else "Proto_JSON.Image (Interfaces.Integer_64 (")
+                          & MP & ".Key (Cur)))");
+                  Val_Is_Msg : constant Boolean :=
+                    Resolve (To_String (F.Map_Value)).Category = Cat_Message;
+                  Val_Acc : constant String :=
+                    (if Val_Is_Msg then "Element (" & MP & ".Element (Cur))"
+                     else MP & ".Element (Cur)");
+               begin
+                  SL (Body_Text, "      if not Message." & C & ".Is_Empty then");
+                  SL (Body_Text, "         declare");
+                  SL (Body_Text, "            M2 : JSON.JSON_Value := JSON.Empty_Object;");
+                  SL (Body_Text, "         begin");
+                  SL (Body_Text, "            for Cur in Message." & C
+                                 & ".Iterate loop");
+                  SL (Body_Text, "               JSON.Insert (M2, " & Key_Str & ", "
+                                 & JSON_Expr (To_String (F.Map_Value), Val_Acc)
+                                 & ");");
+                  SL (Body_Text, "            end loop;");
+                  SL (Body_Text, "            JSON.Insert (Obj, " & Q & JN & Q
+                                 & ", M2);");
+                  SL (Body_Text, "         end;");
+                  SL (Body_Text, "      end if;");
+               end Emit_Map_JSON;
+
                Encoded_Oneofs : String_Vectors.Vector;
+               JSON_Oneofs    : String_Vectors.Vector;
             begin
                SL (Body_Text, "   function Serialize (Message : " & TName
                               & ") return String is");
@@ -1406,6 +1608,26 @@ package body Proto_Compiler is
                SL (Body_Text, "      end loop;");
                SL (Body_Text, "      return Result;");
                SL (Body_Text, "   end Parse_" & TName & ";");
+               SL (Body_Text, "");
+
+               --  To_JSON: build a JSON object per the proto3 mapping, omitting
+               --  default-valued fields.
+               SL (Body_Text, "   function To_JSON (Message : " & TName
+                              & ") return JSON.JSON_Value is");
+               SL (Body_Text, "      Obj : JSON.JSON_Value := JSON.Empty_Object;");
+               SL (Body_Text, "   begin");
+               for F of M.Fields loop
+                  if F.Is_Map then
+                     Emit_Map_JSON (F);
+                  elsif Length (F.Oneof) = 0 then
+                     Emit_To_JSON_Field (F);
+                  elsif not In_Set (JSON_Oneofs, To_String (F.Oneof)) then
+                     Add_Once (JSON_Oneofs, To_String (F.Oneof));
+                     Emit_Oneof_JSON (To_String (F.Oneof));
+                  end if;
+               end loop;
+               SL (Body_Text, "      return Obj;");
+               SL (Body_Text, "   end To_JSON;");
                SL (Body_Text, "");
             end;
          end loop;
