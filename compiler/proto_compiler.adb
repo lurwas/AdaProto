@@ -298,7 +298,7 @@ package body Proto_Compiler is
                   F.Is_Map := True;
                   F.Map_Key := To_Unbounded_String (Expect_Ident);
                   Expect_Symbol (",");
-                  F.Map_Value := To_Unbounded_String (Expect_Ident);
+                  F.Map_Value := Parse_Dotted;
                   Expect_Symbol (">");
                   F.Proto_Type := To_Unbounded_String ("map");
                   F.Name := To_Unbounded_String (Expect_Ident);
@@ -323,7 +323,7 @@ package body Proto_Compiler is
                         declare
                            F : Field_Def;
                         begin
-                           F.Proto_Type := To_Unbounded_String (Expect_Ident);
+                           F.Proto_Type := Parse_Dotted;
                            F.Name := To_Unbounded_String (Expect_Ident);
                            Expect_Symbol ("=");
                            F.Number := Positive (Parse_Int);
@@ -344,7 +344,7 @@ package body Proto_Compiler is
                      F.Repeated := True;
                      Adv;
                   end if;
-                  F.Proto_Type := To_Unbounded_String (Expect_Ident);
+                  F.Proto_Type := Parse_Dotted;
                   F.Name := To_Unbounded_String (Expect_Ident);
                   Expect_Symbol ("=");
                   F.Number := Positive (Parse_Int);
@@ -403,6 +403,7 @@ package body Proto_Compiler is
       Suffix     : Unbounded_String;  --  Add_<Suffix> / As_<Suffix>
       Array_Type : Unbounded_String;  --  Protobuf.<Array_Type> for packed
       Category   : Type_Category := Cat_Int;
+      Is_WKT     : Boolean := False;  --  a google.protobuf.* well-known type
    end record;
 
    function Info
@@ -415,8 +416,45 @@ package body Proto_Compiler is
          To_Unbounded_String (Default),
          To_Unbounded_String (Suffix),
          To_Unbounded_String (Array_Type),
-         Category);
+         Category,
+         Is_WKT => False);
    end Info;
+
+   --  Map a google.protobuf.* type name to its Proto_WKT Ada type name, or ""
+   --  if it is not a (supported) well-known type.
+   function WKT_Ada (Proto : String) return String is
+   begin
+      if Proto = "google.protobuf.Empty" then return "Empty";
+      elsif Proto = "google.protobuf.Int32Value" then return "Int32_Value";
+      elsif Proto = "google.protobuf.Int64Value" then return "Int64_Value";
+      elsif Proto = "google.protobuf.UInt32Value" then return "UInt32_Value";
+      elsif Proto = "google.protobuf.UInt64Value" then return "UInt64_Value";
+      elsif Proto = "google.protobuf.FloatValue" then return "Float_Value";
+      elsif Proto = "google.protobuf.DoubleValue" then return "Double_Value";
+      elsif Proto = "google.protobuf.BoolValue" then return "Bool_Value";
+      elsif Proto = "google.protobuf.StringValue" then return "String_Value";
+      elsif Proto = "google.protobuf.BytesValue" then return "Bytes_Value";
+      elsif Proto = "google.protobuf.Duration" then return "Duration";
+      elsif Proto = "google.protobuf.Timestamp" then return "Timestamp";
+      elsif Proto = "google.protobuf.FieldMask" then return "Field_Mask";
+      elsif Proto = "google.protobuf.Struct" then return "Struct";
+      elsif Proto = "google.protobuf.Value" then return "Value";
+      elsif Proto = "google.protobuf.ListValue" then return "List_Value";
+      elsif Proto = "google.protobuf.Any" then return "Any";
+      else return "";
+      end if;
+   end WKT_Ada;
+
+   --  The Ada type mark for a message/WKT type. WKT type marks are qualified
+   --  (Proto_WKT.<X>) so they are never shadowed by, e.g., Standard.Duration.
+   function Msg_Type_Mark (T : Type_Info) return String is
+     (if T.Is_WKT then "Proto_WKT." & To_String (T.Ada_Type)
+      else To_String (T.Ada_Type));
+
+   --  The binary parse function name for a message/WKT type.
+   function Msg_Parse_Fn (T : Type_Info) return String is
+     (if T.Is_WKT then "Proto_WKT.Parse_" & To_String (T.Ada_Type)
+      else "Parse_" & To_String (T.Ada_Type));
 
    function Map_Scalar (Proto : String; Found : out Boolean) return Type_Info is
    begin
@@ -624,10 +662,19 @@ package body Proto_Compiler is
             return Info (Ada_Id (Proto), "0", "Int32", "Int32_Array", Cat_Int);
          elsif Is_Message (Proto) then
             return Info (Ada_Id (Proto), "", "Message", "", Cat_Message);
+         elsif WKT_Ada (Proto) /= "" then
+            --  A well-known type: a message-category type whose Ada type is the
+            --  Proto_WKT.<X> external type (Is_WKT drives holder generation).
+            return (Ada_Type   => To_Unbounded_String (WKT_Ada (Proto)),
+                    Default    => Null_Unbounded_String,
+                    Suffix     => To_Unbounded_String ("Message"),
+                    Array_Type => Null_Unbounded_String,
+                    Category   => Cat_Message,
+                    Is_WKT     => True);
          else
             raise Compile_Error
               with "field type '" & Proto
-                   & "' is not a scalar, enum, or message";
+                   & "' is not a scalar, enum, message, or known google.protobuf type";
          end if;
       end Resolve;
 
@@ -729,11 +776,14 @@ package body Proto_Compiler is
          Vec_Types : String_Vectors.Vector;  --  scalar/enum repeated elem types
          Msg_Hold  : String_Vectors.Vector;  --  message types used singular
          Msg_Vec   : String_Vectors.Vector;  --  message types used repeated
+         Wkt_Hold  : String_Vectors.Vector;  --  WKT types used singular
+         Wkt_Vec   : String_Vectors.Vector;  --  WKT types used repeated
          Map_Top   : String_Vectors.Vector;  --  "Key|Val" maps, scalar/enum value
          Map_Msg   : String_Vectors.Vector;  --  "Key|Val" maps, message value
          Has_Repeated        : Boolean := False;  --  any repeated -> with Vectors
          Has_Packed_Repeated : Boolean := False;  --  repeated scalar -> Wire_Type
          Has_Map             : Boolean := False;
+         Has_WKT             : Boolean := False;  --  any well-known type used
 
          function Bar_Before (S : String) return String is
            (S (S'First .. Ada.Strings.Fixed.Index (S, "|") - 1));
@@ -800,7 +850,11 @@ package body Proto_Compiler is
                      Key : constant String := To_String (KT.Ada_Type)
                                               & "|" & To_String (VT.Ada_Type);
                   begin
-                     if VT.Category = Cat_Message then
+                     if VT.Is_WKT then
+                        raise Compile_Error
+                          with "a well-known type as a map value is not yet "
+                               & "supported in this codegen phase";
+                     elsif VT.Category = Cat_Message then
                         Add_Once (Map_Msg, Key);
                      else
                         Add_Once (Map_Top, Key);
@@ -810,17 +864,24 @@ package body Proto_Compiler is
                   declare
                      T : constant Type_Info := Resolve (To_String (F.Proto_Type));
                   begin
+                     if T.Is_WKT then
+                        Has_WKT := True;
+                     end if;
                      if F.Repeated then
                         Has_Repeated := True;
-                        if T.Category = Cat_Message then
+                        if T.Is_WKT then
+                           Add_Once (Wkt_Vec, To_String (T.Ada_Type));
+                        elsif T.Category = Cat_Message then
                            Add_Once (Msg_Vec, To_String (T.Ada_Type));
                         else
                            Has_Packed_Repeated :=
                              Has_Packed_Repeated or else T.Category /= Cat_Str;
                            Add_Once (Vec_Types, To_String (T.Ada_Type));
                         end if;
+                     elsif T.Is_WKT then
+                        Add_Once (Wkt_Hold, To_String (T.Ada_Type));
                      elsif T.Category = Cat_Message then
-                           Add_Once (Msg_Hold, To_String (T.Ada_Type));
+                        Add_Once (Msg_Hold, To_String (T.Ada_Type));
                      end if;
                   end;
                end if;
@@ -848,6 +909,9 @@ package body Proto_Compiler is
          end if;
          if Has_Map then
             SL (Spec, "with Ada.Containers.Ordered_Maps;");
+         end if;
+         if Has_WKT then
+            SL (Spec, "with Proto_WKT;");
          end if;
          SL (Spec, "package " & Unit & " is");
          SL (Spec, "");
@@ -901,6 +965,42 @@ package body Proto_Compiler is
             end;
          end loop;
 
+         --  Holders over external well-known types (Proto_WKT.<X>): same
+         --  controlled-holder shape, but wrapping the complete external type
+         --  (no forward declaration needed).
+         declare
+            Wkt_Used : String_Vectors.Vector;
+         begin
+            for W of Wkt_Hold loop
+               Add_Once (Wkt_Used, To_String (W));
+            end loop;
+            for W of Wkt_Vec loop
+               Add_Once (Wkt_Used, To_String (W));
+            end loop;
+            for Wn of Wkt_Used loop
+               declare
+                  W : constant String := To_String (Wn);
+               begin
+                  SL (Spec, "   type " & W & "_Access is access Proto_WKT." & W & ";");
+                  SL (Spec, "   type " & W
+                            & "_Holder is new Ada.Finalization.Controlled with record");
+                  SL (Spec, "      Ptr : " & W & "_Access := null;");
+                  SL (Spec, "   end record;");
+                  SL (Spec, "   overriding procedure Adjust (H : in out "
+                            & W & "_Holder);");
+                  SL (Spec, "   overriding procedure Finalize (H : in out "
+                            & W & "_Holder);");
+                  SL (Spec, "   function To_Holder (Value : Proto_WKT." & W
+                            & ") return " & W & "_Holder;");
+                  SL (Spec, "   function Element (H : " & W & "_Holder) return "
+                            & "Proto_WKT." & W & ";");
+                  SL (Spec, "   function Is_Empty (H : " & W
+                            & "_Holder) return Boolean;");
+                  SL (Spec, "");
+               end;
+            end loop;
+         end;
+
          --  Scalar/enum repeated element vectors.
          for T of Vec_Types loop
             SL (Spec, "   use type " & To_String (T) & ";");
@@ -913,6 +1013,14 @@ package body Proto_Compiler is
 
          --  Repeated message fields: vectors of holders.
          for T of Msg_Vec loop
+            SL (Spec, "   use type " & To_String (T) & "_Holder;");
+            SL (Spec, "   package " & Vector_Pkg (To_String (T))
+                      & " is new Ada.Containers.Vectors (Positive, "
+                      & To_String (T) & "_Holder);");
+         end loop;
+
+         --  Repeated well-known-type fields: vectors of WKT holders.
+         for T of Wkt_Vec loop
             SL (Spec, "   use type " & To_String (T) & "_Holder;");
             SL (Spec, "   package " & Vector_Pkg (To_String (T))
                       & " is new Ada.Containers.Vectors (Positive, "
@@ -1072,6 +1180,9 @@ package body Proto_Compiler is
          SL (Body_Text, "with JSON;");
          SL (Body_Text, "use type JSON.Value_Kind;");
          SL (Body_Text, "with Proto_JSON;");
+         if Has_WKT then
+            SL (Body_Text, "with Proto_WKT; use Proto_WKT;");
+         end if;
          if N_Msgs > 0 then
             SL (Body_Text, "with Ada.Unchecked_Deallocation;");
          end if;
@@ -1115,6 +1226,51 @@ package body Proto_Compiler is
                SL (Body_Text, "");
             end;
          end loop;
+
+         --  Holder operations over external well-known types.
+         declare
+            Wkt_Used : String_Vectors.Vector;
+         begin
+            for W of Wkt_Hold loop
+               Add_Once (Wkt_Used, To_String (W));
+            end loop;
+            for W of Wkt_Vec loop
+               Add_Once (Wkt_Used, To_String (W));
+            end loop;
+            for Wn of Wkt_Used loop
+               declare
+                  W : constant String := To_String (Wn);
+                  P : constant String := "Proto_WKT." & W;
+               begin
+                  SL (Body_Text, "   procedure Free_" & W
+                                 & " is new Ada.Unchecked_Deallocation ("
+                                 & P & ", " & W & "_Access);");
+                  SL (Body_Text, "   overriding procedure Adjust (H : in out "
+                                 & W & "_Holder) is");
+                  SL (Body_Text, "   begin");
+                  SL (Body_Text, "      if H.Ptr /= null then H.Ptr := new "
+                                 & P & "'(H.Ptr.all); end if;");
+                  SL (Body_Text, "   end Adjust;");
+                  SL (Body_Text, "   overriding procedure Finalize (H : in out "
+                                 & W & "_Holder) is");
+                  SL (Body_Text, "   begin");
+                  SL (Body_Text, "      Free_" & W & " (H.Ptr);");
+                  SL (Body_Text, "   end Finalize;");
+                  SL (Body_Text, "   function To_Holder (Value : " & P
+                                 & ") return " & W & "_Holder is");
+                  SL (Body_Text, "   begin");
+                  SL (Body_Text, "      return H : " & W
+                                 & "_Holder do H.Ptr := new " & P
+                                 & "'(Value); end return;");
+                  SL (Body_Text, "   end To_Holder;");
+                  SL (Body_Text, "   function Element (H : " & W
+                                 & "_Holder) return " & P & " is (H.Ptr.all);");
+                  SL (Body_Text, "   function Is_Empty (H : " & W
+                                 & "_Holder) return Boolean is (H.Ptr = null);");
+                  SL (Body_Text, "");
+               end;
+            end loop;
+         end;
 
          --  Enum -> JSON: known values render as their name, unknown as number.
          for E of Enums loop
@@ -1265,8 +1421,7 @@ package body Proto_Compiler is
                   if F.Repeated then
                      if T.Category = Cat_Message then
                         SL (Body_Text, "               Result." & C
-                                       & ".Append (To_Holder (Parse_"
-                                       & To_String (T.Ada_Type)
+                                       & ".Append (To_Holder (" & Msg_Parse_Fn (T)
                                        & " (Protobuf.As_Message_Bytes (Item))));");
                      elsif T.Category = Cat_Str then
                         SL (Body_Text, "               Result." & C & ".Append ("
@@ -1300,7 +1455,7 @@ package body Proto_Compiler is
                                          & " (Item)") & ";");
                   elsif T.Category = Cat_Message then
                      SL (Body_Text, "               Result." & C
-                                    & " := To_Holder (Parse_" & To_String (T.Ada_Type)
+                                    & " := To_Holder (" & Msg_Parse_Fn (T)
                                     & " (Protobuf.As_Message_Bytes (Item)));");
                   else
                      SL (Body_Text, "               Result." & C & " := Protobuf.As_"
@@ -1638,7 +1793,7 @@ package body Proto_Compiler is
                            return Str_Decode (S, "JSON.As_String (" & FV & ")");
                         end if;
                      when Cat_Message =>
-                        return Ada_Id (Proto) & "'(From_JSON (" & FV & "))";
+                        return Msg_Type_Mark (T) & "'(From_JSON (" & FV & "))";
                   end case;
                end From_JSON_Expr;
 

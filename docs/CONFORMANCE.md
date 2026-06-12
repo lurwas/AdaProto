@@ -90,10 +90,16 @@ A runtime library of `google.protobuf.*` types with their binary wire
 
 ### Codegen roadmap (toward 100% proto3 + JSON)
 
-1. **3 (remaining)** wire all the well-known types into the generator so a
-   field of type `google.protobuf.X` resolves to `Proto_WKT.X` (the runtime
-   types and their JSON/binary forms are done).
-2. **4** wire up Google's official conformance-test-runner protocol and drive
+**Generator integration**: a field of type `google.protobuf.X` resolves to
+`Proto_WKT.X` -- the generator emits a controlled holder over the external WKT
+type (presence), routes binary encode/decode through `Proto_WKT.Serialize` /
+`Proto_WKT.Parse_X`, and JSON through `Proto_WKT.To_JSON`/`From_JSON` (so the
+special forms apply). Supported for singular and repeated WKT fields; a WKT as
+a map value is rejected with a clear error (a follow-up).
+
+### Codegen roadmap (toward 100% proto3 + JSON)
+
+1. **4** wire up Google's official conformance-test-runner protocol and drive
    the proto3 + JSON conformance suite to a green (or explicitly-documented) run.
 
 ## Explicitly not implemented (yet)

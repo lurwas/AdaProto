@@ -1538,6 +1538,64 @@ package body Protobuf_Tests is
       end;
    end Test_WKT_Wrappers;
 
+   --  Phase 3: generated message fields of well-known types (Box), wired
+   --  through the generator to Proto_WKT (presence via generated holders).
+   procedure Test_Generated_WKT_Fields is
+      use Ada.Strings.Unbounded;
+      B : Sample.Box;
+   begin
+      B.Count := Sample.To_Holder (Proto_WKT.Int32_Value'(Value => 5));
+      B.Dur   := Sample.To_Holder
+        (Proto_WKT.Duration'(Seconds => 3, Nanos => 500_000_000));
+      B.At_F  := Sample.To_Holder
+        (Proto_WKT.Timestamp'(Seconds => 1_234_567_890, Nanos => 0));
+      B.Tags.Append
+        (Sample.To_Holder (Proto_WKT.String_Value'(Value => To_Unbounded_String ("hi"))));
+
+      --  JSON: each WKT field takes its special bare form.
+      declare
+         J : constant JSON.JSON_Value :=
+           JSON.Parse (JSON.Serialize (Sample.To_JSON (B)));
+         Tags : constant JSON.JSON_Value := JSON.Get (J, "tags");
+      begin
+         Assert (JSON.As_Number (JSON.Get (J, "count")) = "5",
+                 "Int32Value field -> bare JSON number");
+         Assert (JSON.As_String (JSON.Get (J, "dur")) = "3.500s",
+                 "Duration field -> JSON string");
+         Assert (JSON.As_String (JSON.Get (J, "at")) = "2009-02-13T23:31:30Z",
+                 "Timestamp field -> RFC 3339 string");
+         Assert (JSON.Length (Tags) = 1
+                 and then JSON.As_String (JSON.Element (Tags, 1)) = "hi",
+                 "repeated StringValue -> JSON array of strings");
+
+         --  From_JSON round-trips the WKT fields.
+         declare
+            D : constant Sample.Box := Sample.From_JSON (J);
+         begin
+            Assert (not D.Count.Is_Empty
+                    and then Sample.Element (D.Count).Value = 5,
+                    "Int32Value field from JSON");
+            Assert (Sample.Element (D.Dur).Seconds = 3
+                    and then Sample.Element (D.Dur).Nanos = 500_000_000,
+                    "Duration field from JSON");
+         end;
+      end;
+
+      --  Binary round-trip through the generated Serialize/Parse_Box.
+      declare
+         D : constant Sample.Box := Sample.Parse_Box (Sample.Serialize (B));
+      begin
+         Assert (not D.Count.Is_Empty
+                 and then Sample.Element (D.Count).Value = 5,
+                 "Int32Value field binary round-trip");
+         Assert (Sample.Element (D.At_F).Seconds = 1_234_567_890,
+                 "Timestamp field binary round-trip");
+         Assert (Natural (D.Tags.Length) = 1
+                 and then To_String (Sample.Element (D.Tags (1)).Value) = "hi",
+                 "repeated StringValue binary round-trip");
+      end;
+   end Test_Generated_WKT_Fields;
+
    --  Phase 3: Any -- {"@type": url, ...}. Embedded well-known types use a
    --  "value" member; the registry resolves the type_url to its JSON handlers.
    procedure Test_WKT_Any is
@@ -2123,6 +2181,7 @@ package body Protobuf_Tests is
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("wkt fieldmask", Test_WKT_FieldMask'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("wkt struct value listvalue", Test_WKT_Struct_Value'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("wkt any", Test_WKT_Any'Access));
+         AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated wkt fields", Test_Generated_WKT_Fields'Access));
       end if;
       return Registered_Suite;
    end Suite;

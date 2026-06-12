@@ -5,9 +5,26 @@ with Protobuf;
 with JSON;
 use type JSON.Value_Kind;
 with Proto_JSON;
+with Proto_WKT; use Proto_WKT;
 with Ada.Unchecked_Deallocation;
 use type Protobuf.Wire_Type;
 package body Sample is
+
+   procedure Free_Box is new Ada.Unchecked_Deallocation (Box, Box_Access);
+   overriding procedure Adjust (H : in out Box_Holder) is
+   begin
+      if H.Ptr /= null then H.Ptr := new Box'(H.Ptr.all); end if;
+   end Adjust;
+   overriding procedure Finalize (H : in out Box_Holder) is
+   begin
+      Free_Box (H.Ptr);
+   end Finalize;
+   function To_Holder (Value : Box) return Box_Holder is
+   begin
+      return H : Box_Holder do H.Ptr := new Box'(Value); end return;
+   end To_Holder;
+   function Element (H : Box_Holder) return Box is (H.Ptr.all);
+   function Is_Empty (H : Box_Holder) return Boolean is (H.Ptr = null);
 
    procedure Free_Person is new Ada.Unchecked_Deallocation (Person, Person_Access);
    overriding procedure Adjust (H : in out Person_Holder) is
@@ -137,6 +154,70 @@ package body Sample is
    function Element (H : Choice_Holder) return Choice is (H.Ptr.all);
    function Is_Empty (H : Choice_Holder) return Boolean is (H.Ptr = null);
 
+   procedure Free_Int32_Value is new Ada.Unchecked_Deallocation (Proto_WKT.Int32_Value, Int32_Value_Access);
+   overriding procedure Adjust (H : in out Int32_Value_Holder) is
+   begin
+      if H.Ptr /= null then H.Ptr := new Proto_WKT.Int32_Value'(H.Ptr.all); end if;
+   end Adjust;
+   overriding procedure Finalize (H : in out Int32_Value_Holder) is
+   begin
+      Free_Int32_Value (H.Ptr);
+   end Finalize;
+   function To_Holder (Value : Proto_WKT.Int32_Value) return Int32_Value_Holder is
+   begin
+      return H : Int32_Value_Holder do H.Ptr := new Proto_WKT.Int32_Value'(Value); end return;
+   end To_Holder;
+   function Element (H : Int32_Value_Holder) return Proto_WKT.Int32_Value is (H.Ptr.all);
+   function Is_Empty (H : Int32_Value_Holder) return Boolean is (H.Ptr = null);
+
+   procedure Free_Duration is new Ada.Unchecked_Deallocation (Proto_WKT.Duration, Duration_Access);
+   overriding procedure Adjust (H : in out Duration_Holder) is
+   begin
+      if H.Ptr /= null then H.Ptr := new Proto_WKT.Duration'(H.Ptr.all); end if;
+   end Adjust;
+   overriding procedure Finalize (H : in out Duration_Holder) is
+   begin
+      Free_Duration (H.Ptr);
+   end Finalize;
+   function To_Holder (Value : Proto_WKT.Duration) return Duration_Holder is
+   begin
+      return H : Duration_Holder do H.Ptr := new Proto_WKT.Duration'(Value); end return;
+   end To_Holder;
+   function Element (H : Duration_Holder) return Proto_WKT.Duration is (H.Ptr.all);
+   function Is_Empty (H : Duration_Holder) return Boolean is (H.Ptr = null);
+
+   procedure Free_Timestamp is new Ada.Unchecked_Deallocation (Proto_WKT.Timestamp, Timestamp_Access);
+   overriding procedure Adjust (H : in out Timestamp_Holder) is
+   begin
+      if H.Ptr /= null then H.Ptr := new Proto_WKT.Timestamp'(H.Ptr.all); end if;
+   end Adjust;
+   overriding procedure Finalize (H : in out Timestamp_Holder) is
+   begin
+      Free_Timestamp (H.Ptr);
+   end Finalize;
+   function To_Holder (Value : Proto_WKT.Timestamp) return Timestamp_Holder is
+   begin
+      return H : Timestamp_Holder do H.Ptr := new Proto_WKT.Timestamp'(Value); end return;
+   end To_Holder;
+   function Element (H : Timestamp_Holder) return Proto_WKT.Timestamp is (H.Ptr.all);
+   function Is_Empty (H : Timestamp_Holder) return Boolean is (H.Ptr = null);
+
+   procedure Free_String_Value is new Ada.Unchecked_Deallocation (Proto_WKT.String_Value, String_Value_Access);
+   overriding procedure Adjust (H : in out String_Value_Holder) is
+   begin
+      if H.Ptr /= null then H.Ptr := new Proto_WKT.String_Value'(H.Ptr.all); end if;
+   end Adjust;
+   overriding procedure Finalize (H : in out String_Value_Holder) is
+   begin
+      Free_String_Value (H.Ptr);
+   end Finalize;
+   function To_Holder (Value : Proto_WKT.String_Value) return String_Value_Holder is
+   begin
+      return H : String_Value_Holder do H.Ptr := new Proto_WKT.String_Value'(Value); end return;
+   end To_Holder;
+   function Element (H : String_Value_Holder) return Proto_WKT.String_Value is (H.Ptr.all);
+   function Is_Empty (H : String_Value_Holder) return Boolean is (H.Ptr = null);
+
    function Color_To_JSON (V : Color) return JSON.JSON_Value is
    begin
       case V is
@@ -163,6 +244,106 @@ package body Sample is
          return Color (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (V)));
       end if;
    end Color_From_JSON;
+
+   function Serialize (Message : Box) return String is
+      Buffer : Protobuf.Message_Buffer;
+   begin
+      if not Message.Count.Is_Empty then
+         Protobuf.Add_Message (Buffer, 1, Serialize (Message.Count.Element));
+      end if;
+      if not Message.Dur.Is_Empty then
+         Protobuf.Add_Message (Buffer, 2, Serialize (Message.Dur.Element));
+      end if;
+      if not Message.At_F.Is_Empty then
+         Protobuf.Add_Message (Buffer, 3, Serialize (Message.At_F.Element));
+      end if;
+      for I in Message.Tags.First_Index .. Message.Tags.Last_Index loop
+         Protobuf.Add_Message (Buffer, 4, Serialize (Element (Message.Tags (I))));
+      end loop;
+      return Protobuf.To_String (Buffer);
+   end Serialize;
+
+   function Parse_Box (Data : String) return Box is
+      Result : Box;
+      Fields : constant Protobuf.Parsed_Field_Vectors.Vector :=
+        Protobuf.Parse_From_String (Data);
+   begin
+      for Item of Fields loop
+         case Item.Number is
+            when 1 =>
+               Result.Count := To_Holder (Proto_WKT.Parse_Int32_Value (Protobuf.As_Message_Bytes (Item)));
+            when 2 =>
+               Result.Dur := To_Holder (Proto_WKT.Parse_Duration (Protobuf.As_Message_Bytes (Item)));
+            when 3 =>
+               Result.At_F := To_Holder (Proto_WKT.Parse_Timestamp (Protobuf.As_Message_Bytes (Item)));
+            when 4 =>
+               Result.Tags.Append (To_Holder (Proto_WKT.Parse_String_Value (Protobuf.As_Message_Bytes (Item))));
+            when others => null;
+         end case;
+      end loop;
+      return Result;
+   end Parse_Box;
+
+   function To_JSON (Message : Box) return JSON.JSON_Value is
+      Obj : JSON.JSON_Value := JSON.Empty_Object;
+   begin
+      if not Message.Count.Is_Empty then
+         JSON.Insert (Obj, "count", To_JSON (Message.Count.Element));
+      end if;
+      if not Message.Dur.Is_Empty then
+         JSON.Insert (Obj, "dur", To_JSON (Message.Dur.Element));
+      end if;
+      if not Message.At_F.Is_Empty then
+         JSON.Insert (Obj, "at", To_JSON (Message.At_F.Element));
+      end if;
+      if not Message.Tags.Is_Empty then
+         declare
+            Arr : JSON.JSON_Value := JSON.Empty_Array;
+         begin
+            for I in Message.Tags.First_Index .. Message.Tags.Last_Index loop
+               JSON.Append (Arr, To_JSON (Element (Message.Tags (I))));
+            end loop;
+            JSON.Insert (Obj, "tags", Arr);
+         end;
+      end if;
+      return Obj;
+   end To_JSON;
+
+   function From_JSON (V : JSON.JSON_Value) return Box is
+      Result : Box;
+   begin
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "count");
+      begin
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.Count := To_Holder (Proto_WKT.Int32_Value'(From_JSON (FV)));
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "dur");
+      begin
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.Dur := To_Holder (Proto_WKT.Duration'(From_JSON (FV)));
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "at");
+      begin
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.At_F := To_Holder (Proto_WKT.Timestamp'(From_JSON (FV)));
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "tags");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Array then
+            for I in 1 .. JSON.Length (FV) loop
+               Result.Tags.Append (To_Holder (Proto_WKT.String_Value'(From_JSON (JSON.Element (FV, I)))));
+            end loop;
+         end if;
+      end;
+      return Result;
+   end From_JSON;
 
    function Serialize (Message : Person) return String is
       Buffer : Protobuf.Message_Buffer;
