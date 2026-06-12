@@ -17,6 +17,13 @@ package Sample is
    function Color_To_JSON (V : Color) return JSON.JSON_Value;
    function Color_From_JSON (V : JSON.JSON_Value) return Color;
 
+   subtype Nest_Kind is Interfaces.Integer_32;
+   Nest_Kind_KIND_UNKNOWN : constant Nest_Kind := 0;
+   Nest_Kind_KIND_LEAF : constant Nest_Kind := 1;
+   Nest_Kind_KIND_NODE : constant Nest_Kind := 2;
+   function Nest_Kind_To_JSON (V : Nest_Kind) return JSON.JSON_Value;
+   function Nest_Kind_From_JSON (V : JSON.JSON_Value) return Nest_Kind;
+
    type Box;
    type Box_Access is access Box;
    type Box_Holder is new Ada.Finalization.Controlled with record
@@ -105,6 +112,28 @@ package Sample is
    function Element (H : Maps_Holder) return Maps;
    function Is_Empty (H : Maps_Holder) return Boolean;
 
+   type Nest_Item;
+   type Nest_Item_Access is access Nest_Item;
+   type Nest_Item_Holder is new Ada.Finalization.Controlled with record
+      Ptr : Nest_Item_Access := null;
+   end record;
+   overriding procedure Adjust (H : in out Nest_Item_Holder);
+   overriding procedure Finalize (H : in out Nest_Item_Holder);
+   function To_Holder (Value : Nest_Item) return Nest_Item_Holder;
+   function Element (H : Nest_Item_Holder) return Nest_Item;
+   function Is_Empty (H : Nest_Item_Holder) return Boolean;
+
+   type Nest;
+   type Nest_Access is access Nest;
+   type Nest_Holder is new Ada.Finalization.Controlled with record
+      Ptr : Nest_Access := null;
+   end record;
+   overriding procedure Adjust (H : in out Nest_Holder);
+   overriding procedure Finalize (H : in out Nest_Holder);
+   function To_Holder (Value : Nest) return Nest_Holder;
+   function Element (H : Nest_Holder) return Nest;
+   function Is_Empty (H : Nest_Holder) return Boolean;
+
    type Opt;
    type Opt_Access is access Opt;
    type Opt_Holder is new Ada.Finalization.Controlled with record
@@ -177,6 +206,8 @@ package Sample is
    package Inner_Vectors is new Ada.Containers.Vectors (Positive, Inner_Holder);
    use type Tree_Holder;
    package Tree_Vectors is new Ada.Containers.Vectors (Positive, Tree_Holder);
+   use type Nest_Item_Holder;
+   package Nest_Item_Vectors is new Ada.Containers.Vectors (Positive, Nest_Item_Holder);
    use type String_Value_Holder;
    package String_Value_Vectors is new Ada.Containers.Vectors (Positive, String_Value_Holder);
    use type Ada.Strings.Unbounded.Unbounded_String;
@@ -185,6 +216,9 @@ package Sample is
    use type Interfaces.Integer_32;
    use type Inner_Holder;
    package Integer_32_Inner_Maps is new Ada.Containers.Ordered_Maps (Interfaces.Integer_32, Inner_Holder);
+   use type Ada.Strings.Unbounded.Unbounded_String;
+   use type Nest_Item_Holder;
+   package Unbounded_String_Nest_Item_Maps is new Ada.Containers.Ordered_Maps (Ada.Strings.Unbounded.Unbounded_String, Nest_Item_Holder);
 
    type Box is record
       Count : Int32_Value_Holder;
@@ -235,6 +269,19 @@ package Sample is
    type Maps is record
       Counts : Unbounded_String_Integer_32_Maps.Map;
       Items : Integer_32_Inner_Maps.Map;
+   end record;
+
+   type Nest_Item is record
+      A : Interfaces.Integer_32 := 0;
+      Parent : Nest_Holder;
+      Kind : Nest_Kind := 0;
+   end record;
+
+   type Nest is record
+      Head : Nest_Item_Holder;
+      Items : Nest_Item_Vectors.Vector;
+      Kind : Nest_Kind := 0;
+      By_name : Unbounded_String_Nest_Item_Maps.Map;
    end record;
 
    type Opt is record
@@ -300,6 +347,16 @@ package Sample is
    function Parse_Maps (Data : String) return Maps;
    function To_JSON (Message : Maps) return JSON.JSON_Value;
    function From_JSON (V : JSON.JSON_Value) return Maps;
+
+   function Serialize (Message : Nest_Item) return String;
+   function Parse_Nest_Item (Data : String) return Nest_Item;
+   function To_JSON (Message : Nest_Item) return JSON.JSON_Value;
+   function From_JSON (V : JSON.JSON_Value) return Nest_Item;
+
+   function Serialize (Message : Nest) return String;
+   function Parse_Nest (Data : String) return Nest;
+   function To_JSON (Message : Nest) return JSON.JSON_Value;
+   function From_JSON (V : JSON.JSON_Value) return Nest;
 
    function Serialize (Message : Opt) return String;
    function Parse_Opt (Data : String) return Opt;

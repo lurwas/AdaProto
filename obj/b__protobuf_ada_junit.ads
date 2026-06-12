@@ -448,7 +448,7 @@ package ada_main is
    pragma Export (C, u00203, "aunit__test_suitesB");
    u00204 : constant Version_32 := 16#50924664#;
    pragma Export (C, u00204, "aunit__test_suitesS");
-   u00205 : constant Version_32 := 16#cc588fe8#;
+   u00205 : constant Version_32 := 16#1c9cc74b#;
    pragma Export (C, u00205, "protobuf_testsB");
    u00206 : constant Version_32 := 16#2ba43dd0#;
    pragma Export (C, u00206, "protobuf_testsS");
@@ -576,9 +576,9 @@ package ada_main is
    pragma Export (C, u00267, "proto_wktB");
    u00268 : constant Version_32 := 16#fb8e483c#;
    pragma Export (C, u00268, "proto_wktS");
-   u00269 : constant Version_32 := 16#ab7f84b5#;
+   u00269 : constant Version_32 := 16#cab7ad5d#;
    pragma Export (C, u00269, "sampleB");
-   u00270 : constant Version_32 := 16#2cadffa1#;
+   u00270 : constant Version_32 := 16#3015b468#;
    pragma Export (C, u00270, "sampleS");
 
    --  BEGIN ELABORATION ORDER

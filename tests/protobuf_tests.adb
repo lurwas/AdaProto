@@ -2020,6 +2020,85 @@ package body Protobuf_Tests is
       end;
    end Test_Generated_From_JSON;
 
+   --  Nested type definitions: messages/enums declared inside a message, with
+   --  corecursion (a nested message referring back to its enclosing type) and a
+   --  nested message used as a map value. The generator flattens these to
+   --  top-level Ada types (Nest, Nest_Item, Nest_Kind) -- this proves the
+   --  flattened names, scope resolution, and holders all hang together.
+   procedure Test_Generated_Nested_Types is
+      use Ada.Strings.Unbounded;
+   begin
+      --  Binary round-trip: a Nest whose head Item points back at a Nest
+      --  (corecursion), with a repeated Item, a nested-enum field, and a
+      --  nested message as a map value.
+      declare
+         N      : Sample.Nest;
+         Head   : Sample.Nest_Item;
+         Inner  : Sample.Nest;       --  what Head.Parent corecursively holds
+         Child  : Sample.Nest_Item;
+      begin
+         Inner.Kind := Sample.Nest_Kind_KIND_LEAF;
+
+         Head.A := 5;
+         Head.Kind := Sample.Nest_Kind_KIND_NODE;
+         Head.Parent := Sample.To_Holder (Inner);   --  corecursive reference
+
+         Child.A := 7;
+
+         N.Head := Sample.To_Holder (Head);
+         N.Items.Append (Sample.To_Holder (Child));
+         N.Kind := Sample.Nest_Kind_KIND_NODE;
+         N.By_name.Include (To_Unbounded_String ("k"), Sample.To_Holder (Child));
+
+         declare
+            D : constant Sample.Nest := Sample.Parse_Nest (Sample.Serialize (N));
+         begin
+            Assert (D.Kind = Sample.Nest_Kind_KIND_NODE, "nest-level nested enum");
+            Assert (not D.Head.Is_Empty and then D.Head.Element.A = 5,
+                    "singular nested message round-trips");
+            Assert (D.Head.Element.Kind = Sample.Nest_Kind_KIND_NODE,
+                    "nested enum inside a nested message");
+            Assert (not D.Head.Element.Parent.Is_Empty
+                    and then D.Head.Element.Parent.Element.Kind
+                             = Sample.Nest_Kind_KIND_LEAF,
+                    "corecursive nested message (Item -> Nest) round-trips");
+            Assert (Natural (D.Items.Length) = 1
+                    and then Sample.Element (D.Items (1)).A = 7,
+                    "repeated nested message round-trips");
+            Assert (D.By_name.Element (To_Unbounded_String ("k")).Element.A = 7,
+                    "nested message as a map value round-trips");
+         end;
+      end;
+
+      --  JSON: nested enum serialises by name; nested message nests as an object.
+      declare
+         N    : Sample.Nest;
+         Head : Sample.Nest_Item;
+         J    : JSON.JSON_Value;
+         R    : Sample.Nest;
+      begin
+         Head.A := 9;
+         Head.Kind := Sample.Nest_Kind_KIND_LEAF;
+         N.Head := Sample.To_Holder (Head);
+         N.Kind := Sample.Nest_Kind_KIND_NODE;
+
+         J := JSON.Parse (JSON.Serialize (Sample.To_JSON (N)));
+         Assert (JSON.As_String (JSON.Get (J, "kind")) = "KIND_NODE",
+                 "nested enum -> JSON name");
+         Assert (JSON.As_Number (JSON.Get (JSON.Get (J, "head"), "a")) = "9",
+                 "nested message -> nested JSON object");
+         Assert (JSON.As_String (JSON.Get (JSON.Get (J, "head"), "kind"))
+                 = "KIND_LEAF",
+                 "nested enum inside nested message -> JSON name");
+
+         R := Sample.From_JSON (J);
+         Assert (R.Kind = Sample.Nest_Kind_KIND_NODE
+                 and then R.Head.Element.A = 9
+                 and then R.Head.Element.Kind = Sample.Nest_Kind_KIND_LEAF,
+                 "nested types round-trip through JSON");
+      end;
+   end Test_Generated_Nested_Types;
+
    --  proto3 `optional`: explicit-presence scalars. The presence flag, not the
    --  value, decides emission — so `maybe = 0` set explicitly is still wired
    --  out, while a `plain` (no-presence) 0 is omitted.
@@ -2356,6 +2435,7 @@ package body Protobuf_Tests is
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated to_json", Test_Generated_To_JSON'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated from_json", Test_Generated_From_JSON'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated optional presence", Test_Generated_Optional'Access));
+         AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated nested type definitions", Test_Generated_Nested_Types'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated utf8 validation", Test_Generated_UTF8_Validation'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("wkt wrappers and empty", Test_WKT_Wrappers'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("wkt duration and timestamp", Test_WKT_Duration_Timestamp'Access));

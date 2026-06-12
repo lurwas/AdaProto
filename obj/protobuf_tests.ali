@@ -33,7 +33,7 @@ RV NO_IMPLICIT_LOOPS
 RV NO_ELABORATION_CODE
 RV NO_OBSOLESCENT_FEATURES
 
-U protobuf_tests%b	protobuf_tests.adb	cc588fe8 OO PF PK
+U protobuf_tests%b	protobuf_tests.adb	1c9cc74b OO PF PK
 W ada%s			ada.ads			ada.ali
 W ada.calendar%s	a-calend.adb		a-calend.ali
 W ada.containers%s	a-contai.ads		a-contai.ali
@@ -118,9 +118,9 @@ D aunit-test_results.ads  20260308151232 b44de7dc aunit.test_results%s
 D aunit-test_suites.ads	20260308151232 6821dc24 aunit.test_suites%s
 D aunit-tests.ads	20260308151232 1da11d49 aunit.tests%s
 D aunit-time_measure.ads  20260308151232 d9c247b0 aunit.time_measure%s
-D conformance.ads	20260612155112 407f6857 conformance%s
+D conformance.ads	20260612165755 407f6857 conformance%s
 D conformance_harness.ads  20260612154150 abd23cc5 conformance_harness%s
-D conformance_test.ads	20260612155112 8d4b4609 conformance_test%s
+D conformance_test.ads	20260612165755 8d4b4609 conformance_test%s
 D fixture_loader.ads	20260309184838 84b65dc2 fixture_loader%s
 D gnat.ads		20240620080806 b5988c27 gnat%s
 D g-souinf.ads		20240620080806 291df751 gnat.source_info%s
@@ -131,8 +131,8 @@ D proto_json.ads	20260612143743 9fc23e00 proto_json%s
 D proto_wkt.ads		20260612152531 a45ef665 proto_wkt%s
 D protobuf.ads		20260611163507 9deebbb5 protobuf%s
 D protobuf_tests.ads	20260309184838 4385e1f4 protobuf_tests%s
-D protobuf_tests.adb	20260612161327 4d1dd32a protobuf_tests%b
-D sample.ads		20260612161327 c2639554 sample%s
+D protobuf_tests.adb	20260612170006 8161d040 protobuf_tests%b
+D sample.ads		20260612165755 dedbde9d sample%s
 D system.ads		20240620080806 a2da961d system%s
 D s-atocou.ads		20240620080806 dc18efc3 system.atomic_counters%s
 D s-crtl.ads		20240620080806 8a0692f8 system.crtl%s
@@ -249,10 +249,11 @@ G c Z b b [test_wkt_fieldmask protobuf_tests 1814 14 none]
 G c Z b b [test_wkt_duration_timestamp protobuf_tests 1849 14 none]
 G c Z b b [test_generated_utf8_validation protobuf_tests 1899 14 none]
 G c Z b b [test_generated_from_json protobuf_tests 1946 14 none]
-G c Z b b [test_generated_optional protobuf_tests 2026 14 none]
-G c Z b b [test_json_library protobuf_tests 2095 14 none]
-G c Z b b [test_generated_recursive protobuf_tests 2175 14 none]
-G c Z b b [test_serialization_buffer_growth_and_reuse protobuf_tests 2224 14 none]
+G c Z b b [test_generated_nested_types protobuf_tests 2028 14 none]
+G c Z b b [test_generated_optional protobuf_tests 2105 14 none]
+G c Z b b [test_json_library protobuf_tests 2174 14 none]
+G c Z b b [test_generated_recursive protobuf_tests 2254 14 none]
+G c Z b b [test_serialization_buffer_growth_and_reuse protobuf_tests 2303 14 none]
 G r c none [suite protobuf_tests 4 13 none] [new_suite aunit__test_suites 58 13 none]
 G r c none [suite protobuf_tests 4 13 none] [format aunit 44 13 none]
 G r s test_case [suite protobuf_tests 4 13 none] [test_caseIP aunit__simple_test_cases 75 9 none]
@@ -694,86 +695,86 @@ G r c none [test_generated_types_roundtrip protobuf_tests 1070 14 none] [add_boo
 G r c none [test_generated_types_roundtrip protobuf_tests 1070 14 none] [add_double protobuf 194 14 none]
 G r c none [test_generated_types_roundtrip protobuf_tests 1070 14 none] [add_sint64 protobuf 130 14 none]
 G r c none [test_generated_types_roundtrip protobuf_tests 1070 14 none] [add_bytes protobuf 210 14 none]
-G r c none [test_generated_types_roundtrip protobuf_tests 1070 14 none] [serialize sample 269 13 none]
+G r c none [test_generated_types_roundtrip protobuf_tests 1070 14 none] [serialize sample 316 13 none]
 G r c none [test_generated_types_roundtrip protobuf_tests 1070 14 none] [to_string protobuf 66 13 none]
 G r c none [test_generated_types_roundtrip protobuf_tests 1070 14 none] [assert aunit__assertions 48 14 none]
-G r c none [test_generated_types_roundtrip protobuf_tests 1070 14 none] [parse_person sample 270 13 none]
-G r j person [test_generated_types_roundtrip protobuf_tests 1070 14 none] [personDA sample 196 9 none]
-G r k person [test_generated_types_roundtrip protobuf_tests 1070 14 none] [personDF sample 196 9 none]
-G r s person [test_generated_types_roundtrip protobuf_tests 1070 14 none] [personIP sample 196 9 none]
-G r l person [test_generated_types_roundtrip protobuf_tests 1070 14 none] [personDI sample 196 9 none]
-G r c none [test_generated_types_roundtrip protobuf_tests 1070 14 none] [serialize sample 274 13 none]
-G r c none [test_generated_types_roundtrip protobuf_tests 1070 14 none] [parse_pair sample 275 13 none]
-G r s bag [test_generated_enums_and_repeated protobuf_tests 1125 14 none] [bagIP sample 210 9 none]
-G r l bag [test_generated_enums_and_repeated protobuf_tests 1125 14 none] [bagDI sample 210 9 none]
-G r k bag [test_generated_enums_and_repeated protobuf_tests 1125 14 none] [bagDF sample 210 9 none]
+G r c none [test_generated_types_roundtrip protobuf_tests 1070 14 none] [parse_person sample 317 13 none]
+G r j person [test_generated_types_roundtrip protobuf_tests 1070 14 none] [personDA sample 230 9 none]
+G r k person [test_generated_types_roundtrip protobuf_tests 1070 14 none] [personDF sample 230 9 none]
+G r s person [test_generated_types_roundtrip protobuf_tests 1070 14 none] [personIP sample 230 9 none]
+G r l person [test_generated_types_roundtrip protobuf_tests 1070 14 none] [personDI sample 230 9 none]
+G r c none [test_generated_types_roundtrip protobuf_tests 1070 14 none] [serialize sample 321 13 none]
+G r c none [test_generated_types_roundtrip protobuf_tests 1070 14 none] [parse_pair sample 322 13 none]
+G r s bag [test_generated_enums_and_repeated protobuf_tests 1125 14 none] [bagIP sample 244 9 none]
+G r l bag [test_generated_enums_and_repeated protobuf_tests 1125 14 none] [bagDI sample 244 9 none]
+G r k bag [test_generated_enums_and_repeated protobuf_tests 1125 14 none] [bagDF sample 244 9 none]
 G r s message_buffer [test_generated_enums_and_repeated protobuf_tests 1125 14 none] [message_bufferIP protobuf 542 9 none]
 G r c none [test_generated_enums_and_repeated protobuf_tests 1125 14 none] [add_packed_int32 protobuf 226 14 none]
 G r c none [test_generated_enums_and_repeated protobuf_tests 1125 14 none] [add_string protobuf 202 14 none]
 G r c none [test_generated_enums_and_repeated protobuf_tests 1125 14 none] [add_int32 protobuf 90 14 none]
-G r c none [test_generated_enums_and_repeated protobuf_tests 1125 14 none] [serialize sample 279 13 none]
+G r c none [test_generated_enums_and_repeated protobuf_tests 1125 14 none] [serialize sample 326 13 none]
 G r c none [test_generated_enums_and_repeated protobuf_tests 1125 14 none] [to_string protobuf 66 13 none]
 G r c none [test_generated_enums_and_repeated protobuf_tests 1125 14 none] [assert aunit__assertions 48 14 none]
-G r c none [test_generated_enums_and_repeated protobuf_tests 1125 14 none] [parse_bag sample 280 13 none]
-G r j bag [test_generated_enums_and_repeated protobuf_tests 1125 14 none] [bagDA sample 210 9 none]
-G r s inner [test_generated_nested_messages protobuf_tests 1195 14 none] [innerIP sample 223 9 none]
-G r l inner [test_generated_nested_messages protobuf_tests 1195 14 none] [innerDI sample 223 9 none]
-G r k inner [test_generated_nested_messages protobuf_tests 1195 14 none] [innerDF sample 223 9 none]
-G r s outer [test_generated_nested_messages protobuf_tests 1195 14 none] [outerIP sample 217 9 none]
-G r l outer [test_generated_nested_messages protobuf_tests 1195 14 none] [outerDI sample 217 9 none]
-G r k outer [test_generated_nested_messages protobuf_tests 1195 14 none] [outerDF sample 217 9 none]
+G r c none [test_generated_enums_and_repeated protobuf_tests 1125 14 none] [parse_bag sample 327 13 none]
+G r j bag [test_generated_enums_and_repeated protobuf_tests 1125 14 none] [bagDA sample 244 9 none]
+G r s inner [test_generated_nested_messages protobuf_tests 1195 14 none] [innerIP sample 257 9 none]
+G r l inner [test_generated_nested_messages protobuf_tests 1195 14 none] [innerDI sample 257 9 none]
+G r k inner [test_generated_nested_messages protobuf_tests 1195 14 none] [innerDF sample 257 9 none]
+G r s outer [test_generated_nested_messages protobuf_tests 1195 14 none] [outerIP sample 251 9 none]
+G r l outer [test_generated_nested_messages protobuf_tests 1195 14 none] [outerDI sample 251 9 none]
+G r k outer [test_generated_nested_messages protobuf_tests 1195 14 none] [outerDF sample 251 9 none]
 G r s message_buffer [test_generated_nested_messages protobuf_tests 1195 14 none] [message_bufferIP protobuf 542 9 none]
-G r c none [test_generated_nested_messages protobuf_tests 1195 14 none] [to_holder sample 82 13 none]
-G r e inner_holder [test_generated_nested_messages protobuf_tests 1195 14 none] [finalize sample 81 25 none]
-G r c none [test_generated_nested_messages protobuf_tests 1195 14 none] [serialize sample 289 13 none]
+G r c none [test_generated_nested_messages protobuf_tests 1195 14 none] [to_holder sample 89 13 none]
+G r e inner_holder [test_generated_nested_messages protobuf_tests 1195 14 none] [finalize sample 88 25 none]
+G r c none [test_generated_nested_messages protobuf_tests 1195 14 none] [serialize sample 336 13 none]
 G r c none [test_generated_nested_messages protobuf_tests 1195 14 none] [add_message protobuf 218 14 none]
 G r c none [test_generated_nested_messages protobuf_tests 1195 14 none] [add_string protobuf 202 14 none]
-G r c none [test_generated_nested_messages protobuf_tests 1195 14 none] [serialize sample 284 13 none]
+G r c none [test_generated_nested_messages protobuf_tests 1195 14 none] [serialize sample 331 13 none]
 G r c none [test_generated_nested_messages protobuf_tests 1195 14 none] [to_string protobuf 66 13 none]
 G r c none [test_generated_nested_messages protobuf_tests 1195 14 none] [assert aunit__assertions 48 14 none]
-G r c none [test_generated_nested_messages protobuf_tests 1195 14 none] [parse_outer sample 285 13 none]
-G r j outer [test_generated_nested_messages protobuf_tests 1195 14 none] [outerDA sample 217 9 none]
-G r c none [test_generated_nested_messages protobuf_tests 1195 14 none] [is_empty sample 84 13 none]
-G r c none [test_generated_nested_messages protobuf_tests 1195 14 none] [element sample 83 13 none]
-G r s choice [test_generated_oneof protobuf_tests 1252 14 none] [choiceIP sample 258 9 none]
-G r l choice [test_generated_oneof protobuf_tests 1252 14 none] [choiceDI sample 258 9 none]
-G r k choice [test_generated_oneof protobuf_tests 1252 14 none] [choiceDF sample 258 9 none]
+G r c none [test_generated_nested_messages protobuf_tests 1195 14 none] [parse_outer sample 332 13 none]
+G r j outer [test_generated_nested_messages protobuf_tests 1195 14 none] [outerDA sample 251 9 none]
+G r c none [test_generated_nested_messages protobuf_tests 1195 14 none] [is_empty sample 91 13 none]
+G r c none [test_generated_nested_messages protobuf_tests 1195 14 none] [element sample 90 13 none]
+G r s choice [test_generated_oneof protobuf_tests 1252 14 none] [choiceIP sample 305 9 none]
+G r l choice [test_generated_oneof protobuf_tests 1252 14 none] [choiceDI sample 305 9 none]
+G r k choice [test_generated_oneof protobuf_tests 1252 14 none] [choiceDF sample 305 9 none]
 G r s message_buffer [test_generated_oneof protobuf_tests 1252 14 none] [message_bufferIP protobuf 542 9 none]
-G r k choice_pick_oneof [test_generated_oneof protobuf_tests 1252 14 none] [choice_pick_oneofDF sample 250 9 none]
-G r j choice_pick_oneof [test_generated_oneof protobuf_tests 1252 14 none] [choice_pick_oneofDA sample 250 9 none]
+G r k choice_pick_oneof [test_generated_oneof protobuf_tests 1252 14 none] [choice_pick_oneofDF sample 297 9 none]
+G r j choice_pick_oneof [test_generated_oneof protobuf_tests 1252 14 none] [choice_pick_oneofDA sample 297 9 none]
 G r c none [test_generated_oneof protobuf_tests 1252 14 none] [add_string protobuf 202 14 none]
 G r c none [test_generated_oneof protobuf_tests 1252 14 none] [add_int32 protobuf 90 14 none]
 G r c none [test_generated_oneof protobuf_tests 1252 14 none] [add_bool protobuf 138 14 none]
-G r c none [test_generated_oneof protobuf_tests 1252 14 none] [serialize sample 309 13 none]
+G r c none [test_generated_oneof protobuf_tests 1252 14 none] [serialize sample 366 13 none]
 G r c none [test_generated_oneof protobuf_tests 1252 14 none] [to_string protobuf 66 13 none]
 G r c none [test_generated_oneof protobuf_tests 1252 14 none] [assert aunit__assertions 48 14 none]
-G r c none [test_generated_oneof protobuf_tests 1252 14 none] [parse_choice sample 310 13 none]
-G r j choice [test_generated_oneof protobuf_tests 1252 14 none] [choiceDA sample 258 9 none]
-G r s inner [test_generated_oneof protobuf_tests 1252 14 none] [innerIP sample 223 9 none]
-G r l inner [test_generated_oneof protobuf_tests 1252 14 none] [innerDI sample 223 9 none]
-G r k inner [test_generated_oneof protobuf_tests 1252 14 none] [innerDF sample 223 9 none]
-G r c none [test_generated_oneof protobuf_tests 1252 14 none] [to_holder sample 82 13 none]
-G r d inner_holder [test_generated_oneof protobuf_tests 1252 14 none] [adjust sample 80 25 none]
-G r e inner_holder [test_generated_oneof protobuf_tests 1252 14 none] [finalize sample 81 25 none]
-G r c none [test_generated_oneof protobuf_tests 1252 14 none] [element sample 83 13 none]
-G r s maps [test_generated_maps protobuf_tests 1340 14 none] [mapsIP sample 235 9 none]
-G r l maps [test_generated_maps protobuf_tests 1340 14 none] [mapsDI sample 235 9 none]
-G r k maps [test_generated_maps protobuf_tests 1340 14 none] [mapsDF sample 235 9 none]
-G r s inner [test_generated_maps protobuf_tests 1340 14 none] [innerIP sample 223 9 none]
-G r l inner [test_generated_maps protobuf_tests 1340 14 none] [innerDI sample 223 9 none]
-G r k inner [test_generated_maps protobuf_tests 1340 14 none] [innerDF sample 223 9 none]
-G r c none [test_generated_maps protobuf_tests 1340 14 none] [to_holder sample 82 13 none]
-G r e inner_holder [test_generated_maps protobuf_tests 1340 14 none] [finalize sample 81 25 none]
-G r c none [test_generated_maps protobuf_tests 1340 14 none] [serialize sample 299 13 none]
-G r c none [test_generated_maps protobuf_tests 1340 14 none] [parse_maps sample 300 13 none]
-G r j maps [test_generated_maps protobuf_tests 1340 14 none] [mapsDA sample 235 9 none]
+G r c none [test_generated_oneof protobuf_tests 1252 14 none] [parse_choice sample 367 13 none]
+G r j choice [test_generated_oneof protobuf_tests 1252 14 none] [choiceDA sample 305 9 none]
+G r s inner [test_generated_oneof protobuf_tests 1252 14 none] [innerIP sample 257 9 none]
+G r l inner [test_generated_oneof protobuf_tests 1252 14 none] [innerDI sample 257 9 none]
+G r k inner [test_generated_oneof protobuf_tests 1252 14 none] [innerDF sample 257 9 none]
+G r c none [test_generated_oneof protobuf_tests 1252 14 none] [to_holder sample 89 13 none]
+G r d inner_holder [test_generated_oneof protobuf_tests 1252 14 none] [adjust sample 87 25 none]
+G r e inner_holder [test_generated_oneof protobuf_tests 1252 14 none] [finalize sample 88 25 none]
+G r c none [test_generated_oneof protobuf_tests 1252 14 none] [element sample 90 13 none]
+G r s maps [test_generated_maps protobuf_tests 1340 14 none] [mapsIP sample 269 9 none]
+G r l maps [test_generated_maps protobuf_tests 1340 14 none] [mapsDI sample 269 9 none]
+G r k maps [test_generated_maps protobuf_tests 1340 14 none] [mapsDF sample 269 9 none]
+G r s inner [test_generated_maps protobuf_tests 1340 14 none] [innerIP sample 257 9 none]
+G r l inner [test_generated_maps protobuf_tests 1340 14 none] [innerDI sample 257 9 none]
+G r k inner [test_generated_maps protobuf_tests 1340 14 none] [innerDF sample 257 9 none]
+G r c none [test_generated_maps protobuf_tests 1340 14 none] [to_holder sample 89 13 none]
+G r e inner_holder [test_generated_maps protobuf_tests 1340 14 none] [finalize sample 88 25 none]
+G r c none [test_generated_maps protobuf_tests 1340 14 none] [serialize sample 346 13 none]
+G r c none [test_generated_maps protobuf_tests 1340 14 none] [parse_maps sample 347 13 none]
+G r j maps [test_generated_maps protobuf_tests 1340 14 none] [mapsDA sample 269 9 none]
 G r c none [test_generated_maps protobuf_tests 1340 14 none] [assert aunit__assertions 48 14 none]
-G r c none [test_generated_maps protobuf_tests 1340 14 none] [element sample 83 13 none]
-G r s person [test_generated_to_json protobuf_tests 1379 14 none] [personIP sample 196 9 none]
-G r l person [test_generated_to_json protobuf_tests 1379 14 none] [personDI sample 196 9 none]
-G r k person [test_generated_to_json protobuf_tests 1379 14 none] [personDF sample 196 9 none]
+G r c none [test_generated_maps protobuf_tests 1340 14 none] [element sample 90 13 none]
+G r s person [test_generated_to_json protobuf_tests 1379 14 none] [personIP sample 230 9 none]
+G r l person [test_generated_to_json protobuf_tests 1379 14 none] [personDI sample 230 9 none]
+G r k person [test_generated_to_json protobuf_tests 1379 14 none] [personDF sample 230 9 none]
 G r s json_value [test_generated_to_json protobuf_tests 1379 14 none] [json_valueIP json 60 9 none]
-G r c none [test_generated_to_json protobuf_tests 1379 14 none] [to_json sample 271 13 none]
+G r c none [test_generated_to_json protobuf_tests 1379 14 none] [to_json sample 318 13 none]
 G r c none [test_generated_to_json protobuf_tests 1379 14 none] [serialize json 52 13 none]
 G r c none [test_generated_to_json protobuf_tests 1379 14 none] [parse json 53 13 none]
 G r e json_value [test_generated_to_json protobuf_tests 1379 14 none] [finalize json 65 25 none]
@@ -782,31 +783,31 @@ G r c none [test_generated_to_json protobuf_tests 1379 14 none] [as_number json 
 G r c none [test_generated_to_json protobuf_tests 1379 14 none] [assert aunit__assertions 48 14 none]
 G r c none [test_generated_to_json protobuf_tests 1379 14 none] [as_string json 40 13 none]
 G r c none [test_generated_to_json protobuf_tests 1379 14 none] [as_boolean json 38 13 none]
-G r s bag [test_generated_to_json protobuf_tests 1379 14 none] [bagIP sample 210 9 none]
-G r l bag [test_generated_to_json protobuf_tests 1379 14 none] [bagDI sample 210 9 none]
-G r k bag [test_generated_to_json protobuf_tests 1379 14 none] [bagDF sample 210 9 none]
-G r c none [test_generated_to_json protobuf_tests 1379 14 none] [to_json sample 281 13 none]
+G r s bag [test_generated_to_json protobuf_tests 1379 14 none] [bagIP sample 244 9 none]
+G r l bag [test_generated_to_json protobuf_tests 1379 14 none] [bagDI sample 244 9 none]
+G r k bag [test_generated_to_json protobuf_tests 1379 14 none] [bagDF sample 244 9 none]
+G r c none [test_generated_to_json protobuf_tests 1379 14 none] [to_json sample 328 13 none]
 G r c none [test_generated_to_json protobuf_tests 1379 14 none] [element json 43 13 none]
 G r c none [test_generated_to_json protobuf_tests 1379 14 none] [length json 42 13 none]
-G r s maps [test_generated_to_json protobuf_tests 1379 14 none] [mapsIP sample 235 9 none]
-G r l maps [test_generated_to_json protobuf_tests 1379 14 none] [mapsDI sample 235 9 none]
-G r k maps [test_generated_to_json protobuf_tests 1379 14 none] [mapsDF sample 235 9 none]
-G r s inner [test_generated_to_json protobuf_tests 1379 14 none] [innerIP sample 223 9 none]
-G r l inner [test_generated_to_json protobuf_tests 1379 14 none] [innerDI sample 223 9 none]
-G r k inner [test_generated_to_json protobuf_tests 1379 14 none] [innerDF sample 223 9 none]
-G r c none [test_generated_to_json protobuf_tests 1379 14 none] [to_holder sample 82 13 none]
-G r e inner_holder [test_generated_to_json protobuf_tests 1379 14 none] [finalize sample 81 25 none]
-G r c none [test_generated_to_json protobuf_tests 1379 14 none] [to_json sample 301 13 none]
-G r s outer [test_generated_to_json protobuf_tests 1379 14 none] [outerIP sample 217 9 none]
-G r l outer [test_generated_to_json protobuf_tests 1379 14 none] [outerDI sample 217 9 none]
-G r k outer [test_generated_to_json protobuf_tests 1379 14 none] [outerDF sample 217 9 none]
-G r s choice [test_generated_to_json protobuf_tests 1379 14 none] [choiceIP sample 258 9 none]
-G r l choice [test_generated_to_json protobuf_tests 1379 14 none] [choiceDI sample 258 9 none]
-G r k choice [test_generated_to_json protobuf_tests 1379 14 none] [choiceDF sample 258 9 none]
-G r c none [test_generated_to_json protobuf_tests 1379 14 none] [to_json sample 286 13 none]
-G r k choice_pick_oneof [test_generated_to_json protobuf_tests 1379 14 none] [choice_pick_oneofDF sample 250 9 none]
-G r j choice_pick_oneof [test_generated_to_json protobuf_tests 1379 14 none] [choice_pick_oneofDA sample 250 9 none]
-G r c none [test_generated_to_json protobuf_tests 1379 14 none] [to_json sample 311 13 none]
+G r s maps [test_generated_to_json protobuf_tests 1379 14 none] [mapsIP sample 269 9 none]
+G r l maps [test_generated_to_json protobuf_tests 1379 14 none] [mapsDI sample 269 9 none]
+G r k maps [test_generated_to_json protobuf_tests 1379 14 none] [mapsDF sample 269 9 none]
+G r s inner [test_generated_to_json protobuf_tests 1379 14 none] [innerIP sample 257 9 none]
+G r l inner [test_generated_to_json protobuf_tests 1379 14 none] [innerDI sample 257 9 none]
+G r k inner [test_generated_to_json protobuf_tests 1379 14 none] [innerDF sample 257 9 none]
+G r c none [test_generated_to_json protobuf_tests 1379 14 none] [to_holder sample 89 13 none]
+G r e inner_holder [test_generated_to_json protobuf_tests 1379 14 none] [finalize sample 88 25 none]
+G r c none [test_generated_to_json protobuf_tests 1379 14 none] [to_json sample 348 13 none]
+G r s outer [test_generated_to_json protobuf_tests 1379 14 none] [outerIP sample 251 9 none]
+G r l outer [test_generated_to_json protobuf_tests 1379 14 none] [outerDI sample 251 9 none]
+G r k outer [test_generated_to_json protobuf_tests 1379 14 none] [outerDF sample 251 9 none]
+G r s choice [test_generated_to_json protobuf_tests 1379 14 none] [choiceIP sample 305 9 none]
+G r l choice [test_generated_to_json protobuf_tests 1379 14 none] [choiceDI sample 305 9 none]
+G r k choice [test_generated_to_json protobuf_tests 1379 14 none] [choiceDF sample 305 9 none]
+G r c none [test_generated_to_json protobuf_tests 1379 14 none] [to_json sample 333 13 none]
+G r k choice_pick_oneof [test_generated_to_json protobuf_tests 1379 14 none] [choice_pick_oneofDF sample 297 9 none]
+G r j choice_pick_oneof [test_generated_to_json protobuf_tests 1379 14 none] [choice_pick_oneofDA sample 297 9 none]
+G r c none [test_generated_to_json protobuf_tests 1379 14 none] [to_json sample 368 13 none]
 G r c none [test_generated_to_json protobuf_tests 1379 14 none] [has json 44 13 none]
 G r s message_buffer [test_wkt_wrappers protobuf_tests 1477 14 none] [message_bufferIP protobuf 542 9 none]
 G r c none [test_wkt_wrappers protobuf_tests 1477 14 none] [parse json 53 13 none]
@@ -857,19 +858,19 @@ G r e json_value [test_conformance_harness protobuf_tests 1546 14 none] [finaliz
 G r c none [test_conformance_harness protobuf_tests 1546 14 none] [to_json conformance_test 62 13 none]
 G r c none [test_conformance_harness protobuf_tests 1546 14 none] [serialize json 52 13 none]
 G r c none [test_conformance_harness protobuf_tests 1546 14 none] [parse_testmessage conformance_test 61 13 none]
-G r s box [test_generated_wkt_fields protobuf_tests 1652 14 none] [boxIP sample 189 9 none]
-G r l box [test_generated_wkt_fields protobuf_tests 1652 14 none] [boxDI sample 189 9 none]
-G r k box [test_generated_wkt_fields protobuf_tests 1652 14 none] [boxDF sample 189 9 none]
-G r c none [test_generated_wkt_fields protobuf_tests 1652 14 none] [to_holder sample 136 13 none]
-G r e int32_value_holder [test_generated_wkt_fields protobuf_tests 1652 14 none] [finalize sample 135 25 none]
-G r c none [test_generated_wkt_fields protobuf_tests 1652 14 none] [to_holder sample 146 13 none]
-G r e duration_holder [test_generated_wkt_fields protobuf_tests 1652 14 none] [finalize sample 145 25 none]
-G r c none [test_generated_wkt_fields protobuf_tests 1652 14 none] [to_holder sample 156 13 none]
-G r e timestamp_holder [test_generated_wkt_fields protobuf_tests 1652 14 none] [finalize sample 155 25 none]
-G r c none [test_generated_wkt_fields protobuf_tests 1652 14 none] [to_holder sample 166 13 none]
-G r e string_value_holder [test_generated_wkt_fields protobuf_tests 1652 14 none] [finalize sample 165 25 none]
+G r s box [test_generated_wkt_fields protobuf_tests 1652 14 none] [boxIP sample 223 9 none]
+G r l box [test_generated_wkt_fields protobuf_tests 1652 14 none] [boxDI sample 223 9 none]
+G r k box [test_generated_wkt_fields protobuf_tests 1652 14 none] [boxDF sample 223 9 none]
+G r c none [test_generated_wkt_fields protobuf_tests 1652 14 none] [to_holder sample 165 13 none]
+G r e int32_value_holder [test_generated_wkt_fields protobuf_tests 1652 14 none] [finalize sample 164 25 none]
+G r c none [test_generated_wkt_fields protobuf_tests 1652 14 none] [to_holder sample 175 13 none]
+G r e duration_holder [test_generated_wkt_fields protobuf_tests 1652 14 none] [finalize sample 174 25 none]
+G r c none [test_generated_wkt_fields protobuf_tests 1652 14 none] [to_holder sample 185 13 none]
+G r e timestamp_holder [test_generated_wkt_fields protobuf_tests 1652 14 none] [finalize sample 184 25 none]
+G r c none [test_generated_wkt_fields protobuf_tests 1652 14 none] [to_holder sample 195 13 none]
+G r e string_value_holder [test_generated_wkt_fields protobuf_tests 1652 14 none] [finalize sample 194 25 none]
 G r k string_value [test_generated_wkt_fields protobuf_tests 1652 14 none] [string_valueDF proto_wkt 41 9 none]
-G r c none [test_generated_wkt_fields protobuf_tests 1652 14 none] [to_json sample 266 13 none]
+G r c none [test_generated_wkt_fields protobuf_tests 1652 14 none] [to_json sample 313 13 none]
 G r c none [test_generated_wkt_fields protobuf_tests 1652 14 none] [serialize json 52 13 none]
 G r c none [test_generated_wkt_fields protobuf_tests 1652 14 none] [parse json 53 13 none]
 G r d json_value [test_generated_wkt_fields protobuf_tests 1652 14 none] [adjust json 64 25 none]
@@ -880,15 +881,15 @@ G r c none [test_generated_wkt_fields protobuf_tests 1652 14 none] [assert aunit
 G r c none [test_generated_wkt_fields protobuf_tests 1652 14 none] [as_string json 40 13 none]
 G r c none [test_generated_wkt_fields protobuf_tests 1652 14 none] [element json 43 13 none]
 G r c none [test_generated_wkt_fields protobuf_tests 1652 14 none] [length json 42 13 none]
-G r c none [test_generated_wkt_fields protobuf_tests 1652 14 none] [from_json sample 267 13 none]
-G r j box [test_generated_wkt_fields protobuf_tests 1652 14 none] [boxDA sample 189 9 none]
-G r c none [test_generated_wkt_fields protobuf_tests 1652 14 none] [element sample 137 13 none]
-G r c none [test_generated_wkt_fields protobuf_tests 1652 14 none] [is_empty sample 138 13 none]
-G r c none [test_generated_wkt_fields protobuf_tests 1652 14 none] [element sample 147 13 none]
-G r c none [test_generated_wkt_fields protobuf_tests 1652 14 none] [serialize sample 264 13 none]
-G r c none [test_generated_wkt_fields protobuf_tests 1652 14 none] [parse_box sample 265 13 none]
-G r c none [test_generated_wkt_fields protobuf_tests 1652 14 none] [element sample 157 13 none]
-G r c none [test_generated_wkt_fields protobuf_tests 1652 14 none] [element sample 167 13 none]
+G r c none [test_generated_wkt_fields protobuf_tests 1652 14 none] [from_json sample 314 13 none]
+G r j box [test_generated_wkt_fields protobuf_tests 1652 14 none] [boxDA sample 223 9 none]
+G r c none [test_generated_wkt_fields protobuf_tests 1652 14 none] [element sample 166 13 none]
+G r c none [test_generated_wkt_fields protobuf_tests 1652 14 none] [is_empty sample 167 13 none]
+G r c none [test_generated_wkt_fields protobuf_tests 1652 14 none] [element sample 176 13 none]
+G r c none [test_generated_wkt_fields protobuf_tests 1652 14 none] [serialize sample 311 13 none]
+G r c none [test_generated_wkt_fields protobuf_tests 1652 14 none] [parse_box sample 312 13 none]
+G r c none [test_generated_wkt_fields protobuf_tests 1652 14 none] [element sample 186 13 none]
+G r c none [test_generated_wkt_fields protobuf_tests 1652 14 none] [element sample 196 13 none]
 G r c none [test_wkt_any protobuf_tests 1710 14 none] [serialize proto_wkt 99 13 none]
 G r c none [test_wkt_any protobuf_tests 1710 14 none] [to_json proto_wkt 167 13 none]
 G r d json_value [test_wkt_any protobuf_tests 1710 14 none] [adjust json 64 25 none]
@@ -956,112 +957,139 @@ G r c none [test_wkt_duration_timestamp protobuf_tests 1849 14 none] [from_json 
 G r c none [test_wkt_duration_timestamp protobuf_tests 1849 14 none] [parse json 53 13 none]
 G r c none [test_wkt_duration_timestamp protobuf_tests 1849 14 none] [serialize proto_wkt 104 13 none]
 G r c none [test_wkt_duration_timestamp protobuf_tests 1849 14 none] [parse_timestamp proto_wkt 105 13 none]
-G r s person [test_generated_utf8_validation protobuf_tests 1899 14 none] [personIP sample 196 9 none]
-G r l person [test_generated_utf8_validation protobuf_tests 1899 14 none] [personDI sample 196 9 none]
-G r k person [test_generated_utf8_validation protobuf_tests 1899 14 none] [personDF sample 196 9 none]
-G r c none [test_generated_utf8_validation protobuf_tests 1899 14 none] [serialize sample 269 13 none]
-G r c none [test_generated_utf8_validation protobuf_tests 1899 14 none] [parse_person sample 270 13 none]
+G r s person [test_generated_utf8_validation protobuf_tests 1899 14 none] [personIP sample 230 9 none]
+G r l person [test_generated_utf8_validation protobuf_tests 1899 14 none] [personDI sample 230 9 none]
+G r k person [test_generated_utf8_validation protobuf_tests 1899 14 none] [personDF sample 230 9 none]
+G r c none [test_generated_utf8_validation protobuf_tests 1899 14 none] [serialize sample 316 13 none]
+G r c none [test_generated_utf8_validation protobuf_tests 1899 14 none] [parse_person sample 317 13 none]
 G r c none [test_generated_utf8_validation protobuf_tests 1899 14 none] [assert aunit__assertions 48 14 none]
 G r s message_buffer [test_generated_utf8_validation protobuf_tests 1899 14 none] [message_bufferIP protobuf 542 9 none]
 G r c none [test_generated_utf8_validation protobuf_tests 1899 14 none] [add_string protobuf 202 14 none]
 G r c none [test_generated_utf8_validation protobuf_tests 1899 14 none] [to_string protobuf 66 13 none]
-G r j person [test_generated_utf8_validation protobuf_tests 1899 14 none] [personDA sample 196 9 none]
+G r j person [test_generated_utf8_validation protobuf_tests 1899 14 none] [personDA sample 230 9 none]
 G r c none [test_generated_utf8_validation protobuf_tests 1899 14 none] [add_bytes protobuf 210 14 none]
-G r s person [test_generated_from_json protobuf_tests 1946 14 none] [personIP sample 196 9 none]
-G r l person [test_generated_from_json protobuf_tests 1946 14 none] [personDI sample 196 9 none]
-G r k person [test_generated_from_json protobuf_tests 1946 14 none] [personDF sample 196 9 none]
-G r c none [test_generated_from_json protobuf_tests 1946 14 none] [to_json sample 271 13 none]
+G r s person [test_generated_from_json protobuf_tests 1946 14 none] [personIP sample 230 9 none]
+G r l person [test_generated_from_json protobuf_tests 1946 14 none] [personDI sample 230 9 none]
+G r k person [test_generated_from_json protobuf_tests 1946 14 none] [personDF sample 230 9 none]
+G r c none [test_generated_from_json protobuf_tests 1946 14 none] [to_json sample 318 13 none]
 G r c none [test_generated_from_json protobuf_tests 1946 14 none] [serialize json 52 13 none]
 G r c none [test_generated_from_json protobuf_tests 1946 14 none] [parse json 53 13 none]
-G r c none [test_generated_from_json protobuf_tests 1946 14 none] [from_json sample 272 13 none]
-G r j person [test_generated_from_json protobuf_tests 1946 14 none] [personDA sample 196 9 none]
+G r c none [test_generated_from_json protobuf_tests 1946 14 none] [from_json sample 319 13 none]
+G r j person [test_generated_from_json protobuf_tests 1946 14 none] [personDA sample 230 9 none]
 G r e json_value [test_generated_from_json protobuf_tests 1946 14 none] [finalize json 65 25 none]
 G r c none [test_generated_from_json protobuf_tests 1946 14 none] [assert aunit__assertions 48 14 none]
-G r c none [test_generated_from_json protobuf_tests 1946 14 none] [from_json sample 282 13 none]
-G r j bag [test_generated_from_json protobuf_tests 1946 14 none] [bagDA sample 210 9 none]
-G r k bag [test_generated_from_json protobuf_tests 1946 14 none] [bagDF sample 210 9 none]
-G r c none [test_generated_from_json protobuf_tests 1946 14 none] [from_json sample 287 13 none]
-G r j outer [test_generated_from_json protobuf_tests 1946 14 none] [outerDA sample 217 9 none]
-G r k outer [test_generated_from_json protobuf_tests 1946 14 none] [outerDF sample 217 9 none]
-G r c none [test_generated_from_json protobuf_tests 1946 14 none] [from_json sample 312 13 none]
-G r j choice [test_generated_from_json protobuf_tests 1946 14 none] [choiceDA sample 258 9 none]
-G r k choice [test_generated_from_json protobuf_tests 1946 14 none] [choiceDF sample 258 9 none]
-G r c none [test_generated_from_json protobuf_tests 1946 14 none] [from_json sample 302 13 none]
-G r j maps [test_generated_from_json protobuf_tests 1946 14 none] [mapsDA sample 235 9 none]
-G r k maps [test_generated_from_json protobuf_tests 1946 14 none] [mapsDF sample 235 9 none]
-G r c none [test_generated_from_json protobuf_tests 1946 14 none] [element sample 83 13 none]
-G r k inner [test_generated_from_json protobuf_tests 1946 14 none] [innerDF sample 223 9 none]
-G r c none [test_generated_from_json protobuf_tests 1946 14 none] [is_empty sample 84 13 none]
-G r e inner_holder [test_generated_from_json protobuf_tests 1946 14 none] [finalize sample 81 25 none]
-G r s opt [test_generated_optional protobuf_tests 2026 14 none] [optIP sample 240 9 none]
-G r l opt [test_generated_optional protobuf_tests 2026 14 none] [optDI sample 240 9 none]
-G r k opt [test_generated_optional protobuf_tests 2026 14 none] [optDF sample 240 9 none]
-G r c none [test_generated_optional protobuf_tests 2026 14 none] [serialize sample 304 13 none]
-G r c none [test_generated_optional protobuf_tests 2026 14 none] [assert aunit__assertions 48 14 none]
-G r c none [test_generated_optional protobuf_tests 2026 14 none] [parse_opt sample 305 13 none]
-G r j opt [test_generated_optional protobuf_tests 2026 14 none] [optDA sample 240 9 none]
-G r s json_value [test_generated_optional protobuf_tests 2026 14 none] [json_valueIP json 60 9 none]
-G r c none [test_generated_optional protobuf_tests 2026 14 none] [to_json sample 306 13 none]
-G r c none [test_generated_optional protobuf_tests 2026 14 none] [serialize json 52 13 none]
-G r c none [test_generated_optional protobuf_tests 2026 14 none] [parse json 53 13 none]
-G r e json_value [test_generated_optional protobuf_tests 2026 14 none] [finalize json 65 25 none]
-G r c none [test_generated_optional protobuf_tests 2026 14 none] [has json 44 13 none]
-G r c none [test_generated_optional protobuf_tests 2026 14 none] [get json 45 13 none]
-G r c none [test_generated_optional protobuf_tests 2026 14 none] [as_number json 39 13 none]
-G r c none [test_generated_optional protobuf_tests 2026 14 none] [from_json sample 307 13 none]
-G r c none [test_json_library protobuf_tests 2095 14 none] [empty_object json 28 13 none]
-G r d json_value [test_json_library protobuf_tests 2095 14 none] [adjust json 64 25 none]
-G r e json_value [test_json_library protobuf_tests 2095 14 none] [finalize json 65 25 none]
-G r c none [test_json_library protobuf_tests 2095 14 none] [empty_array json 27 13 none]
-G r c none [test_json_library protobuf_tests 2095 14 none] [number json 25 13 none]
-G r c none [test_json_library protobuf_tests 2095 14 none] [append json 30 14 none]
-G r c none [test_json_library protobuf_tests 2095 14 none] [to_value json 26 13 none]
-G r c none [test_json_library protobuf_tests 2095 14 none] [insert json 31 14 none]
-G r c none [test_json_library protobuf_tests 2095 14 none] [to_value json 24 13 none]
-G r c none [test_json_library protobuf_tests 2095 14 none] [serialize json 52 13 none]
-G r c none [test_json_library protobuf_tests 2095 14 none] [assert aunit__assertions 48 14 none]
-G r c none [test_json_library protobuf_tests 2095 14 none] [parse json 53 13 none]
-G r c none [test_json_library protobuf_tests 2095 14 none] [kind json 37 13 none]
-G r c none [test_json_library protobuf_tests 2095 14 none] [has json 44 13 none]
-G r c none [test_json_library protobuf_tests 2095 14 none] [get json 45 13 none]
-G r c none [test_json_library protobuf_tests 2095 14 none] [length json 42 13 none]
-G r c none [test_json_library protobuf_tests 2095 14 none] [element json 43 13 none]
-G r c none [test_json_library protobuf_tests 2095 14 none] [as_number json 39 13 none]
-G r c none [test_json_library protobuf_tests 2095 14 none] [as_boolean json 38 13 none]
-G r c none [test_json_library protobuf_tests 2095 14 none] [as_string json 40 13 none]
-G r s tree [test_generated_recursive protobuf_tests 2175 14 none] [treeIP sample 228 9 none]
-G r l tree [test_generated_recursive protobuf_tests 2175 14 none] [treeDI sample 228 9 none]
-G r k tree [test_generated_recursive protobuf_tests 2175 14 none] [treeDF sample 228 9 none]
-G r c none [test_generated_recursive protobuf_tests 2175 14 none] [to_holder sample 93 13 none]
-G r e tree_holder [test_generated_recursive protobuf_tests 2175 14 none] [finalize sample 92 25 none]
-G r c none [test_generated_recursive protobuf_tests 2175 14 none] [serialize sample 294 13 none]
-G r c none [test_generated_recursive protobuf_tests 2175 14 none] [parse_tree sample 295 13 none]
-G r j tree [test_generated_recursive protobuf_tests 2175 14 none] [treeDA sample 228 9 none]
-G r c none [test_generated_recursive protobuf_tests 2175 14 none] [assert aunit__assertions 48 14 none]
-G r c none [test_generated_recursive protobuf_tests 2175 14 none] [element sample 94 13 none]
-G r c none [test_generated_recursive protobuf_tests 2175 14 none] [is_empty sample 95 13 none]
-G r s message_buffer [test_serialization_buffer_growth_and_reuse protobuf_tests 2224 14 none] [message_bufferIP protobuf 542 9 none]
-G r c none [test_serialization_buffer_growth_and_reuse protobuf_tests 2224 14 none] [add_uint64 protobuf 114 14 none]
-G r c none [test_serialization_buffer_growth_and_reuse protobuf_tests 2224 14 none] [add_string protobuf 202 14 none]
-G r c none [test_serialization_buffer_growth_and_reuse protobuf_tests 2224 14 none] [add_fixed64 protobuf 162 14 none]
-G r c none [test_serialization_buffer_growth_and_reuse protobuf_tests 2224 14 none] [add_packed_uint32 protobuf 242 14 none]
-G r c none [test_serialization_buffer_growth_and_reuse protobuf_tests 2224 14 none] [to_string protobuf 66 13 none]
-G r c none [test_serialization_buffer_growth_and_reuse protobuf_tests 2224 14 none] [assert aunit__assertions 48 14 none]
-G r c none [test_serialization_buffer_growth_and_reuse protobuf_tests 2224 14 none] [clear protobuf 60 14 none]
-G r c none [test_serialization_buffer_growth_and_reuse protobuf_tests 2224 14 none] [parse_from_string protobuf 414 13 none]
-G r j parsed_field [test_serialization_buffer_growth_and_reuse protobuf_tests 2224 14 none] [parsed_fieldDA protobuf 21 9 none]
-G r c none [test_serialization_buffer_growth_and_reuse protobuf_tests 2224 14 none] [as_uint64 protobuf 454 13 none]
-G r k parsed_field [test_serialization_buffer_growth_and_reuse protobuf_tests 2224 14 none] [parsed_fieldDF protobuf 21 9 none]
-G r c none [test_serialization_buffer_growth_and_reuse protobuf_tests 2224 14 none] [as_string protobuf 520 13 none]
-G r c none [test_serialization_buffer_growth_and_reuse protobuf_tests 2224 14 none] [as_fixed64 protobuf 490 13 none]
-G r c none [test_serialization_buffer_growth_and_reuse protobuf_tests 2224 14 none] [as_bytes protobuf 526 13 none]
-G r c none [test_serialization_buffer_growth_and_reuse protobuf_tests 2224 14 none] [decode_packed_uint32 protobuf 348 13 none]
+G r c none [test_generated_from_json protobuf_tests 1946 14 none] [from_json sample 329 13 none]
+G r j bag [test_generated_from_json protobuf_tests 1946 14 none] [bagDA sample 244 9 none]
+G r k bag [test_generated_from_json protobuf_tests 1946 14 none] [bagDF sample 244 9 none]
+G r c none [test_generated_from_json protobuf_tests 1946 14 none] [from_json sample 334 13 none]
+G r j outer [test_generated_from_json protobuf_tests 1946 14 none] [outerDA sample 251 9 none]
+G r k outer [test_generated_from_json protobuf_tests 1946 14 none] [outerDF sample 251 9 none]
+G r c none [test_generated_from_json protobuf_tests 1946 14 none] [from_json sample 369 13 none]
+G r j choice [test_generated_from_json protobuf_tests 1946 14 none] [choiceDA sample 305 9 none]
+G r k choice [test_generated_from_json protobuf_tests 1946 14 none] [choiceDF sample 305 9 none]
+G r c none [test_generated_from_json protobuf_tests 1946 14 none] [from_json sample 349 13 none]
+G r j maps [test_generated_from_json protobuf_tests 1946 14 none] [mapsDA sample 269 9 none]
+G r k maps [test_generated_from_json protobuf_tests 1946 14 none] [mapsDF sample 269 9 none]
+G r c none [test_generated_from_json protobuf_tests 1946 14 none] [element sample 90 13 none]
+G r k inner [test_generated_from_json protobuf_tests 1946 14 none] [innerDF sample 257 9 none]
+G r c none [test_generated_from_json protobuf_tests 1946 14 none] [is_empty sample 91 13 none]
+G r e inner_holder [test_generated_from_json protobuf_tests 1946 14 none] [finalize sample 88 25 none]
+G r s nest [test_generated_nested_types protobuf_tests 2028 14 none] [nestIP sample 280 9 none]
+G r l nest [test_generated_nested_types protobuf_tests 2028 14 none] [nestDI sample 280 9 none]
+G r k nest [test_generated_nested_types protobuf_tests 2028 14 none] [nestDF sample 280 9 none]
+G r s nest_item [test_generated_nested_types protobuf_tests 2028 14 none] [nest_itemIP sample 274 9 none]
+G r l nest_item [test_generated_nested_types protobuf_tests 2028 14 none] [nest_itemDI sample 274 9 none]
+G r k nest_item [test_generated_nested_types protobuf_tests 2028 14 none] [nest_itemDF sample 274 9 none]
+G r c none [test_generated_nested_types protobuf_tests 2028 14 none] [to_holder sample 133 13 none]
+G r e nest_holder [test_generated_nested_types protobuf_tests 2028 14 none] [finalize sample 132 25 none]
+G r c none [test_generated_nested_types protobuf_tests 2028 14 none] [to_holder sample 122 13 none]
+G r e nest_item_holder [test_generated_nested_types protobuf_tests 2028 14 none] [finalize sample 121 25 none]
+G r c none [test_generated_nested_types protobuf_tests 2028 14 none] [serialize sample 356 13 none]
+G r c none [test_generated_nested_types protobuf_tests 2028 14 none] [parse_nest sample 357 13 none]
+G r j nest [test_generated_nested_types protobuf_tests 2028 14 none] [nestDA sample 280 9 none]
+G r c none [test_generated_nested_types protobuf_tests 2028 14 none] [assert aunit__assertions 48 14 none]
+G r c none [test_generated_nested_types protobuf_tests 2028 14 none] [element sample 123 13 none]
+G r c none [test_generated_nested_types protobuf_tests 2028 14 none] [is_empty sample 124 13 none]
+G r c none [test_generated_nested_types protobuf_tests 2028 14 none] [element sample 134 13 none]
+G r c none [test_generated_nested_types protobuf_tests 2028 14 none] [is_empty sample 135 13 none]
+G r s json_value [test_generated_nested_types protobuf_tests 2028 14 none] [json_valueIP json 60 9 none]
+G r c none [test_generated_nested_types protobuf_tests 2028 14 none] [to_json sample 358 13 none]
+G r c none [test_generated_nested_types protobuf_tests 2028 14 none] [serialize json 52 13 none]
+G r c none [test_generated_nested_types protobuf_tests 2028 14 none] [parse json 53 13 none]
+G r e json_value [test_generated_nested_types protobuf_tests 2028 14 none] [finalize json 65 25 none]
+G r c none [test_generated_nested_types protobuf_tests 2028 14 none] [get json 45 13 none]
+G r c none [test_generated_nested_types protobuf_tests 2028 14 none] [as_string json 40 13 none]
+G r c none [test_generated_nested_types protobuf_tests 2028 14 none] [as_number json 39 13 none]
+G r c none [test_generated_nested_types protobuf_tests 2028 14 none] [from_json sample 359 13 none]
+G r s opt [test_generated_optional protobuf_tests 2105 14 none] [optIP sample 287 9 none]
+G r l opt [test_generated_optional protobuf_tests 2105 14 none] [optDI sample 287 9 none]
+G r k opt [test_generated_optional protobuf_tests 2105 14 none] [optDF sample 287 9 none]
+G r c none [test_generated_optional protobuf_tests 2105 14 none] [serialize sample 361 13 none]
+G r c none [test_generated_optional protobuf_tests 2105 14 none] [assert aunit__assertions 48 14 none]
+G r c none [test_generated_optional protobuf_tests 2105 14 none] [parse_opt sample 362 13 none]
+G r j opt [test_generated_optional protobuf_tests 2105 14 none] [optDA sample 287 9 none]
+G r s json_value [test_generated_optional protobuf_tests 2105 14 none] [json_valueIP json 60 9 none]
+G r c none [test_generated_optional protobuf_tests 2105 14 none] [to_json sample 363 13 none]
+G r c none [test_generated_optional protobuf_tests 2105 14 none] [serialize json 52 13 none]
+G r c none [test_generated_optional protobuf_tests 2105 14 none] [parse json 53 13 none]
+G r e json_value [test_generated_optional protobuf_tests 2105 14 none] [finalize json 65 25 none]
+G r c none [test_generated_optional protobuf_tests 2105 14 none] [has json 44 13 none]
+G r c none [test_generated_optional protobuf_tests 2105 14 none] [get json 45 13 none]
+G r c none [test_generated_optional protobuf_tests 2105 14 none] [as_number json 39 13 none]
+G r c none [test_generated_optional protobuf_tests 2105 14 none] [from_json sample 364 13 none]
+G r c none [test_json_library protobuf_tests 2174 14 none] [empty_object json 28 13 none]
+G r d json_value [test_json_library protobuf_tests 2174 14 none] [adjust json 64 25 none]
+G r e json_value [test_json_library protobuf_tests 2174 14 none] [finalize json 65 25 none]
+G r c none [test_json_library protobuf_tests 2174 14 none] [empty_array json 27 13 none]
+G r c none [test_json_library protobuf_tests 2174 14 none] [number json 25 13 none]
+G r c none [test_json_library protobuf_tests 2174 14 none] [append json 30 14 none]
+G r c none [test_json_library protobuf_tests 2174 14 none] [to_value json 26 13 none]
+G r c none [test_json_library protobuf_tests 2174 14 none] [insert json 31 14 none]
+G r c none [test_json_library protobuf_tests 2174 14 none] [to_value json 24 13 none]
+G r c none [test_json_library protobuf_tests 2174 14 none] [serialize json 52 13 none]
+G r c none [test_json_library protobuf_tests 2174 14 none] [assert aunit__assertions 48 14 none]
+G r c none [test_json_library protobuf_tests 2174 14 none] [parse json 53 13 none]
+G r c none [test_json_library protobuf_tests 2174 14 none] [kind json 37 13 none]
+G r c none [test_json_library protobuf_tests 2174 14 none] [has json 44 13 none]
+G r c none [test_json_library protobuf_tests 2174 14 none] [get json 45 13 none]
+G r c none [test_json_library protobuf_tests 2174 14 none] [length json 42 13 none]
+G r c none [test_json_library protobuf_tests 2174 14 none] [element json 43 13 none]
+G r c none [test_json_library protobuf_tests 2174 14 none] [as_number json 39 13 none]
+G r c none [test_json_library protobuf_tests 2174 14 none] [as_boolean json 38 13 none]
+G r c none [test_json_library protobuf_tests 2174 14 none] [as_string json 40 13 none]
+G r s tree [test_generated_recursive protobuf_tests 2254 14 none] [treeIP sample 262 9 none]
+G r l tree [test_generated_recursive protobuf_tests 2254 14 none] [treeDI sample 262 9 none]
+G r k tree [test_generated_recursive protobuf_tests 2254 14 none] [treeDF sample 262 9 none]
+G r c none [test_generated_recursive protobuf_tests 2254 14 none] [to_holder sample 100 13 none]
+G r e tree_holder [test_generated_recursive protobuf_tests 2254 14 none] [finalize sample 99 25 none]
+G r c none [test_generated_recursive protobuf_tests 2254 14 none] [serialize sample 341 13 none]
+G r c none [test_generated_recursive protobuf_tests 2254 14 none] [parse_tree sample 342 13 none]
+G r j tree [test_generated_recursive protobuf_tests 2254 14 none] [treeDA sample 262 9 none]
+G r c none [test_generated_recursive protobuf_tests 2254 14 none] [assert aunit__assertions 48 14 none]
+G r c none [test_generated_recursive protobuf_tests 2254 14 none] [element sample 101 13 none]
+G r c none [test_generated_recursive protobuf_tests 2254 14 none] [is_empty sample 102 13 none]
+G r s message_buffer [test_serialization_buffer_growth_and_reuse protobuf_tests 2303 14 none] [message_bufferIP protobuf 542 9 none]
+G r c none [test_serialization_buffer_growth_and_reuse protobuf_tests 2303 14 none] [add_uint64 protobuf 114 14 none]
+G r c none [test_serialization_buffer_growth_and_reuse protobuf_tests 2303 14 none] [add_string protobuf 202 14 none]
+G r c none [test_serialization_buffer_growth_and_reuse protobuf_tests 2303 14 none] [add_fixed64 protobuf 162 14 none]
+G r c none [test_serialization_buffer_growth_and_reuse protobuf_tests 2303 14 none] [add_packed_uint32 protobuf 242 14 none]
+G r c none [test_serialization_buffer_growth_and_reuse protobuf_tests 2303 14 none] [to_string protobuf 66 13 none]
+G r c none [test_serialization_buffer_growth_and_reuse protobuf_tests 2303 14 none] [assert aunit__assertions 48 14 none]
+G r c none [test_serialization_buffer_growth_and_reuse protobuf_tests 2303 14 none] [clear protobuf 60 14 none]
+G r c none [test_serialization_buffer_growth_and_reuse protobuf_tests 2303 14 none] [parse_from_string protobuf 414 13 none]
+G r j parsed_field [test_serialization_buffer_growth_and_reuse protobuf_tests 2303 14 none] [parsed_fieldDA protobuf 21 9 none]
+G r c none [test_serialization_buffer_growth_and_reuse protobuf_tests 2303 14 none] [as_uint64 protobuf 454 13 none]
+G r k parsed_field [test_serialization_buffer_growth_and_reuse protobuf_tests 2303 14 none] [parsed_fieldDF protobuf 21 9 none]
+G r c none [test_serialization_buffer_growth_and_reuse protobuf_tests 2303 14 none] [as_string protobuf 520 13 none]
+G r c none [test_serialization_buffer_growth_and_reuse protobuf_tests 2303 14 none] [as_fixed64 protobuf 490 13 none]
+G r c none [test_serialization_buffer_growth_and_reuse protobuf_tests 2303 14 none] [as_bytes protobuf 526 13 none]
+G r c none [test_serialization_buffer_growth_and_reuse protobuf_tests 2303 14 none] [decode_packed_uint32 protobuf 348 13 none]
 X 1 ada.ads
 16K9*Ada 20e8 54|1r6 2r6 3r6 4r6 5r6 6r6 7r6 26r13 27r13 73r33 74r33 196r14
 . 196r65 232r37 233r14 240r20 241r20 245r16 249r20 250r20 251r35 262r29 263r12
 . 266r28 271r16 694r20 703r11 726r27 742r7 972r14 973r14 975r17 1005r27 1017r7
 . 1071r11 1126r11 1196r11 1253r11 1341r11 1380r11 1478r11 1547r11 1653r11
-. 1711r11 1815r11 1900r11 1947r11 2027r11
+. 1711r11 1815r11 1900r11 1947r11 2029r11 2106r11
 X 2 a-calend.ads
 36K13*Calendar 413e17 54|2w10 703r15
 42I9*Time<226I9> 54|704r20 705r18
@@ -1073,12 +1101,12 @@ X 5 a-contai.ads
 22I9*Count_Type<integer> 54|26r28
 X 7 a-coorma.ads
 57R9*Map<12|43R9>
-83V13*Length{5|22I9} 54|1358s36[55|184] 1363s35[55|187]
-162U14*Include 54|1346s16[55|184] 1347s16[55|184] 1348s16[55|184] 1352s15[55|187]
-. 1353s15[55|187] 1432s19[55|184] 1434s18[55|187] 1562s19[43|35]
-204V13*Element{47|52I9} 54|1359s27[55|184] 1360s36[55|184] 1361s36[55|184]
-. 1364s26[55|187] 1365s46[55|187] 1366s35[55|187] 1593s39[43|35] 2016s27[55|184]
-. 2018s26[55|187]
+83V13*Length{5|22I9} 54|1358s36[55|215] 1363s35[55|218]
+162U14*Include 54|1346s16[55|215] 1347s16[55|215] 1348s16[55|215] 1352s15[55|218]
+. 1353s15[55|218] 1432s19[55|215] 1434s18[55|218] 1562s19[43|35] 2051s20[55|221]
+204V13*Element{47|52I9} 54|1359s27[55|215] 1360s36[55|215] 1361s36[55|215]
+. 1364s26[55|218] 1365s46[55|218] 1366s35[55|218] 1593s39[43|35] 2016s27[55|215]
+. 2018s26[55|218] 2068s31[55|221]
 X 9 a-convec.ads
 91R9*Vector<12|43R9> 54|77r46[52|35] 94r46[52|35] 331r78[52|35] 353r65[52|35]
 . 373r83[52|35] 396r65[52|35] 411r46[52|35] 420r46[52|35] 450r52[52|35] 477r46[52|35]
@@ -1086,20 +1114,22 @@ X 9 a-convec.ads
 . 660r46[52|35] 687r46[52|35] 712r52[52|35] 730r46[52|35] 750r55[52|35] 758r55[52|35]
 . 773r55[52|35] 788r46[52|35] 801r46[52|35] 815r46[52|35] 843r46[52|35] 858r46[52|35]
 . 871r46[52|35] 883r55[52|35] 892r46[52|35] 910r46[52|35] 932r46[52|35] 984r46[52|35]
-. 1022r46[52|35] 2264r58[52|35] 2297r61[52|35]
-175V13*Length{5|22I9} 54|753s22[52|35] 886s22[52|35] 1153s37[55|173] 1156s34[55|174]
-. 1160s37[55|175] 1177s40[55|173] 1228s34[55|177] 1590s46[43|31] 1702s34[55|181]
-. 1827s35[51|115] 1836s35[51|115] 1991s37[55|173] 1993s37[55|175] 2201s38[55|179]
-483U14*Append 54|1130s17[55|173] 1131s17[55|173] 1132s17[55|173] 1133s14[55|174]
-. 1134s14[55|174] 1136s17[55|175] 1137s17[55|175] 1207s14[55|177] 1208s14[55|177]
-. 1411s20[55|173] 1412s20[55|173] 1414s20[55|175] 1559s17[43|31] 1560s17[43|31]
-. 1661s14[55|181] 1819s15[51|115] 1820s15[51|115] 2188s21[55|179] 2189s21[55|179]
+. 1022r46[52|35] 2343r58[52|35] 2376r61[52|35]
+175V13*Length{5|22I9} 54|753s22[52|35] 886s22[52|35] 1153s37[55|202] 1156s34[55|203]
+. 1160s37[55|204] 1177s40[55|202] 1228s34[55|206] 1590s46[43|31] 1702s34[55|212]
+. 1827s35[51|115] 1836s35[51|115] 1991s37[55|202] 1993s37[55|204] 2065s38[55|210]
+. 2280s38[55|208]
+483U14*Append 54|1130s17[55|202] 1131s17[55|202] 1132s17[55|202] 1133s14[55|203]
+. 1134s14[55|203] 1136s17[55|204] 1137s17[55|204] 1207s14[55|206] 1208s14[55|206]
+. 1411s20[55|202] 1412s20[55|202] 1414s20[55|204] 1559s17[43|31] 1560s17[43|31]
+. 1661s14[55|212] 1819s15[51|115] 1820s15[51|115] 2049s18[55|210] 2267s21[55|208]
+. 2268s21[55|208]
 X 10 a-direct.ads
 76K13*Directories 524e20 54|3w10 742r11 1017r11
 147U14*Delete_File 54|742s23 1017s23
 X 15 a-iteint.ads
 24h9 Forward_Iterator
-32h9 Reversible_Iterator<24R9[7|78]>
+32h9 Reversible_Iterator<24R9[9|119]>
 X 16 a-stream.ads
 36K13*Streams 87e16 54|6r10 27r17 232r41 240r24 241r24 245r20 249r24 250r24
 . 262r33 263r16 266r32 271r20 726r31 972r18 973r18 1005r31
@@ -1123,7 +1153,7 @@ X 17 a-ststio.ads
 X 18 a-string.ads
 16K13*Strings 35e16 54|4r10 5r10 196r18 196r69 233r18 251r39 694r24 975r21
 . 1071r15 1126r15 1196r15 1253r15 1341r15 1380r15 1478r15 1547r15 1653r15
-. 1711r15 1815r15 1900r15 1947r15 2027r15
+. 1711r15 1815r15 1900r15 1947r15 2029r15 2106r15
 33n37*Both{33E9} 54|196r77
 X 19 a-strfix.ads
 49K21*Fixed 1397e22 54|4w18 196r26
@@ -1131,7 +1161,7 @@ X 19 a-strfix.ads
 X 23 a-strunb.ads
 85K21*Unbounded 765e26 54|5w18 233r26 251r47 694r32 975r29 1071r23 1126r23
 . 1196r23 1253r23 1341r23 1380r23 1478r23 1547r23 1653r23 1711r23 1815r23
-. 1900r23 1947r23 2027r23
+. 1900r23 1947r23 2029r23 2106r23
 90R9*Unbounded_String<12|43R9> 744e15 54|233r36
 107V13*To_Unbounded_String{90R9} 54|694s42 975s39 1074s21 1078s21 1133s22
 . 1134s22 1203s19 1205s19 1209s17 1261s22 1284s30 1300s21 1346s25 1347s25
@@ -1139,11 +1169,11 @@ X 23 a-strunb.ads
 . 1458s22 1511s60 1512s59 1521s20 1557s17 1562s28 1573s30 1578s15 1593s48
 . 1603s30 1607s29 1627s30 1638s30 1642s29 1662s61 1718s25 1719s25 1740s25
 . 1741s25 1751s25 1752s25 1819s23 1820s23 1908s20 1957s20 1961s20 2016s36
-. 2055s20
+. 2051s29 2068s40 2134s20
 120V13*To_String{string} 54|251s57 1098s18 1102s18 1157s27 1226s27 1232s18
 . 1274s21 1289s30 1308s30 1365s27 1586s30 1588s41 1616s18 1703s27 1729s41
 . 1755s18 1756s27 1828s27 1829s27 1837s27 1909s18 1939s18 1963s37 1965s27
-. 1979s18 2013s27 2059s38
+. 1979s18 2013s27 2138s38
 242V14*"="{boolean} 9|65i19 54|1521s18
 260V14*"<"{boolean} 7|45i19
 X 28 a-unccon.ads
@@ -1152,14 +1182,14 @@ X 30 ada_containers-aunit_lists.ads
 53R9*Cursor
 X 31 aunit.ads
 34K9*AUnit 48e10 53|1r6 4r26 54|8w6 9r6 10r6 11r6 24r8 28r13 29r13 30r13
-. 34r30 35r19 40r57 43r23 45r59 48r48 58r68 59r27 61r12 62r25 2307r26 2310r30
-. 2311r10 2312r10 2313r10 2314r10 2315r10 2316r10 2317r10 2318r10 2319r10
-. 2320r10 2321r10 2322r10 2323r10 2324r10 2325r10 2326r10 2327r10 2328r10
-. 2329r10 2330r10 2331r10 2332r10 2333r10 2334r10 2335r10 2336r10 2337r10
-. 2338r10 2339r10 2340r10 2341r10 2342r10 2343r10 2344r10 2345r10 2346r10
-. 2347r10 2348r10 2349r10 2350r10 2351r10 2352r10 2353r10 2354r10 2355r10
-. 2356r10 2357r10 2358r10 2359r10 2360r10 2361r10 2362r10 2363r10 2364r10
-. 2365r10 2366r10
+. 34r30 35r19 40r57 43r23 45r59 48r48 58r68 59r27 61r12 62r25 2386r26 2389r30
+. 2390r10 2391r10 2392r10 2393r10 2394r10 2395r10 2396r10 2397r10 2398r10
+. 2399r10 2400r10 2401r10 2402r10 2403r10 2404r10 2405r10 2406r10 2407r10
+. 2408r10 2409r10 2410r10 2411r10 2412r10 2413r10 2414r10 2415r10 2416r10
+. 2417r10 2418r10 2419r10 2420r10 2421r10 2422r10 2423r10 2424r10 2425r10
+. 2426r10 2427r10 2428r10 2429r10 2430r10 2431r10 2432r10 2433r10 2434r10
+. 2435r10 2436r10 2437r10 2438r10 2439r10 2440r10 2441r10 2442r10 2443r10
+. 2444r10 2445r10 2446r10
 36P9*Message_String(string) 54|28r19 35r25 45r65 48r54
 44V13*Format{36P9} 54|62s31
 X 32 aunit-assertions.ads
@@ -1189,11 +1219,12 @@ X 32 aunit-assertions.ads
 . 1863s10 1864s10 1865s10 1867s10 1869s10 1870s10 1883s10 1885s10 1887s10
 . 1889s10 1890s10 1892s10 1909s10 1929s10 1939s10 1963s10 1977s10 1978s10
 . 1979s10 1980s10 1990s10 1991s10 1993s10 2012s10 2014s10 2016s10 2018s10
-. 2034s10 2042s13 2043s13 2044s13 2058s10 2059s10 2068s10 2082s10 2083s10
-. 2085s10 2088s10 2090s10 2108s10 2120s10 2121s10 2123s10 2127s13 2128s13
-. 2129s13 2135s7 2144s10 2146s10 2151s7 2168s10 2194s10 2195s10 2197s10 2201s10
-. 2213s10 2215s10 2247s7 2256s10 2258s10 2268s13 2273s10 2275s10 2283s13
-. 2284s13 2300s13 2301s13
+. 2056s13 2057s13 2059s13 2061s13 2065s13 2068s13 2086s10 2088s10 2090s10
+. 2095s10 2113s10 2121s13 2122s13 2123s13 2137s10 2138s10 2147s10 2161s10
+. 2162s10 2164s10 2167s10 2169s10 2187s10 2199s10 2200s10 2202s10 2206s13
+. 2207s13 2208s13 2214s7 2223s10 2225s10 2230s7 2247s10 2273s10 2274s10 2276s10
+. 2280s10 2292s10 2294s10 2326s7 2335s10 2337s10 2347s13 2352s10 2354s10
+. 2362s13 2363s13 2379s13 2380s13
 101U14*Init_Test
 104U14*Clear_Failures
 107V13*Has_Failures{boolean}
@@ -1208,23 +1239,23 @@ X 35 aunit-simple_test_cases.ads
 60U14*Tear_Down
 67U14*Run
 X 38 aunit-test_suites.ads
-41K15*Test_Suites 86e22 53|1w12 4r32 54|11w12 30r19 43r29 2307r32 2310r36
-. 2311r16 2312r16 2313r16 2314r16 2315r16 2316r16 2317r16 2318r16 2319r16
-. 2320r16 2321r16 2322r16 2323r16 2324r16 2325r16 2326r16 2327r16 2328r16
-. 2329r16 2330r16 2331r16 2332r16 2333r16 2334r16 2335r16 2336r16 2337r16
-. 2338r16 2339r16 2340r16 2341r16 2342r16 2343r16 2344r16 2345r16 2346r16
-. 2347r16 2348r16 2349r16 2350r16 2351r16 2352r16 2353r16 2354r16 2355r16
-. 2356r16 2357r16 2358r16 2359r16 2360r16 2361r16 2362r16 2363r16 2364r16
-. 2365r16 2366r16
-44P9*Access_Test_Suite(43R9) 53|4r44 54|30r31 43r41 2307r44
-48U14*Add_Test 54|2311s28 2312s28 2313s28 2314s28 2315s28 2316s28 2317s28
-. 2318s28 2319s28 2320s28 2321s28 2322s28 2323s28 2324s28 2325s28 2326s28
-. 2327s28 2328s28 2329s28 2330s28 2331s28 2332s28 2333s28 2334s28 2335s28
-. 2336s28 2337s28 2338s28 2339s28 2340s28 2341s28 2342s28 2343s28 2344s28
-. 2345s28 2346s28 2347s28 2348s28 2349s28 2350s28 2351s28 2352s28 2353s28
-. 2354s28 2355s28 2356s28 2357s28 2358s28 2359s28 2360s28 2361s28 2362s28
-. 2363s28 2364s28 2365s28 2366s28
-58V13*New_Suite{44P9} 54|2310s48
+41K15*Test_Suites 86e22 53|1w12 4r32 54|11w12 30r19 43r29 2386r32 2389r36
+. 2390r16 2391r16 2392r16 2393r16 2394r16 2395r16 2396r16 2397r16 2398r16
+. 2399r16 2400r16 2401r16 2402r16 2403r16 2404r16 2405r16 2406r16 2407r16
+. 2408r16 2409r16 2410r16 2411r16 2412r16 2413r16 2414r16 2415r16 2416r16
+. 2417r16 2418r16 2419r16 2420r16 2421r16 2422r16 2423r16 2424r16 2425r16
+. 2426r16 2427r16 2428r16 2429r16 2430r16 2431r16 2432r16 2433r16 2434r16
+. 2435r16 2436r16 2437r16 2438r16 2439r16 2440r16 2441r16 2442r16 2443r16
+. 2444r16 2445r16 2446r16
+44P9*Access_Test_Suite(43R9) 53|4r44 54|30r31 43r41 2386r44
+48U14*Add_Test 54|2390s28 2391s28 2392s28 2393s28 2394s28 2395s28 2396s28
+. 2397s28 2398s28 2399s28 2400s28 2401s28 2402s28 2403s28 2404s28 2405s28
+. 2406s28 2407s28 2408s28 2409s28 2410s28 2411s28 2412s28 2413s28 2414s28
+. 2415s28 2416s28 2417s28 2418s28 2419s28 2420s28 2421s28 2422s28 2423s28
+. 2424s28 2425s28 2426s28 2427s28 2428s28 2429s28 2430s28 2431s28 2432s28
+. 2433s28 2434s28 2435s28 2436s28 2437s28 2438s28 2439s28 2440s28 2441s28
+. 2442s28 2443s28 2444s28 2445s28 2446s28
+58V13*New_Suite{44P9} 54|2389s48
 X 41 conformance.ads
 7K9*Conformance 86e16 54|19w6 1548r16 1570r17 1571r17 1574r41 1576r33 1581r20
 . 1600r17 1601r17 1604r41 1606r29 1611r20 1624r17 1625r17 1629r38 1635r17
@@ -1293,8 +1324,8 @@ X 47 interfac.ads
 . 502r64
 82M9*Unsigned_64 54|74r59 106r74 107r15 113r15 154r39 154r59 160r38 165r38
 . 170r38 175r38 175r58 180r39 185r40 194r30 196r38 201r14 204r22 437r15 445r30
-. 485r34 486r34 503r64 504r64 525r15 594r14 715r40 2233r46 2270r20 2294r37
-. 2301r67
+. 485r34 486r34 503r64 504r64 525r15 594r14 715r40 2312r46 2349r20 2373r37
+. 2380r67
 89V13*Shift_Left{68M9} 54|147s25
 164V13*Shift_Left{82M9} 54|112s12
 169V13*Shift_Right{82M9} 54|211s58
@@ -1316,49 +1347,52 @@ X 49 json.ads
 . 1792r31 1792r48 1795r21 1795r37 1795r47 1801r51 1803r56 1807r36 1809r18
 . 1821r15 1825r33 1843r18 1863r18 1864r18 1865r18 1867r18 1881r33 1883r18
 . 1885r18 1887r18 1962r33 1962r45 1975r58 1988r55 2002r30 2006r30 2008r30
-. 2076r14 2081r15 2081r27 2082r18 2083r18 2083r34 2085r22 2096r16 2101r14
-. 2101r33 2102r14 2102r33 2104r10 2104r26 2105r10 2105r26 2106r10 2107r10
-. 2107r32 2108r18 2116r23 2117r12 2120r18 2120r34 2121r18 2121r49 2123r18
-. 2123r29 2123r50 2125r26 2125r45 2127r21 2128r21 2128r37 2129r21 2129r38
-. 2129r48 2135r15 2135r31 2141r23 2142r12 2144r18 2146r18 2151r15 2151r31
-. 2161r34 2161r53 2166r18
-12E9*Value_Kind 13e79 54|1764r21 2096r21
-13n7*JSON_Null{12E9} 54|1788r56 2123r55
-13n67*JSON_Object{12E9} 54|2120r39
+. 2077r17 2085r15 2085r27 2086r18 2086r34 2088r18 2088r34 2088r44 2090r18
+. 2090r34 2090r44 2155r14 2160r15 2160r27 2161r18 2162r18 2162r34 2164r22
+. 2175r16 2180r14 2180r33 2181r14 2181r33 2183r10 2183r26 2184r10 2184r26
+. 2185r10 2186r10 2186r32 2187r18 2195r23 2196r12 2199r18 2199r34 2200r18
+. 2200r49 2202r18 2202r29 2202r50 2204r26 2204r45 2206r21 2207r21 2207r37
+. 2208r21 2208r38 2208r48 2214r15 2214r31 2220r23 2221r12 2223r18 2225r18
+. 2230r15 2230r31 2240r34 2240r53 2245r18
+12E9*Value_Kind 13e79 54|1764r21 2175r21
+13n7*JSON_Null{12E9} 54|1788r56 2202r55
+13n67*JSON_Object{12E9} 54|2199r39
 15R9*JSON_Value<12|43R9> 62e14 54|1386r19 1409r19 1430r20 1448r20 1449r20
-. 1666r28 1668r31 1720r28 1742r28 1766r25 1781r29 1782r30 2076r19 2101r19
-. 2102r19 2116r28 2125r31 2141r28 2161r39
-17X4*Parse_Error 54|2166r23
-24V13*To_Value{15R9} 54|2107s37
-25V13*Number{15R9} 54|1801s56 2104s31
-26V13*To_Value{15R9} 54|2105s31
-27V13*Empty_Array{15R9} 54|2102s38
-28V13*Empty_Object{15R9} 54|2101s38
-30U14*Append 54|2104s15 2105s15
-31U14*Insert 54|2106s15 2107s15
-37V13*Kind{12E9} 54|1788s23 2120s23 2123s23
-38V13*As_Boolean{boolean} 54|1397s23 1515s23 1787s23 1792s36 2129s26
+. 1666r28 1668r31 1720r28 1742r28 1766r25 1781r29 1782r30 2077r22 2155r19
+. 2180r19 2181r19 2195r28 2204r31 2220r28 2240r39
+17X4*Parse_Error 54|2245r23
+24V13*To_Value{15R9} 54|2186s37
+25V13*Number{15R9} 54|1801s56 2183s31
+26V13*To_Value{15R9} 54|2184s31
+27V13*Empty_Array{15R9} 54|2181s38
+28V13*Empty_Object{15R9} 54|2180s38
+30U14*Append 54|2183s15 2184s15
+31U14*Insert 54|2185s15 2186s15
+37V13*Kind{12E9} 54|1788s23 2199s23 2202s23
+38V13*As_Boolean{boolean} 54|1397s23 1515s23 1787s23 1792s36 2208s26
 39V13*As_Number{string} 54|1395s23 1402s41 1419s32 1436s23 1438s23 1455s23
 . 1461s23 1492s23 1522s41 1670s23 1744s23 1784s41 1790s41 1795s26 1807s41
-. 2083s23 2128s26 2135s20
+. 2088s23 2162s23 2207s26 2214s20
 40V13*As_String{string} 54|1396s23 1398s23 1400s23 1416s23 1422s23 1503s23
 . 1516s23 1518s23 1672s23 1674s23 1677s32 1722s23 1724s23 1786s23 1791s32
 . 1821s20 1843s23 1863s23 1864s23 1865s23 1867s23 1883s23 1885s23 1887s23
-. 2144s23 2151s20
-42V13*Length{natural} 54|1418s23 1676s23 1789s23 1809s23 2127s26
+. 2086s23 2090s23 2223s23 2230s20
+42V13*Length{natural} 54|1418s23 1676s23 1789s23 1809s23 2206s26
 43V13*Element{15R9} 54|1420s35 1422s39 1677s48 1790s57 1791s48 1792s53 1795s52
-. 2128s42 2129s53
-44V13*Has{boolean} 54|1463s27 2082s23 2085s27 2121s23 2121s54
+. 2207s42 2208s53
+44V13*Has{boolean} 54|1463s27 2161s23 2164s27 2200s23 2200s54
 45V13*Get{15R9} 54|1395s39 1396s39 1397s40 1398s39 1400s39 1402s57 1416s39
 . 1418s36 1420s49 1422s53 1436s39 1436s49 1439s26 1439s36 1439s46 1455s39
 . 1455s49 1461s39 1668s50 1670s39 1672s39 1674s39 1722s39 1724s39 1744s39
-. 1782s49 1784s57 1786s39 1787s40 1788s34 1795s42 2083s39 2123s34 2125s50
-. 2129s43
+. 1782s49 1784s57 1786s39 1787s40 1788s34 1795s42 2086s39 2088s39 2088s49
+. 2090s39 2090s49 2162s39 2202s34 2204s50 2208s43
 52V13*Serialize{string} 54|1394s32 1415s32 1435s32 1454s33 1460s33 1470s23
-. 1540s23 1608s21 1667s29 1774s20 1774s61 1962s50 2081s32 2108s23 2146s23
+. 1540s23 1608s21 1667s29 1774s20 1774s61 1962s50 2085s32 2160s32 2187s23
+. 2225s23
 53V13*Parse{15R9} 54|1394s20 1415s20 1435s20 1454s21 1460s21 1485s38 1501s38
 . 1586s23 1667s17 1767s14 1803s61 1825s38 1881s38 1962s38 1975s63 1988s60
-. 2002s35 2006s35 2008s35 2081s20 2117s17 2135s36 2142s17 2151s36 2161s58
+. 2002s35 2006s35 2008s35 2085s20 2160s20 2196s17 2214s36 2221s17 2230s36
+. 2240s58
 X 50 proto_json.ads
 7K9*Proto_JSON 37e15 54|16w6 1927r18
 35X4*Decode_Error 54|1927r29
@@ -1484,27 +1518,27 @@ X 52 protobuf.ads
 . 1128r19 1141r7 1142r7 1143r7 1144r7 1145r7 1146r38 1169r21 1171r10 1172r10
 . 1175r33 1200r19 1213r7 1214r7 1215r7 1216r7 1217r38 1259r16 1264r10 1265r10
 . 1266r10 1267r41 1483r16 1487r10 1488r44 1915r19 1918r10 1922r39 1934r16
-. 1938r10 1939r50 2226r35 2232r13 2233r19 2235r10 2236r10 2237r10 2240r12
-. 2241r12 2247r15 2247r41 2253r37 2255r10 2256r18 2258r18 2264r28 2265r12
-. 2265r40 2269r16 2269r56 2273r18 2275r18 2279r26 2280r15 2281r18 2292r14
-. 2294r10 2296r36 2297r31 2298r15 2301r21
+. 1938r10 1939r50 2305r35 2311r13 2312r19 2314r10 2315r10 2316r10 2319r12
+. 2320r12 2326r15 2326r41 2332r37 2334r10 2335r18 2337r18 2343r28 2344r12
+. 2344r40 2348r16 2348r56 2352r18 2354r18 2358r26 2359r15 2360r18 2371r14
+. 2373r10 2375r36 2376r31 2377r15 2380r21
 10X4*Parse_Error 54|90r22 548r30 577r36 793r24 806r24 826r24 863r24 876r24
 . 902r24 924r24 938r24
-13I12*Field_Number{positive} 54|78r25 95r25 2233r28 2269r65
+13I12*Field_Number{positive} 54|78r25 95r25 2312r28 2348r65
 21R9*Parsed_Field 33e14 54|79r51 933r25
 22i7*Number{13I12} 54|83r15 99r15
 35K12*Parsed_Field_Vectors[9|74] 54|77r25 94r25 331r57 353r44 373r62 396r44
 . 411r25 420r25 450r31 477r25 510r25 542r46 571r52 619r25 635r32 636r34 660r25
 . 687r25 712r31 730r25 750r34 758r34 773r34 788r25 801r25 815r25 843r25 858r25
-. 871r25 883r34 892r25 910r25 932r25 984r25 1022r25 2264r37 2297r40
+. 871r25 883r34 892r25 910r25 932r25 984r25 1022r25 2343r37 2376r40
 39R9*Message_Buffer<12|50R9> 545e14 54|200r27 220r28 277r54 296r28 309r59
 . 323r28 404r20 410r20 419r20 441r26 476r20 509r20 602r32 618r20 633r27 634r29
 . 659r20 686r20 711r26 729r20 765r20 780r20 814r20 833r20 842r20 983r20 1008r20
 . 1021r20 1079r28 1128r28 1169r30 1200r28 1259r25 1483r25 1915r28 1934r25
-. 2226r44 2240r21 2241r21 2292r23
+. 2305r44 2319r21 2320r21 2371r23
 41A9*Int32_Array(47|52I9)<integer> 54|365r37 637r32 648r45
 42A9*Int64_Array(47|55I9)<integer> 54|992r38 1046r32
-43A9*UInt32_Array(47|79M9)<integer> 54|2279r35
+43A9*UInt32_Array(47|79M9)<integer> 54|2358r35
 44A9*UInt64_Array(47|82M9)<integer> 54|1044r32
 45A9*Bool_Array(boolean)<integer> 54|671r33
 46A9*SFixed32_Array(47|52I9)<integer> 54|673r33
@@ -1513,12 +1547,12 @@ X 52 protobuf.ads
 51F12*Float64{47|219F9} 54|493r43 494r43
 53A9*Float_Array(50F12)<integer> 54|674r33
 54A9*Double_Array(51F12)<integer> 54|675r33
-60U14*Clear 54|837s16 2255s19
+60U14*Clear 54|837s16 2334s19
 66V13*To_String{string} 54|224s48 300s48 327s47 406s24 414s54 426s50 496s54
 . 520s54 605s36 625s54 644s61 645s63 668s54 692s48 717s60 768s24 783s24 818s54
 . 836s24 838s24 846s54 988s54 1041s54 1089s47 1146s47 1175s42 1217s47 1267s50
-. 1488s53 1922s48 1939s59 2247s24 2247s50 2253s46 2256s27 2258s27 2265s49
-. 2296s45
+. 1488s53 1922s48 1939s59 2326s24 2326s50 2332s46 2335s27 2337s27 2344s49
+. 2375s45
 73V13*Serialize_To_String{string} 54|427s50 462s66
 80U14*Write_To_Stream 54|736s16 1011s16
 90U14*Add_Int32 54|213s16 222s19 226s16 227s16 228s16 279s16 298s19 303s16
@@ -1526,26 +1560,26 @@ X 52 protobuf.ads
 . 714s22 733s16 835s16 1083s16 1144s16 1171s19 1172s19 1265s19 1487s19
 98U14*Add_Int64 54|280s16 453s22 481s16 482s16
 106U14*Add_UInt32 54|281s16 454s22 483s16 484s16
-114U14*Add_UInt64 54|214s16 282s16 455s22 485s16 486s16 624s16 715s22 2232s22
-. 2294s19
+114U14*Add_UInt64 54|214s16 282s16 455s22 485s16 486s16 624s16 715s22 2311s22
+. 2373s19
 122U14*Add_SInt32 54|215s16 283s16 456s22 487s16 488s16
 130U14*Add_SInt64 54|216s16 284s16 457s22 489s16 490s16 1087s16
 138U14*Add_Bool 54|285s16 319s16 458s22 1085s16 1266s19
 146U14*Add_Enum 54|986s16
 154U14*Add_Fixed32 54|286s16 622s16 817s16
-162U14*Add_Fixed64 54|287s16 2236s19
+162U14*Add_Fixed64 54|287s16 2315s19
 170U14*Add_SFixed32 54|288s16
 178U14*Add_SFixed64 54|289s16
 186U14*Add_Float 54|290s16 491s16 492s16
 194U14*Add_Double 54|291s16 493s16 494s16 1086s16
 202U14*Add_String 54|217s16 223s19 292s16 299s19 311s16 320s16 326s19 423s16
 . 459s22 515s16 623s16 716s22 732s16 1084s16 1142s16 1143s16 1216s16 1264s19
-. 1918s19 2235s19
+. 1918s19 2314s19
 210U14*Add_Bytes 54|218s16 293s16 317s16 318s16 321s16 1088s16 1938s19
 218U14*Add_Message 54|224s19 300s19 327s19 1213s16 1214s16 1215s16
 226U14*Add_Packed_Int32 54|639s16 1141s16 1145s16
 234U14*Add_Packed_Int64 54|987s16
-242U14*Add_Packed_UInt32 54|516s16 2237s19
+242U14*Add_Packed_UInt32 54|516s16 2316s19
 250U14*Add_Packed_UInt64 54|1024s16
 258U14*Add_Packed_SInt32 54|229s16 306s16 460s22
 266U14*Add_Packed_SInt64 54|1032s16
@@ -1557,7 +1591,7 @@ X 52 protobuf.ads
 330U14*Add_Packed_Double 54|666s16
 336V13*Decode_Packed_Int32{41A9} 54|649s21
 342V13*Decode_Packed_Int64{42A9} 54|993s21
-348V13*Decode_Packed_UInt32{43A9} 54|2280s24
+348V13*Decode_Packed_UInt32{43A9} 54|2359s24
 354V13*Decode_Packed_UInt64{44A9} 54|1045s21
 360V13*Decode_Packed_SInt32{41A9} 54|365s61
 366V13*Decode_Packed_SInt64{42A9} 54|1047s21
@@ -1569,33 +1603,33 @@ X 52 protobuf.ads
 414V13*Parse_From_String{9|91R9[35]} 54|353s84 396s84 414s26 496s26 520s26
 . 543s30 572s36 625s26 644s33 645s35 668s26 717s32 750s74 758s74 773s74 791s29
 . 804s29 818s26 846s26 861s29 874s29 884s18 896s21 914s21 988s26 1041s26
-. 2265s21 2298s24
+. 2344s21 2377s24
 421V13*Deserialize_From_String{9|91R9[35]} 54|430s29 462s32
 428V13*Parse_From_Stream{9|91R9[35]} 54|697s29 740s26
 436V13*As_Int32{47|52I9} 54|333s24 355s27 360s24 361s24 362s24 398s27 432s24
 . 463s30 497s24 498s24 626s24 652s48 653s48 654s48 718s30 745s24 821s54
 442V13*As_Int64{47|55I9} 54|334s24 464s30 499s24 500s24
 448V13*As_UInt32{47|79M9} 54|335s24 465s30 501s24 502s24
-454V13*As_UInt64{47|82M9} 54|336s24 466s30 503s24 504s24 2269s25 2301s30
+454V13*As_UInt64{47|82M9} 54|336s24 466s30 503s24 504s24 2348s25 2380s30
 460V13*As_SInt32{47|52I9} 54|337s24 467s30
 466V13*As_SInt64{47|55I9} 54|338s24 468s30
 472V13*As_Bool{boolean} 54|339s24 389s24 469s30
 478V13*As_Enum{47|52I9} 54|990s24
 484V13*As_Fixed32{47|79M9} 54|340s24
-490V13*As_Fixed64{47|82M9} 54|341s24 2275s27
+490V13*As_Fixed64{47|82M9} 54|341s24 2354s27
 496V13*As_SFixed32{47|52I9} 54|342s24
 502V13*As_SFixed64{47|55I9} 54|343s24
 508V13*As_Float{50F12} 54|344s29
 514V13*As_Double{51F12} 54|345s29
 520V13*As_String{string} 54|346s24 356s27 376s24 390s24 399s27 433s24 470s30
-. 521s24 627s24 744s24 887s24 2273s27
+. 521s24 627s24 744s24 887s24 2352s27
 526V13*As_Bytes{string} 54|347s24 365s92 378s47 385s24 386s24 391s24 649s51
-. 671s85 672s91 673s93 674s87 675s89 848s48 993s51 1045s52 1047s52 2281s27
+. 671s85 672s91 673s93 674s87 675s89 848s48 993s51 1045s52 1047s52 2360s27
 532V13*As_Message_Bytes{string} 54|352s53 395s53
 X 53 protobuf_tests.ads
-3K9*Protobuf_Tests 6l5 6e19 54|23b14 2376l5 2376t19
-4V13*Suite{38|44P9} 54|2307b13 2369l8 2369t13
-5U14*Cleanup 54|2371b14 2374l8 2374t15
+3K9*Protobuf_Tests 6l5 6e19 54|23b14 2456l5 2456t19
+4V13*Suite{38|44P9} 54|2386b13 2449l8 2449t13
+5U14*Cleanup 54|2451b14 2454l8 2454t15
 X 54 protobuf_tests.adb
 32P9 Test_Proc 36r14 58r50
 34R9 Callback_Case<35|44R9> 32|101p14 104p14 107p13 113p13 35|50p13 57p14
@@ -1606,24 +1640,24 @@ X 54 protobuf_tests.adb
 40A9 Test_Case_Array(35|45P9)<integer> 41r23
 41a4 Registered_Cases{40A9} 69m7
 42i4 Registered_Count{natural} 65r10 68m7 68r27 69r25
-43p4 Registered_Suite{38|44P9} 2309r10 2310m10 2311r38 2312r38 2313r38 2314r38
-. 2315r38 2316r38 2317r38 2318r38 2319r38 2320r38 2321r38 2322r38 2323r38
-. 2324r38 2325r38 2326r38 2327r38 2328r38 2329r38 2330r38 2331r38 2332r38
-. 2333r38 2334r38 2335r38 2336r38 2337r38 2338r38 2339r38 2340r38 2341r38
-. 2342r38 2343r38 2344r38 2345r38 2346r38 2347r38 2348r38 2349r38 2350r38
-. 2351r38 2352r38 2353r38 2354r38 2355r38 2356r38 2357r38 2358r38 2359r38
-. 2360r38 2361r38 2362r38 2363r38 2364r38 2365r38 2366r38 2368r14
+43p4 Registered_Suite{38|44P9} 2388r10 2389m10 2390r38 2391r38 2392r38 2393r38
+. 2394r38 2395r38 2396r38 2397r38 2398r38 2399r38 2400r38 2401r38 2402r38
+. 2403r38 2404r38 2405r38 2406r38 2407r38 2408r38 2409r38 2410r38 2411r38
+. 2412r38 2413r38 2414r38 2415r38 2416r38 2417r38 2418r38 2419r38 2420r38
+. 2421r38 2422r38 2423r38 2424r38 2425r38 2426r38 2427r38 2428r38 2429r38
+. 2430r38 2431r38 2432r38 2433r38 2434r38 2435r38 2436r38 2437r38 2438r38
+. 2439r38 2440r38 2441r38 2442r38 2443r38 2444r38 2445r38 2446r38 2448r14
 45V24 Name{31|36P9}<35|47p13> 45>30 48b13 51l8 51t12
 45r30 Test{34R9} 48b19 50r14
 46U25 Run_Test<35|53p14> 46=35 53b14 56l8 56t16
 46r35 Test{34R9} 53b24 55r7
-58V13 New_Case{35|45P9} 58b13 58>23 58>43 71l8 71t16 2311s56 2312s56 2313s56
-. 2314s56 2315s56 2316s56 2317s56 2318s56 2319s56 2320s56 2321s56 2322s56
-. 2323s56 2324s56 2325s56 2326s56 2327s56 2328s56 2329s56 2330s56 2331s56
-. 2332s56 2333s56 2334s56 2335s56 2336s56 2337s56 2338s56 2339s56 2340s56
-. 2341s56 2342s56 2343s56 2344s56 2345s56 2346s56 2347s56 2348s56 2349s56
-. 2350s56 2351s56 2352s56 2353s56 2354s56 2355s56 2356s56 2357s56 2358s56
-. 2359s56 2360s56 2361s56 2362s56 2363s56 2364s56 2365s56 2366s56
+58V13 New_Case{35|45P9} 58b13 58>23 58>43 71l8 71t16 2390s56 2391s56 2392s56
+. 2393s56 2394s56 2395s56 2396s56 2397s56 2398s56 2399s56 2400s56 2401s56
+. 2402s56 2403s56 2404s56 2405s56 2406s56 2407s56 2408s56 2409s56 2410s56
+. 2411s56 2412s56 2413s56 2414s56 2415s56 2416s56 2417s56 2418s56 2419s56
+. 2420s56 2421s56 2422s56 2423s56 2424s56 2425s56 2426s56 2427s56 2428s56
+. 2429s56 2430s56 2431s56 2432s56 2433s56 2434s56 2435s56 2436s56 2437s56
+. 2438s56 2439s56 2440s56 2441s56 2442s56 2443s56 2444s56 2445s56 2446s56
 58a23 Test_Name{string} 62r39
 58p43 Proc{32P9} 63r20
 59p7 Case_Ptr{35|45P9} 69r46 70r14
@@ -1636,8 +1670,8 @@ X 54 protobuf_tests.adb
 . 464s40 465s41 466s41 467s41 468s41 469s39 470s41 497s34 498s34 499s34 500s34
 . 501s35 502s35 503s35 504s35 521s35 626s34 627s35 649s61 652s58 653s58 654s58
 . 671s95 672s101 673s103 674s97 675s99 718s40 744s35 745s34 821s64 848s58
-. 887s35 936s20 990s33 993s61 1045s62 1047s62 2269s36 2273s38 2275s39 2281s37
-. 2301s41
+. 887s35 936s20 990s33 993s61 1045s62 1047s62 2348s36 2352s38 2354s39 2360s37
+. 2380s41
 77r7 Fields{9|91R9[52|35]} 82r16
 78i7 Number{52|13I12} 83r24
 79i7 Occurrence{positive} 85r23
@@ -1732,17 +1766,17 @@ X 54 protobuf_tests.adb
 378a10 Packed{string} 380r18 381r37 381r45 382r37 382r45
 395a10 Nested_Bytes{string} 396r103
 396r10 Nested_Fields{9|91R9[52|35]} 398r49 399r50
-403U14 Test_Empty_Message_Encodes_Empty 403b14 407l8 407t40 2311r83
+403U14 Test_Empty_Message_Encodes_Empty 403b14 407l8 407t40 2390r83
 404r7 B{52|39R9} 406r35
-409U14 Test_All_Scalar_Encodings 409b14 416l8 416t33 2312r90
+409U14 Test_All_Scalar_Encodings 409b14 416l8 416t33 2391r90
 410r7 B{52|39R9} 413m27 413r27 414r65
 411r7 Fields{9|91R9[52|35]} 414m7 415r32
-418U14 Test_Serialize_Deserialize_String_Aliases 418b14 434l8 434t49 2313r86
+418U14 Test_Serialize_Deserialize_String_Aliases 418b14 434l8 434t49 2392r86
 419r7 B{52|39R9} 422m27 422r27 423m28 423r28 426r61 427r71
 420r7 Parsed{9|91R9[52|35]} 430m10 432r46 433r47
 426a10 Encoded_A{string} 429r18
 427a10 Encoded_B{string} 429r30 430r54
-436U14 Test_Randomized_Roundtrip 436b14 473l8 473t33 2314r90
+436U14 Test_Randomized_Roundtrip 436b14 473l8 473t33 2393r90
 437m7 State{47|82M9} 442m54 442r54 443m54 443r54 444m55 444r55 445m55 445r55
 . 446m54 446r54 447m54 447r54 448m53 448r53 449m52 449r52
 439i11 I{integer} 460r75
@@ -1758,19 +1792,19 @@ X 54 protobuf_tests.adb
 449a13 V_Str{string} 459r40 470r67
 450r13 Parsed{9|91R9[52|35]} 462m13 463r52 464r52 465r53 466r53 467r53 468r53
 . 469r51 470r53
-475U14 Test_Boundary_Value_Matrix 475b14 505l8 505t34 2315r85
+475U14 Test_Boundary_Value_Matrix 475b14 505l8 505t34 2394r85
 476r7 B{52|39R9} 479m27 479r27 480m27 480r27 481m27 481r27 482m27 482r27
 . 483m28 483r28 484m28 484r28 485m28 485r28 486m28 486r28 487m28 487r28 488m28
 . 488r28 489m28 489r28 490m28 490r28 491m27 491r27 492m27 492r27 493m28 493r28
 . 494m28 494r28 496r65
 477r7 Parsed{9|91R9[52|35]} 496m7 497r46 498r46 499r46 500r46 501r47 502r47
 . 503r47 504r47
-507U14 Test_Large_Payload_Stress 507b14 522l8 522t33 2316r90
+507U14 Test_Large_Payload_Stress 507b14 522l8 522t33 2395r90
 508a7 Large{string} 512r16 513m10 515r34 521r61
 509r7 B{52|39R9} 515m28 515r28 517m10 517r10 520r65
 510r7 Parsed{9|91R9[52|35]} 520m7 521r47
 512i11 I{integer} 513r17 513r61
-524U14 Test_Malformed_Fuzz_Corpus 524b14 556l8 556t34 2317r84
+524U14 Test_Malformed_Fuzz_Corpus 524b14 556l8 556t34 2396r84
 525m7 State{47|82M9} 529m59 529r59 537m63 537r63
 527i11 I{integer}
 529i13 Len{natural} 530r34 530r54 533r16 536r30 543r52 543r81
@@ -1778,14 +1812,14 @@ X 54 protobuf_tests.adb
 531b13 Failed_Ok{boolean} 549m19 553r34
 536i20 J{integer} 537r22
 542r19 Ignore{9|91R9[52|35]}
-558U14 Test_Malformed_Corpus_Fixture 558b14 589l8 589t37 2318r94
+558U14 Test_Malformed_Corpus_Fixture 558b14 589l8 589t37 2397r94
 559a7 Corpus{string} 560r32 562r16 563r13 566r45 584r20
 560i7 Line_Start{positive} 564r20 566r53 585m16
 562i11 I{integer} 563r21 564r16 566r67 584r16 585r30
 566a19 Line{string} 567r57
 567a19 Data{string} 572r55
 571r25 Ignore{9|91R9[52|35]}
-591U14 Test_Cpp_Differential_Corpus 591b14 615l8 615t36 2319r93
+591U14 Test_Cpp_Differential_Corpus 591b14 615l8 615t36 2398r93
 592a7 Corpus{string} 593r32 596r16 597r13 600r45 609r20
 593i7 Line_Start{positive} 598r20 600r53 610m16
 594m7 Seed{47|82M9} 604r52 605r107 606m19 606r27 614r15
@@ -1793,18 +1827,18 @@ X 54 protobuf_tests.adb
 600a19 Line{string} 601r61
 601a19 Expected{string} 605r52
 602r19 B{52|39R9} 604m49 604r49 605r47
-617U14 Test_Unknown_Fields_Stability 617b14 630l8 630t37 2327r94
+617U14 Test_Unknown_Fields_Stability 617b14 630l8 630t37 2406r94
 618r7 B{52|39R9} 621m27 621r27 622m29 622r29 623m28 623r28 624m28 624r28
 . 625r65
 619r7 Parsed{9|91R9[52|35]} 625m7 626r46 627r47 628r28 629r28
-632U14 Test_Packed_Unpacked_Equivalence 632b14 656l8 656t40 2328r97
+632U14 Test_Packed_Unpacked_Equivalence 632b14 656l8 656t40 2407r97
 633r7 Packed_B{52|39R9} 639m34 639r34 644r72
 634r7 Unpacked_B{52|39R9} 640m27 640r27 641m27 641r27 642m27 642r27 645r74
 635r7 Packed_Parsed{9|91R9[52|35]} 644m7 649r73
 636r7 Unpacked_Parsed{9|91R9[52|35]} 645m7 652r70 653r70 654r70
 637a7 Packed_Values{52|41A9} 639r47
 648a10 Decoded_Packed{52|41A9} 651r18 652r18 653r18 654r18
-658U14 Test_Public_Packed_Decode_Helpers 658b14 683l8 683t41 2329r98
+658U14 Test_Public_Packed_Decode_Helpers 658b14 683l8 683t41 2408r98
 659r7 B{52|39R9} 662m33 662r33 663m36 663r36 664m37 664r37 665m34 665r34
 . 666m35 666r35 668r65
 660r7 Parsed{9|91R9[52|35]} 668m7 671r107 672r113 673r115 674r109 675r111
@@ -1813,19 +1847,19 @@ X 54 protobuf_tests.adb
 673a10 V3{52|46A9} 679r18 679r36 679r52 679r67
 674a10 V4{52|53A9} 680r18 680r41 680r74
 675a10 V5{52|54A9} 681r18 681r41 681r77
-685U14 Test_Stream_Chunking 685b14 700l8 700t28 2321r85
+685U14 Test_Stream_Chunking 685b14 700l8 700t28 2400r85
 686r7 B{52|39R9} 690m27 690r27 692r59
 687r7 Parsed{9|91R9[52|35]} 697m10 699r32
 688r7 S{232R9} 694m10 695m10 696m10 697m48 697r48
 692a10 Encoded{string} 694r63 697r58
-702U14 Test_Benchmark_Regression_Guard 702b14 723l8 723t39 2330r96
+702U14 Test_Benchmark_Regression_Guard 702b14 723l8 723t39 2409r96
 704i7 Start_Time{2|42I9} 708m7 722r26
 705i7 End_Time{2|42I9} 721m7 722r15
 706i7 Iterations{positive} 709r21
 709i11 I{integer} 714r51 715r53 718r78
 711r13 B{52|39R9} 714m33 714r33 715m34 715r34 716m34 716r34 717r71
 712r13 Parsed{9|91R9[52|35]} 717m13 718r52
-725U14 Test_Stream_Serialization 725b14 746l8 746t33 2320r90
+725U14 Test_Stream_Serialization 725b14 746l8 746t33 2399r90
 726K15 SIO=726:39 728r14 735r7 735r25 736r36 737r7 739r7 739r23 740r45 740r73
 . 741r7
 727a7 Tmp{string} 735r39 739r36 742r36
@@ -1833,146 +1867,146 @@ X 54 protobuf_tests.adb
 . 740r83 741m18 741r18
 729r7 B{52|39R9} 732m28 732r28 733m27 733r27 736r33
 730r7 Parsed{9|91R9[52|35]} 740m7 744r47 745r46
-748U14 Test_Fixture_Empty 748b14 754l8 754t26 2322r83
+748U14 Test_Fixture_Empty 748b14 754l8 754t26 2401r83
 749a7 Data{string} 750r93 752r15
 750r7 Parsed{9|91R9[52|35]} 753r15
-756U14 Test_Fixture_All_Types_Compatibility 756b14 761l8 761t44 2323r87
+756U14 Test_Fixture_All_Types_Compatibility 756b14 761l8 761t44 2402r87
 757a7 Data{string} 758r93
 758r7 Parsed{9|91R9[52|35]} 760r32
-763U14 Test_Ada_Encoding_Matches_Golden 763b14 769l8 769t40 2324r82
+763U14 Test_Ada_Encoding_Matches_Golden 763b14 769l8 769t40 2403r82
 764a7 Golden{string} 768r40
 765r7 B{52|39R9} 767m27 767r27 768r35
-771U14 Test_Fixture_Advanced_Types_Compatibility 771b14 776l8 776t49 2325r92
+771U14 Test_Fixture_Advanced_Types_Compatibility 771b14 776l8 776t49 2404r92
 772a7 Data{string} 773r93
 773r7 Parsed{9|91R9[52|35]} 775r37
-778U14 Test_Ada_Encoding_Matches_Advanced_Golden 778b14 784l8 784t49 2326r91
+778U14 Test_Ada_Encoding_Matches_Advanced_Golden 778b14 784l8 784t49 2405r91
 779a7 Golden{string} 783r40
 780r7 B{52|39R9} 782m32 782r32 783r35
-786U14 Test_Truncated_Varint_Fails 786b14 797l8 797t35 2331r86
+786U14 Test_Truncated_Varint_Fails 786b14 797l8 797t35 2410r86
 787b7 Failed{boolean} 794m13 796r15
 788r7 Ignore{9|91R9[52|35]} 791m10
-799U14 Test_Unsupported_Group_Wire_Fails 799b14 810l8 810t41 2332r87
+799U14 Test_Unsupported_Group_Wire_Fails 799b14 810l8 810t41 2411r87
 800b7 Failed{boolean} 807m13 809r15
 801r7 Ignore{9|91R9[52|35]} 804m10
-812U14 Test_Wire_Mismatch_Fails 812b14 830l8 830t32 2333r83
+812U14 Test_Wire_Mismatch_Fails 812b14 830l8 830t32 2412r83
 813b7 Failed{boolean} 827m13 829r15
 814r7 B{52|39R9} 817m29 817r29 818r65
 815r7 Parsed{9|91R9[52|35]} 818m7 821r76
 821i13 Ignore{47|52I9}
-832U14 Test_Clear_Buffer 832b14 839l8 839t25 2334r82
+832U14 Test_Clear_Buffer 832b14 839l8 839t25 2413r82
 833r7 B{52|39R9} 835m27 835r27 836r35 837m23 837r23 838r35
-841U14 Test_Packed_Fixed32 841b14 854l8 854t27 2335r84
+841U14 Test_Packed_Fixed32 841b14 854l8 854t27 2414r84
 842r7 B{52|39R9} 845m36 845r36 846r65
 843r7 Fields{9|91R9[52|35]} 846m7 848r70
 848a10 Payload{string} 850r18 851r33 851r74 852r33 852r74
-856U14 Test_Zero_Field_Number_Fails 856b14 867l8 867t36 2336r87
+856U14 Test_Zero_Field_Number_Fails 856b14 867l8 867t36 2415r87
 857b7 Failed{boolean} 864m13 866r15
 858r7 Ignore{9|91R9[52|35]} 861m10
-869U14 Test_Truncated_Length_Field_Fails 869b14 880l8 880t41 2337r86
+869U14 Test_Truncated_Length_Field_Fails 869b14 880l8 880t41 2416r86
 870b7 Failed{boolean} 877m13 879r15
 871r7 Ignore{9|91R9[52|35]} 874m10
-882U14 Test_Empty_Length_Field 882b14 888l8 888t31 2338r82
+882U14 Test_Empty_Length_Field 882b14 888l8 888t31 2417r82
 883r7 Parsed{9|91R9[52|35]} 886r15 887r47
-890U14 Test_Truncated_Fixed32_Fails 890b14 906l8 906t36 2339r87
+890U14 Test_Truncated_Fixed32_Fails 890b14 906l8 906t36 2418r87
 891b7 Failed{boolean} 903m13 905r15
 892r7 Ignore{9|91R9[52|35]} 895m10
-908U14 Test_Truncated_Fixed64_Fails 908b14 928l8 928t36 2340r87
+908U14 Test_Truncated_Fixed64_Fails 908b14 928l8 928t36 2419r87
 909b7 Failed{boolean} 925m13 927r15
 910r7 Ignore{9|91R9[52|35]} 913m10
-930U14 Test_Find_Field_Not_Found_Fails 930b14 942l8 942t39 2341r88
+930U14 Test_Find_Field_Not_Found_Fails 930b14 942l8 942t39 2420r88
 931b7 Failed{boolean} 939m13 941r15
 932r7 Empty{9|91R9[52|35]} 936r32
 933r7 Ignore{52|21R9} 936m10 936r10
-944U14 Test_Decode_Hex_Invalid_Digit_Fails 944b14 955l8 955t43 2342r94
+944U14 Test_Decode_Hex_Invalid_Digit_Fails 944b14 955l8 955t43 2421r94
 945b7 Failed{boolean} 952m13 954r15
 946a7 Ignore{string} 949m10
-957U14 Test_Decode_Hex_Odd_Length_Fails 957b14 968l8 968t40 2343r91
+957U14 Test_Decode_Hex_Odd_Length_Fails 957b14 968l8 968t40 2422r91
 958b7 Failed{boolean} 965m13 967r15
 959a7 Ignore{string} 962m10
-970U14 Test_Chunked_Read_EOF 970b14 980l8 980t29 2344r86
+970U14 Test_Chunked_Read_EOF 970b14 980l8 980t29 2423r86
 971r7 S{232R9} 975m7 976m7 977m7 978m13 978r13
 972a7 Item{16|54A9} 978m16 979r22
 973i7 Last{16|44I9} 978m22 979r15
-982U14 Test_Enum_And_Packed_Int64 982b14 1002l8 1002t34 2345r91
+982U14 Test_Enum_And_Packed_Int64 982b14 1002l8 1002t34 2424r91
 983r7 B{52|39R9} 986m26 986r26 987m34 987r34 988r65
 984r7 Parsed{9|91R9[52|35]} 988m7 990r45 993r73
 992a10 Decoded{52|42A9} 995r18 996r18 997r18 998r18 999r18 1000r18
-1004U14 Test_Stream_Serialization_Empty_Buffer 1004b14 1018l8 1018t46 2346r96
+1004U14 Test_Stream_Serialization_Empty_Buffer 1004b14 1018l8 1018t46 2425r96
 1005K15 SIO=1005:39 1007r14 1010r7 1010r25 1011r36 1012r7 1014r7 1014r23
 . 1015r24 1016r7
 1006a7 Tmp{string} 1010r39 1014r36 1017r36
 1007p7 File{17|44P9} 1010m19 1010r19 1011r48 1012m18 1012r18 1014m17 1014r17
 . 1015r34 1016m18 1016r18
 1008r7 B{52|39R9} 1011r33
-1020U14 Test_Packed_UInt64_And_SInt64 1020b14 1063l8 1063t37 2347r94
+1020U14 Test_Packed_UInt64_And_SInt64 1020b14 1063l8 1063t37 2426r94
 1021r7 B{52|39R9} 1025m10 1025r10 1033m10 1033r10 1041r65
 1022r7 Parsed{9|91R9[52|35]} 1041m7 1045r74 1047r74
 1044a10 U{52|44A9} 1049r18 1050r18 1051r18 1052r18 1053r18 1054r18
 1046a10 S{52|42A9} 1056r18 1057r18 1058r18 1059r18 1060r18 1061r18
-1070U14 Test_Generated_Types_Roundtrip 1070b14 1120l8 1120t38 2349r95
-1072r7 P{55|196R9} 1089r33 1095r51
+1070U14 Test_Generated_Types_Roundtrip 1070b14 1120l8 1120t38 2428r95
+1072r7 P{55|230R9} 1089r33 1095r51
 1079r7 Reference{52|39R9} 1083m28 1083r28 1084m28 1084r28 1085m28 1085r28
 . 1086m28 1086r28 1087m28 1087r28 1088m28 1088r28 1089r58
-1094r10 D{55|196R9} 1097r18 1098r29 1099r18 1100r18 1101r18 1102r29
-1107r10 Empty{55|196R9} 1109r36
-1115r10 Q{55|205R9} 1116r75
-1116r10 R{55|205R9} 1118r18 1118r34
-1125U14 Test_Generated_Enums_And_Repeated 1125b14 1190l8 1190t41 2350r98
-1127r7 B{55|210R9} 1130m7 1130r7 1131m7 1131r7 1132m7 1132r7 1133m7 1133r7
+1094r10 D{55|230R9} 1097r18 1098r29 1099r18 1100r18 1101r18 1102r29
+1107r10 Empty{55|230R9} 1109r36
+1115r10 Q{55|239R9} 1116r75
+1116r10 R{55|239R9} 1118r18 1118r34
+1125U14 Test_Generated_Enums_And_Repeated 1125b14 1190l8 1190t41 2429r98
+1127r7 B{55|244R9} 1130m7 1130r7 1131m7 1131r7 1132m7 1132r7 1133m7 1133r7
 . 1134m7 1134r7 1135m7 1136m7 1136r7 1137m7 1137r7 1146r33 1151r73
 1128r7 Reference{52|39R9} 1141m34 1141r34 1142m34 1142r34 1143m34 1143r34
 . 1144m34 1144r34 1145m34 1145r34 1146r58
-1151r10 D{55|210R9} 1153r27 1154r27 1154r54 1156r27 1157r38 1159r18 1160r27
+1151r10 D{55|244R9} 1153r27 1154r27 1154r54 1156r27 1157r38 1159r18 1160r27
 . 1161r27 1162r27
 1169r10 Unpacked{52|39R9} 1171m30 1171r30 1172m30 1172r30 1175r53
-1174r13 D{55|210R9} 1177r30 1178r30 1178r57
-1185r10 Empty{55|210R9} 1187r36
-1195U14 Test_Generated_Nested_Messages 1195b14 1246l8 1246t38 2351r95
-1197r7 I1{55|223R9} 1202m7 1203m7 1206r34 1208r40 1213r61 1215r61
-1198r7 I2{55|223R9} 1204m7 1205m7 1207r40 1214r61
-1199r7 O{55|217R9} 1206m7 1207m7 1207r7 1208m7 1208r7 1209m7 1217r33 1222r77
+1174r13 D{55|244R9} 1177r30 1178r30 1178r57
+1185r10 Empty{55|244R9} 1187r36
+1195U14 Test_Generated_Nested_Messages 1195b14 1246l8 1246t38 2430r95
+1197r7 I1{55|257R9} 1202m7 1203m7 1206r34 1208r40 1213r61 1215r61
+1198r7 I2{55|257R9} 1204m7 1205m7 1207r40 1214r61
+1199r7 O{55|251R9} 1206m7 1207m7 1207r7 1208m7 1208r7 1209m7 1217r33 1222r77
 1200r7 Reference{52|39R9} 1213m29 1213r29 1214m29 1214r29 1215m29 1215r29
 . 1216m29 1216r29 1217r58
-1222r10 D{55|217R9} 1224r22 1225r18 1226r38 1228r27 1229r34 1230r43 1232r29
-1239r10 Empty{55|217R9} 1241r50 1243r36
-1240r10 D{55|217R9} 1244r18
-1252U14 Test_Generated_Oneof 1252b14 1334l8 1334t28 2352r85
-1258r10 C{55|258R9} 1261m10 1262m10 1263m10 1267r36 1270r82
+1222r10 D{55|251R9} 1224r22 1225r18 1226r38 1228r27 1229r34 1230r43 1232r29
+1239r10 Empty{55|251R9} 1241r50 1243r36
+1240r10 D{55|251R9} 1244r18
+1252U14 Test_Generated_Oneof 1252b14 1334l8 1334t28 2431r85
+1258r10 C{55|305R9} 1261m10 1262m10 1263m10 1267r36 1270r82
 1259r10 Ref{52|39R9} 1264m31 1264r31 1265m31 1265r31 1266m31 1266r31 1267r61
-1270r13 D{55|258R9} 1272r21 1273r30 1274r32 1274r57
-1281r10 C{55|258R9} 1283m10 1286r82
-1286r13 D{55|258R9} 1288r21 1289r41
-1296r10 C{55|258R9} 1301m10 1304r82
-1297r10 I{55|223R9} 1299m10 1300m10 1302r50
-1304r13 D{55|258R9} 1306r21 1307r30 1308r41
-1315r10 C{55|258R9} 1317m10 1319r54
+1270r13 D{55|305R9} 1272r21 1273r30 1274r32 1274r57
+1281r10 C{55|305R9} 1283m10 1286r82
+1286r13 D{55|305R9} 1288r21 1289r41
+1296r10 C{55|305R9} 1301m10 1304r82
+1297r10 I{55|257R9} 1299m10 1300m10 1302r50
+1304r13 D{55|305R9} 1306r21 1307r30 1308r41
+1315r10 C{55|305R9} 1317m10 1319r54
 1319a13 S{string} 1320r64 1322r21
-1320r13 D{55|258R9} 1323r21 1323r70
-1330r10 C{55|258R9} 1332r36
-1340U14 Test_Generated_Maps 1340b14 1375l8 1375t27 2353r84
-1342r7 M{55|235R9} 1346m7 1346r7 1347m7 1347r7 1348m7 1348r7 1352m7 1352r7
+1320r13 D{55|305R9} 1323r21 1323r70
+1330r10 C{55|305R9} 1332r36
+1340U14 Test_Generated_Maps 1340b14 1375l8 1375t27 2432r84
+1342r7 M{55|269R9} 1346m7 1346r7 1347m7 1347r7 1348m7 1348r7 1352m7 1352r7
 . 1353m7 1353r7 1356r75
-1343r7 I1{55|223R9} 1349m7 1350m7 1352r45
-1344r7 I2{55|223R9} 1351m7 1353r45
-1356r10 D{55|235R9} 1358r27 1359r18 1360r27 1361r27 1363r27 1364r18 1365r38
+1343r7 I1{55|257R9} 1349m7 1350m7 1352r45
+1344r7 I2{55|257R9} 1351m7 1353r45
+1356r10 D{55|269R9} 1358r27 1359r18 1360r27 1361r27 1363r27 1364r18 1365r38
 . 1366r27
-1371r10 Empty{55|235R9} 1373r36
-1379U14 Test_Generated_To_JSON 1379b14 1473l8 1473t30 2356r87
-1385r10 P{55|196R9} 1388m10 1389m10 1390m10 1391m10 1392m10 1393m10 1394r59
+1371r10 Empty{55|269R9} 1373r36
+1379U14 Test_Generated_To_JSON 1379b14 1473l8 1473t30 2435r87
+1385r10 P{55|230R9} 1388m10 1389m10 1390m10 1391m10 1392m10 1393m10 1394r59
 1386r10 J{49|15R9} 1394m10 1395r44 1396r44 1397r45 1398r44 1400r44 1402r62
-1408r10 B{55|210R9} 1411m10 1411r10 1412m10 1412r10 1413m10 1414m10 1414r10
+1408r10 B{55|244R9} 1411m10 1411r10 1412m10 1412r10 1413m10 1414m10 1414r10
 . 1415r59
 1409r10 J{49|15R9} 1415m10 1416r44 1418r41 1420r54 1422r58
-1428r10 M{55|235R9} 1432m10 1432r10 1434m10 1434r10 1435r59
-1429r10 I1{55|223R9} 1433m10 1434r48
+1428r10 M{55|269R9} 1432m10 1432r10 1434m10 1434r10 1435r59
+1429r10 I1{55|257R9} 1433m10 1434r48
 1430r10 J{49|15R9} 1435m10 1436r54 1439r51
-1445r10 O{55|217R9} 1452m10 1453m10 1454r60
-1446r10 I1{55|223R9} 1451m10 1452r37
-1447r10 C{55|258R9} 1458m10 1459m10 1460r60
+1445r10 O{55|251R9} 1452m10 1453m10 1454r60
+1446r10 I1{55|257R9} 1451m10 1452r37
+1447r10 C{55|305R9} 1458m10 1459m10 1460r60
 1448r10 JO{49|15R9} 1454m10 1455r54
 1449r10 JC{49|15R9} 1460m10 1461r44 1463r32
-1468r10 P{55|196R9} 1470r50
-1477U14 Test_WKT_Wrappers 1477b14 1542l8 1542t25 2360r92
+1468r10 P{55|230R9} 1470r50
+1477U14 Test_WKT_Wrappers 1477b14 1542l8 1542t25 2440r92
 1482r10 W{51|38R9} 1488r39 1490r68 1492r53
 1483r10 Ref{52|39R9} 1487m30 1487r30 1488r64
 1484r10 D{51|38R9} 1494r18
@@ -1984,7 +2018,7 @@ X 54 protobuf_tests.adb
 1513r10 DW{51|34R9} 1522r71
 1528r10 W{51|38R9} 1530r39
 1537r10 E{51|23R9} 1539r39 1540r53
-1546U14 Test_Conformance_Harness 1546b14 1648l8 1648t32 2366r89
+1546U14 Test_Conformance_Harness 1546b14 1648l8 1648t32 2446r89
 1551a7 Known{string} 1573r51 1603r51 1638r51
 1553V16 Sample_Message{43|46R9} 1553b16 1564l11 1564t25 1566s52
 1554r10 M{43|46R9} 1556m10 1557m10 1558m10 1559m10 1559r10 1560m10 1560r10
@@ -2000,13 +2034,13 @@ X 54 protobuf_tests.adb
 1625r10 Resp{41|72R9} 1628m10 1628r10 1629r18
 1635r10 Req{41|52R9} 1638m10 1639m10 1640m10 1643r46
 1636r10 Resp{41|72R9} 1643m10 1643r10 1644r18
-1652U14 Test_Generated_WKT_Fields 1652b14 1706l8 1706t33 2365r90
-1654r7 B{55|189R9} 1656m7 1657m7 1659m7 1661m7 1661r7 1667r56 1695r73
+1652U14 Test_Generated_WKT_Fields 1652b14 1706l8 1706t33 2445r90
+1654r7 B{55|223R9} 1656m7 1657m7 1659m7 1661m7 1661r7 1667r56 1695r73
 1666r10 J{49|15R9} 1668r55 1670r44 1672r44 1674r44 1682r58
 1668r10 Tags{49|15R9} 1676r31 1677r57
-1682r13 D{55|189R9} 1684r25 1685r46 1687r37 1688r46
-1695r10 D{55|189R9} 1697r22 1698r43 1700r34 1702r27 1703r54
-1710U14 Test_WKT_Any 1710b14 1758l8 1758t20 2364r77
+1682r13 D{55|223R9} 1684r25 1685r46 1687r37 1688r46
+1695r10 D{55|223R9} 1697r22 1698r43 1700r34 1702r27 1703r54
+1710U14 Test_WKT_Any 1710b14 1758l8 1758t20 2444r77
 1712a7 Pfx{string} 1718r46 1722r59 1740r46
 1716r10 D{51|89R9} 1719r67
 1717r10 A{51|160R9} 1720r61
@@ -2018,7 +2052,7 @@ X 54 protobuf_tests.adb
 1742r10 J{49|15R9} 1744r44
 1750r10 A{51|160R9} 1753r83
 1753r10 A2{51|160R9} 1755r29 1756r38
-1763U14 Test_WKT_Struct_Value 1763b14 1811l8 1811t29 2363r96
+1763U14 Test_WKT_Struct_Value 1763b14 1811l8 1811t29 2443r96
 1765e7 Q{character} 1768r18 1768r28 1768r41 1768r51 1768r61 1768r72 1769r14
 . 1769r24 1769r39 1769r49 1769r64 1769r76 1770r23 1770r35 1770r52 1770r62
 1766r7 J{49|15R9} 1771r48 1774r72
@@ -2030,13 +2064,13 @@ X 54 protobuf_tests.adb
 1802r10 DV{51|132R9} 1807r71
 1803r10 L{51|134R9} 1805r61
 1804r10 DL{51|134R9} 1809r50
-1814U14 Test_WKT_FieldMask 1814b14 1846l8 1846t26 2362r83
+1814U14 Test_WKT_FieldMask 1814b14 1846l8 1846t26 2442r83
 1816e7 Q{character} 1825r45 1825r76
 1817r7 M{51|117R9} 1819m7 1819r7 1820m7 1820r7 1821r50 1834r61
 1824r10 D{51|117R9} 1827r27 1828r38 1829r38
 1833r10 D{51|117R9} 1836r27 1837r38
 1841r10 Empty{51|117R9} 1843r53
-1849U14 Test_WKT_Duration_Timestamp 1849b14 1895l8 1895t35 2361r96
+1849U14 Test_WKT_Duration_Timestamp 1849b14 1895l8 1895t35 2441r96
 1850e7 Q{character} 1881r45 1881r79
 1856r10 D1{51|89R9} 1860r86 1863r53 1869r23 1870r65 1870r72
 1857r10 D2{51|89R9} 1864r53
@@ -2049,75 +2083,86 @@ X 54 protobuf_tests.adb
 1878r10 T2{51|94R9} 1887r53
 1879r10 R1{51|94R9} 1889r18
 1880r10 RO{51|94R9} 1890r18 1890r42
-1899U14 Test_Generated_UTF8_Validation 1899b14 1942l8 1942t38 2359r95
+1899U14 Test_Generated_UTF8_Validation 1899b14 1942l8 1942t38 2439r95
 1901a7 E_Acute{string} 1908r41 1910r20
-1906r10 P{55|196R9} 1908m10 1909r68
+1906r10 P{55|230R9} 1908m10 1909r68
 1915r10 Raw{52|39R9} 1918m31 1918r31 1922r59
 1916b10 Raised{boolean} 1927m45 1929r18
-1921r16 Ignore{55|196R9}
+1921r16 Ignore{55|230R9}
 1934r10 Raw{52|39R9} 1938m30 1938r30 1939r70
 1935a10 Bad{string} 1938r38 1940r20
-1946U14 Test_Generated_From_JSON 1946b14 2021l8 2021t32 2357r89
+1946U14 Test_Generated_From_JSON 1946b14 2021l8 2021t32 2436r89
 1949e7 Q{character} 1972r18 1972r29 1972r39 1972r49 1972r59 1972r73 1973r14
 . 1973r26 1973r36 1973r49 1973r59 1973r72 1974r14 1974r29 1986r18 1986r32
 . 1986r42 1986r56 1986r66 1987r14 1987r32 1987r48 1987r59 1987r71 2003r21
 . 2003r33 2003r44 2003r54 2003r67 2004r17 2004r27 2004r37 2006r48 2006r62
 . 2009r21 2009r36 2009r47 2009r57 2009r70 2010r17 2010r28 2010r38 2010r49
 . 2010r59
-1953r10 P{55|196R9} 1956m10 1957m10 1958m10 1959m10 1960m10 1961m10 1962r77
-1954r10 D{55|196R9} 1962m10 1962r10 1963r18 1963r48 1963r75 1964r27 1964r52
+1953r10 P{55|230R9} 1956m10 1957m10 1958m10 1959m10 1960m10 1961m10 1962r77
+1954r10 D{55|230R9} 1962m10 1962r10 1963r18 1963r48 1963r75 1964r27 1964r52
 . 1965r38
 1971a10 J{string} 1975r70
-1975r10 D{55|196R9} 1977r18 1978r18 1979r29 1980r18
+1975r10 D{55|230R9} 1977r18 1978r18 1979r29 1980r18
 1985a10 J{string} 1988r67
-1988r10 D{55|210R9} 1990r18 1991r27 1991r58 1993r27 1994r27 1995r27
-2001r10 O{55|217R9} 2012r22 2012r46 2013r38
-2005r10 C{55|258R9} 2014r18 2015r27
-2007r10 M{55|235R9} 2016r18 2018r18
-2026U14 Test_Generated_Optional 2026b14 2092l8 2092t31 2358r97
-2032r10 O{55|240R9} 2034r36 2037m10 2038m10 2040r76
-2040r13 R{55|240R9} 2042r21 2043r21 2044r25
-2050r10 O{55|240R9} 2053m10 2054m10 2055m10 2056m10 2057r51
-2051r10 R{55|240R9} 2057m10 2057r10 2058r18 2058r39 2059r18 2059r49
-2065r10 O{55|240R9} 2067m10 2068r36
-2075r10 O{55|240R9} 2079m10 2080m10 2081r59
-2076r10 J{49|15R9} 2081m10 2082r28 2083r44 2085r32 2087r33
-2077r10 R{55|240R9} 2087m10 2087r10 2088r18 2088r39 2090r22
-2095U14 Test_JSON_Library 2095b14 2170l8 2170t25 2355r82
-2097e7 Q{character} 2109r26 2109r39 2109r52 2109r62 2110r26 2110r37 2117r31
-. 2117r41 2117r61 2117r71 2118r41 2118r51 2142r24 2142r38 2142r49 2144r62
-. 2146r39 2146r53 2146r64 2151r43 2151r58
-2101r10 O{49|15R9} 2106m23 2106r23 2107m23 2107r23 2108r34
-2102r10 A{49|15R9} 2104m23 2104r23 2105m23 2105r23 2106r34
-2116r10 V{49|15R9} 2120r29 2121r28 2121r59 2123r39 2125r55
-2125r13 A{49|15R9} 2127r34 2128r51 2129r62
-2141r10 S{49|15R9} 2144r34 2146r34
-2157b10 Raised{boolean} 2166m38 2168r18
-2161r16 Ignore{49|15R9}
-2175U14 Test_Generated_Recursive 2175b14 2217l8 2217t32 2354r97
-2176r7 Root{55|228R9} 2185m7 2186m7 2187m7 2188m7 2188r7 2189m7 2189r7 2192r75
-. 2210r32 2213r18
-2177r7 L{55|228R9} 2181m7 2186r38 2188r47
-2178r7 R{55|228R9} 2182m7 2184m7 2187r39 2189r47 2212r41
-2179r7 C1{55|228R9} 2183m7 2184r35
-2192r10 D{55|228R9} 2194r18 2195r22 2195r47 2197r22 2198r27 2199r27 2201r27
-. 2202r43 2203r43
-2210r10 Copy{55|228R9} 2212m10 2215r18
-2224U14 Test_Serialization_Buffer_Growth_And_Reuse 2224b14 2305l8 2305t50
-. 2348r107
-2226U17 Build 2226b17 2226=24 2238l11 2238t16 2243s7 2244s7 2257s10
-2226r24 B{52|39R9} 2233m16 2235m31 2236m32 2237m38
-2231i14 K{integer} 2233r42 2233r59
-2240r7 B1{52|39R9} 2243m14 2243r14 2247r35 2253r57 2255m26 2255r26 2256r38
-. 2257m17 2257r17 2258r38
-2241r7 B2{52|39R9} 2244m14 2244r14 2247r61 2265r60
-2253a10 Fresh{string} 2258r44
-2264r10 Parsed{9|91R9[52|35]} 2269r48 2273r50 2275r51 2281r49
-2267i14 K{integer} 2269r79 2270r33
-2279a13 U{52|43A9} 2283r21 2284r21 2284r47
-2292r10 B{52|39R9} 2294m31 2294r31 2296r56
-2296a13 S{string} 2298r43 2300r21
-2297r13 Parsed{9|91R9[52|35]} 2301r53
+1988r10 D{55|244R9} 1990r18 1991r27 1991r58 1993r27 1994r27 1995r27
+2001r10 O{55|251R9} 2012r22 2012r46 2013r38
+2005r10 C{55|305R9} 2014r18 2015r27
+2007r10 M{55|269R9} 2016r18 2018r18
+2028U14 Test_Generated_Nested_Types 2028b14 2100l8 2100t35 2438r103
+2035r10 N{55|280R9} 2048m10 2049m10 2049r10 2050m10 2051m10 2051r10 2054r78
+2036r10 Head{55|274R9} 2042m10 2043m10 2044m10 2048r38
+2037r10 Inner{55|280R9} 2040m10 2044r43
+2038r10 Child{55|274R9} 2046m10 2049r44 2051r74
+2054r13 D{55|280R9} 2056r21 2057r25 2057r50 2059r21 2061r25 2062r30 2065r30
+. 2066r46 2068r21
+2075r10 N{55|280R9} 2082m10 2083m10 2085r59
+2076r10 Head{55|274R9} 2080m10 2081m10 2082r38
+2077r10 J{49|15R9} 2085m10 2086r44 2088r54 2090r54 2094r33
+2078r10 R{55|280R9} 2094m10 2094r10 2095r18 2096r27 2097r27
+2105U14 Test_Generated_Optional 2105b14 2171l8 2171t31 2437r97
+2111r10 O{55|287R9} 2113r36 2116m10 2117m10 2119r76
+2119r13 R{55|287R9} 2121r21 2122r21 2123r25
+2129r10 O{55|287R9} 2132m10 2133m10 2134m10 2135m10 2136r51
+2130r10 R{55|287R9} 2136m10 2136r10 2137r18 2137r39 2138r18 2138r49
+2144r10 O{55|287R9} 2146m10 2147r36
+2154r10 O{55|287R9} 2158m10 2159m10 2160r59
+2155r10 J{49|15R9} 2160m10 2161r28 2162r44 2164r32 2166r33
+2156r10 R{55|287R9} 2166m10 2166r10 2167r18 2167r39 2169r22
+2174U14 Test_JSON_Library 2174b14 2249l8 2249t25 2434r82
+2176e7 Q{character} 2188r26 2188r39 2188r52 2188r62 2189r26 2189r37 2196r31
+. 2196r41 2196r61 2196r71 2197r41 2197r51 2221r24 2221r38 2221r49 2223r62
+. 2225r39 2225r53 2225r64 2230r43 2230r58
+2180r10 O{49|15R9} 2185m23 2185r23 2186m23 2186r23 2187r34
+2181r10 A{49|15R9} 2183m23 2183r23 2184m23 2184r23 2185r34
+2195r10 V{49|15R9} 2199r29 2200r28 2200r59 2202r39 2204r55
+2204r13 A{49|15R9} 2206r34 2207r51 2208r62
+2220r10 S{49|15R9} 2223r34 2225r34
+2236b10 Raised{boolean} 2245m38 2247r18
+2240r16 Ignore{49|15R9}
+2254U14 Test_Generated_Recursive 2254b14 2296l8 2296t32 2433r97
+2255r7 Root{55|262R9} 2264m7 2265m7 2266m7 2267m7 2267r7 2268m7 2268r7 2271r75
+. 2289r32 2292r18
+2256r7 L{55|262R9} 2260m7 2265r38 2267r47
+2257r7 R{55|262R9} 2261m7 2263m7 2266r39 2268r47 2291r41
+2258r7 C1{55|262R9} 2262m7 2263r35
+2271r10 D{55|262R9} 2273r18 2274r22 2274r47 2276r22 2277r27 2278r27 2280r27
+. 2281r43 2282r43
+2289r10 Copy{55|262R9} 2291m10 2294r18
+2303U14 Test_Serialization_Buffer_Growth_And_Reuse 2303b14 2384l8 2384t50
+. 2427r107
+2305U17 Build 2305b17 2305=24 2317l11 2317t16 2322s7 2323s7 2336s10
+2305r24 B{52|39R9} 2312m16 2314m31 2315m32 2316m38
+2310i14 K{integer} 2312r42 2312r59
+2319r7 B1{52|39R9} 2322m14 2322r14 2326r35 2332r57 2334m26 2334r26 2335r38
+. 2336m17 2336r17 2337r38
+2320r7 B2{52|39R9} 2323m14 2323r14 2326r61 2344r60
+2332a10 Fresh{string} 2337r44
+2343r10 Parsed{9|91R9[52|35]} 2348r48 2352r50 2354r51 2360r49
+2346i14 K{integer} 2348r79 2349r33
+2358a13 U{52|43A9} 2362r21 2363r21 2363r47
+2371r10 B{52|39R9} 2373m31 2373r31 2375r56
+2375a13 S{string} 2377r43 2379r21
+2376r13 Parsed{9|91R9[52|35]} 2380r53
 X 55 sample.ads
 10K9*Sample 54|18w6 1072r20 1089r15 1094r23 1095r12 1095r33 1107r18 1109r18
 . 1115r23 1116r23 1116r38 1116r57 1127r11 1135r20 1136r25 1137r25 1146r15
@@ -2135,142 +2180,172 @@ X 55 sample.ads
 . 1688r30 1695r23 1695r37 1695r55 1698r27 1700r18 1703r38 1906r14 1909r29
 . 1909r50 1921r34 1922r18 1939r29 1948r16 1953r14 1954r14 1962r15 1962r61
 . 1975r23 1975r40 1988r23 1988r37 1990r30 1994r43 1995r43 2001r23 2002r12
-. 2005r23 2006r12 2007r23 2008r12 2014r33 2032r14 2034r18 2040r26 2040r40
-. 2040r58 2050r14 2051r14 2057r15 2057r33 2065r14 2068r18 2075r14 2077r14
-. 2081r43 2087r15 2176r14 2177r14 2178r14 2179r14 2184r17 2186r20 2187r21
-. 2188r29 2189r29 2192r23 2192r38 2192r57 2202r27 2203r27 2210r17 2212r23
-. 55|314e11
+. 2005r23 2006r12 2007r23 2008r12 2014r33 2035r19 2036r19 2037r19 2038r19
+. 2040r24 2043r23 2044r25 2048r20 2049r26 2050r20 2051r56 2054r26 2054r41
+. 2054r60 2056r30 2059r43 2063r32 2066r30 2075r17 2076r17 2078r17 2081r23
+. 2082r20 2083r20 2085r43 2094r15 2095r27 2097r49 2111r14 2113r18 2119r26
+. 2119r40 2119r58 2129r14 2130r14 2136r15 2136r33 2144r14 2147r18 2154r14
+. 2156r14 2160r43 2166r15 2255r14 2256r14 2257r14 2258r14 2263r17 2265r20
+. 2266r21 2267r29 2268r29 2271r23 2271r38 2271r57 2281r27 2282r27 2289r17
+. 2291r23 55|371e11
 12I12*Color{47|52I9}
 14i4*Color_RED{12I12} 54|1136r32 1161r50 1414r35 1994r50
 15i4*Color_GREEN{12I12} 54|1135r27 1159r37 1413r30 1990r37 1995r50
 16i4*Color_BLUE{12I12} 54|1137r32 1162r50
-20R9*Box 54|1654r18 1682r33 1695r30 55|194e14
-31R9*Person 54|1072r27 1094r30 1107r25 1385r21 1468r21 1906r21 1921r41 1953r21
-. 1954r21 1975r30 55|203e14
-42R9*Pair 54|1115r30 1116r30 55|208e14
-53R9*Bag 54|1127r18 1151r30 1174r33 1185r25 1408r21 1988r30 55|215e14
-64R9*Outer 54|1199r19 1222r30 1239r25 1240r34 1445r22 2001r30 55|221e14
-75R9*Inner 54|1197r19 1198r19 1297r21 1343r19 1344r19 1429r22 1446r22 55|226e14
-82V13*To_Holder{77R9} 54|1206s23 1207s29 1208s29 1302s39 1352s34 1353s34
+20I12*Nest_Kind{47|52I9}
+22i4*Nest_Kind_KIND_LEAF{20I12} 54|2040r31 2063r39 2081r30 2097r56
+23i4*Nest_Kind_KIND_NODE{20I12} 54|2043r30 2050r27 2056r37 2059r50 2083r27
+. 2095r34
+27R9*Box 54|1654r18 1682r33 1695r30 55|228e14
+38R9*Person 54|1072r27 1094r30 1107r25 1385r21 1468r21 1906r21 1921r41 1953r21
+. 1954r21 1975r30 55|237e14
+49R9*Pair 54|1115r30 1116r30 55|242e14
+60R9*Bag 54|1127r18 1151r30 1174r33 1185r25 1408r21 1988r30 55|249e14
+71R9*Outer 54|1199r19 1222r30 1239r25 1240r34 1445r22 2001r30 55|255e14
+82R9*Inner 54|1197r19 1198r19 1297r21 1343r19 1344r19 1429r22 1446r22 55|260e14
+89V13*To_Holder{84R9} 54|1206s23 1207s29 1208s29 1302s39 1352s34 1353s34
 . 1434s37 1452s26
-83V13*Element{223R9} 54|1225s24 1226s44 1229s25 1230s34 1307s45 1308s56 1364s38
+90V13*Element{257R9} 54|1225s24 1226s44 1229s25 1230s34 1307s45 1308s56 1364s38
 . 1365s58 1366s47 2012s52 2018s38
-84V13*Is_Empty{boolean} 54|1224s28 1244s24 2012s28
-86R9*Tree 54|2176r21 2177r21 2178r21 2179r21 2192r30 2210r24 55|233e14
-93V13*To_Holder{88R9} 54|2184s24 2186s27 2187s28 2188s36 2189s36 2212s30
-94V13*Element{228R9} 54|2195s54 2198s35 2199s35 2199s48 2202s34 2203s34 2213s28
-. 2215s28
-95V13*Is_Empty{boolean} 54|2195s29 2197s30 2198s49
-97R9*Maps 54|1342r19 1356r30 1371r25 1428r22 2007r30 55|238e14
-108R9*Opt 54|2032r21 2040r33 2050r21 2051r21 2065r21 2075r21 2077r21 55|246e14
-119R9*Choice 54|1258r23 1270r33 1281r21 1286r33 1296r21 1304r33 1315r21 1320r33
-. 1330r21 1447r22 2005r30 55|262e14
-136V13*To_Holder{131R9} 54|1656s25
-137V13*Element{51|38R9} 54|1685s37 1698s34
-138V13*Is_Empty{boolean} 54|1684s33 1697s30
-146V13*To_Holder{141R9} 54|1657s25
-147V13*Element{51|89R9} 54|1687s28 1688s37
-156V13*To_Holder{151R9} 54|1659s25
-157V13*Element{51|94R9} 54|1700s25
-166V13*To_Holder{161R9} 54|1662s17
-167V13*Element{51|41R9} 54|1703s45
-189R9*Box
-190r7*Count{131R9} 54|1656m9 1684r27 1685r48 1697r24 1698r45
-191r7*Dur{141R9} 54|1657m9 1687r39 1688r48
-192r7*At_F{151R9} 54|1659m9 1700r36
-193r7*Tags{9|91R9[181]} 54|1661m9 1702r29 1703r56
-196R9*Person
-197i7*Id{47|52I9} 54|1073m10 1097r20 1388m12 1956m12 1963r20 1977r20
-198r7*Name{23|90R9} 54|1074m10 1098r31 1389m12 1908m12 1909r72 1957m12 1963r50
-199b7*Active{boolean} 54|1075m10 1099r20 1390m12 1958m12 1963r77 1980r20
-200f7*Balance{47|219F9} 54|1076m10 1100r20 1391m12 1959m12 1964r29
-201i7*Delta_F{47|55I9} 54|1077m10 1101r20 1392m12 1960m12 1964r54 1978r20
-202r7*Blob{23|90R9} 54|1078m10 1102r31 1393m12 1939r76 1961m12 1965r40 1979r31
-205R9*Pair
-206m7*First{47|79M9} 54|1115m39 1118r20
-207m7*Second{47|79M9} 54|1115m51 1118r36
-210R9*Bag
-211r7*Numbers{9|91R9[173]} 54|1130m9 1131m9 1132m9 1153r29 1154r29 1154r56
+91V13*Is_Empty{boolean} 54|1224s28 1244s24 2012s28
+93R9*Tree 54|2255r21 2256r21 2257r21 2258r21 2271r30 2289r24 55|267e14
+100V13*To_Holder{95R9} 54|2263s24 2265s27 2266s28 2267s36 2268s36 2291s30
+101V13*Element{262R9} 54|2274s54 2277s35 2278s35 2278s48 2281s34 2282s34
+. 2292s28 2294s28
+102V13*Is_Empty{boolean} 54|2274s29 2276s30 2277s49
+104R9*Maps 54|1342r19 1356r30 1371r25 1428r22 2007r30 55|272e14
+115R9*Nest_Item 54|2036r26 2038r26 2076r24 55|278e14
+122V13*To_Holder{117R9} 54|2048s27 2049s33 2051s63 2082s27
+123V13*Element{274R9} 54|2057s57 2059s28 2061s32 2062s37 2066s37 2068s67
+. 2096s34 2097s34
+124V13*Is_Empty{boolean} 54|2057s32
+126R9*Nest 54|2035r26 2037r26 2054r33 2075r24 2078r24 55|285e14
+133V13*To_Holder{128R9} 54|2044s32
+134V13*Element{280R9} 54|2062s52
+135V13*Is_Empty{boolean} 54|2061s47
+137R9*Opt 54|2111r21 2119r33 2129r21 2130r21 2144r21 2154r21 2156r21 55|293e14
+148R9*Choice 54|1258r23 1270r33 1281r21 1286r33 1296r21 1304r33 1315r21 1320r33
+. 1330r21 1447r22 2005r30 55|309e14
+165V13*To_Holder{160R9} 54|1656s25
+166V13*Element{51|38R9} 54|1685s37 1698s34
+167V13*Is_Empty{boolean} 54|1684s33 1697s30
+175V13*To_Holder{170R9} 54|1657s25
+176V13*Element{51|89R9} 54|1687s28 1688s37
+185V13*To_Holder{180R9} 54|1659s25
+186V13*Element{51|94R9} 54|1700s25
+195V13*To_Holder{190R9} 54|1662s17
+196V13*Element{51|41R9} 54|1703s45
+223R9*Box
+224r7*Count{160R9} 54|1656m9 1684r27 1685r48 1697r24 1698r45
+225r7*Dur{170R9} 54|1657m9 1687r39 1688r48
+226r7*At_F{180R9} 54|1659m9 1700r36
+227r7*Tags{9|91R9[212]} 54|1661m9 1702r29 1703r56
+230R9*Person
+231i7*Id{47|52I9} 54|1073m10 1097r20 1388m12 1956m12 1963r20 1977r20
+232r7*Name{23|90R9} 54|1074m10 1098r31 1389m12 1908m12 1909r72 1957m12 1963r50
+233b7*Active{boolean} 54|1075m10 1099r20 1390m12 1958m12 1963r77 1980r20
+234f7*Balance{47|219F9} 54|1076m10 1100r20 1391m12 1959m12 1964r29
+235i7*Delta_F{47|55I9} 54|1077m10 1101r20 1392m12 1960m12 1964r54 1978r20
+236r7*Blob{23|90R9} 54|1078m10 1102r31 1393m12 1939r76 1961m12 1965r40 1979r31
+239R9*Pair
+240m7*First{47|79M9} 54|1115m39 1118r20
+241m7*Second{47|79M9} 54|1115m51 1118r36
+244R9*Bag
+245r7*Numbers{9|91R9[202]} 54|1130m9 1131m9 1132m9 1153r29 1154r29 1154r56
 . 1177r32 1178r32 1178r59 1411m12 1412m12 1991r29 1991r60
-212r7*Tags{9|91R9[174]} 54|1133m9 1134m9 1156r29 1157r40
-213i7*Color_F{12I12} 54|1135m9 1159r20 1413m12 1990r20
-214r7*Palette{9|91R9[175]} 54|1136m9 1137m9 1160r29 1161r29 1162r29 1414m12
+246r7*Tags{9|91R9[203]} 54|1133m9 1134m9 1156r29 1157r40
+247i7*Color_F{12I12} 54|1135m9 1159r20 1413m12 1990r20
+248r7*Palette{9|91R9[204]} 54|1136m9 1137m9 1160r29 1161r29 1162r29 1414m12
 . 1993r29 1994r29 1995r29
-217R9*Outer
-218r7*One{77R9} 54|1206m9 1224r24 1225r20 1226r40 1244r20 1452m12 2012r24
+251R9*Outer
+252r7*One{84R9} 54|1206m9 1224r24 1225r20 1226r40 1244r20 1452m12 2012r24
 . 2012r48
-219r7*Many{9|91R9[177]} 54|1207m9 1208m9 1228r29 1229r36 1230r45
-220r7*Note{23|90R9} 54|1209m9 1232r31 1453m12 2013r40
-223R9*Inner
-224i7*X{47|52I9} 54|1202m10 1204m10 1225r32 1229r46 1230r55 1299m12 1307r53
+253r7*Many{9|91R9[206]} 54|1207m9 1208m9 1228r29 1229r36 1230r45
+254r7*Note{23|90R9} 54|1209m9 1232r31 1453m12 2013r40
+257R9*Inner
+258i7*X{47|52I9} 54|1202m10 1204m10 1225r32 1229r46 1230r55 1299m12 1307r53
 . 1349m10 1351m10 1364r46 1366r55 1433m13 1451m13 2012r60 2018r46
-225r7*Label{23|90R9} 54|1203m10 1205m10 1226r52 1300m12 1308r64 1350m10 1365r66
-228R9*Tree
-229i7*Value{47|52I9} 54|2181m9 2182m9 2183m10 2185m12 2194r20 2195r62 2199r56
-. 2202r59 2203r59 2213r36 2215r36
-230r7*Left{88R9} 54|2184m9 2186m12 2195r24 2195r49 2199r43 2212m15 2213r23
-. 2215r23
-231r7*Right{88R9} 54|2187m12 2197r24 2198r29 2198r43 2199r29
-232r7*Children{9|91R9[179]} 54|2188m12 2189m12 2201r29 2202r45 2203r45
-235R9*Maps
-236r7*Counts{7|57R9[184]} 54|1346m9 1347m9 1348m9 1358r29 1359r20 1360r29
+259r7*Label{23|90R9} 54|1203m10 1205m10 1226r52 1300m12 1308r64 1350m10 1365r66
+262R9*Tree
+263i7*Value{47|52I9} 54|2260m9 2261m9 2262m10 2264m12 2273r20 2274r62 2278r56
+. 2281r59 2282r59 2292r36 2294r36
+264r7*Left{95R9} 54|2263m9 2265m12 2274r24 2274r49 2278r43 2291m15 2292r23
+. 2294r23
+265r7*Right{95R9} 54|2266m12 2276r24 2277r29 2277r43 2278r29
+266r7*Children{9|91R9[208]} 54|2267m12 2268m12 2280r29 2281r45 2282r45
+269R9*Maps
+270r7*Counts{7|57R9[215]} 54|1346m9 1347m9 1348m9 1358r29 1359r20 1360r29
 . 1361r29 1432m12 2016r20
-237r7*Items{7|57R9[187]} 54|1352m9 1353m9 1363r29 1364r20 1365r40 1366r29
+271r7*Items{7|57R9[218]} 54|1352m9 1353m9 1363r29 1364r20 1365r40 1366r29
 . 1434m12 2018r20
-240R9*Opt
-241i7*Maybe{47|52I9} 54|2037m12 2043r23 2053m12 2058r41 2079m12 2088r41
-242b7*Maybe_Has{boolean} 54|2038m12 2042r23 2054m12 2058r20 2080m12 2088r20
-243r7*Note{23|90R9} 54|2055m12 2059r51
-244b7*Note_Has{boolean} 54|2044r27 2056m12 2059r20 2090r24
-245i7*Plain{47|52I9} 54|2067m12
-248E9*Choice_Pick_Selector 54|1254r23 1948r23 55|249e83
-249n28*Choice_Pick_Count{248E9} 54|1262r39 1272r43 1317r37 1323r43 1459r37
+274R9*Nest_Item
+275i7*A{47|52I9} 54|2042m15 2046m16 2057r65 2066r59 2068r75 2080m15 2096r42
+276r7*Parent{128R9} 54|2044m15 2061r40 2062r45
+277i7*Kind{20I12} 54|2043m15 2059r36 2081m15 2097r42
+280R9*Nest
+281r7*Head{117R9} 54|2048m12 2057r27 2057r52 2059r23 2061r27 2062r32 2082m12
+. 2096r29 2097r29
+282r7*Items{9|91R9[210]} 54|2049m12 2065r32 2066r48
+283i7*Kind{20I12} 54|2040m16 2050m12 2056r23 2062r60 2083m12 2095r20
+284r7*By_name{7|57R9[221]} 54|2051m12 2068r23
+287R9*Opt
+288i7*Maybe{47|52I9} 54|2116m12 2122r23 2132m12 2137r41 2158m12 2167r41
+289b7*Maybe_Has{boolean} 54|2117m12 2121r23 2133m12 2137r20 2159m12 2167r20
+290r7*Note{23|90R9} 54|2134m12 2138r51
+291b7*Note_Has{boolean} 54|2123r27 2135m12 2138r20 2169r24
+292i7*Plain{47|52I9} 54|2146m12
+295E9*Choice_Pick_Selector 54|1254r23 1948r23 55|296e83
+296n28*Choice_Pick_Count{295E9} 54|1262r39 1272r43 1317r37 1323r43 1459r37
 . 2014r40
-249n47*Choice_Pick_Text{248E9} 54|1283r37 1288r43
-249n65*Choice_Pick_Inner{248E9} 54|1301r37 1306r43
-250e28*Which{248E9} 54|1262m23 1272r28 1283m21 1288r28 1301m21 1306r28 1317m21
+296n47*Choice_Pick_Text{295E9} 54|1283r37 1288r43
+296n65*Choice_Pick_Inner{295E9} 54|1301r37 1306r43
+297e28*Which{295E9} 54|1262m23 1272r28 1283m21 1288r28 1301m21 1306r28 1317m21
 . 1323r28 1459m21 2014r25
-253i36*Count{47|52I9} 54|1262m58 1273r37 1317m56 1323r77 1459m56 2015r34
-254r35*Text{23|90R9} 54|1284m21 1289r48
-255r36*Inner_F{77R9} 54|1302m21 1307r37 1308r48
-258R9*Choice
-259r7*Before{23|90R9} 54|1261m12 1274r34 1458m12
-260r7*Pick{250R9} 54|1262m12 1272r23 1273r32 1283m12 1288r23 1289r43 1301m12
+300i36*Count{47|52I9} 54|1262m58 1273r37 1317m56 1323r77 1459m56 2015r34
+301r35*Text{23|90R9} 54|1284m21 1289r48
+302r36*Inner_F{84R9} 54|1302m21 1307r37 1308r48
+305R9*Choice
+306r7*Before{23|90R9} 54|1261m12 1274r34 1458m12
+307r7*Pick{297R9} 54|1262m12 1272r23 1273r32 1283m12 1288r23 1289r43 1301m12
 . 1306r23 1307r32 1308r43 1317m12 1323r23 1323r72 1459m12 2014r20 2015r29
-261b7*After{boolean} 54|1263m12 1274r59
-264V13*Serialize{string} 54|1695s62
-265V13*Parse_Box{189R9} 54|1695s44
-266V13*To_JSON{49|15R9} 54|1667s47
-267V13*From_JSON{189R9} 54|1682s47
-269V13*Serialize{string} 54|1089s22 1095s40 1109s25 1909s57
-270V13*Parse_Person{196R9} 54|1095s19 1909s36 1922s25 1939s36
-271V13*To_JSON{49|15R9} 54|1394s50 1470s41 1962s68
-272V13*From_JSON{196R9} 54|1962s22 1975s47
-274V13*Serialize{string} 54|1116s64
-275V13*Parse_Pair{205R9} 54|1116s45
-279V13*Serialize{string} 54|1146s22 1151s62 1187s25
-280V13*Parse_Bag{210R9} 54|1151s44 1175s22
-281V13*To_JSON{49|15R9} 54|1415s50
-282V13*From_JSON{210R9} 54|1988s44
-284V13*Serialize{string} 54|1217s22 1222s66 1241s39 1243s25
-285V13*Parse_Outer{217R9} 54|1222s46 1241s19
-286V13*To_JSON{49|15R9} 54|1454s51
-287V13*From_JSON{217R9} 54|2002s19
-289V13*Serialize{string} 54|1213s50 1214s50 1215s50
-294V13*Serialize{string} 54|2192s64
-295V13*Parse_Tree{228R9} 54|2192s45
-299V13*Serialize{string} 54|1356s64 1373s25
-300V13*Parse_Maps{235R9} 54|1356s45
-301V13*To_JSON{49|15R9} 54|1435s50
-302V13*From_JSON{235R9} 54|2008s19
-304V13*Serialize{string} 54|2034s25 2040s65 2057s40 2068s25
-305V13*Parse_Opt{240R9} 54|2040s47 2057s22
-306V13*To_JSON{49|15R9} 54|2081s50
-307V13*From_JSON{240R9} 54|2087s22
-309V13*Serialize{string} 54|1267s25 1270s71 1286s71 1304s71 1319s43 1332s25
-310V13*Parse_Choice{258R9} 54|1270s50 1286s50 1304s50 1320s50
-311V13*To_JSON{49|15R9} 54|1460s51
-312V13*From_JSON{258R9} 54|2006s19
+308b7*After{boolean} 54|1263m12 1274r59
+311V13*Serialize{string} 54|1695s62
+312V13*Parse_Box{223R9} 54|1695s44
+313V13*To_JSON{49|15R9} 54|1667s47
+314V13*From_JSON{223R9} 54|1682s47
+316V13*Serialize{string} 54|1089s22 1095s40 1109s25 1909s57
+317V13*Parse_Person{230R9} 54|1095s19 1909s36 1922s25 1939s36
+318V13*To_JSON{49|15R9} 54|1394s50 1470s41 1962s68
+319V13*From_JSON{230R9} 54|1962s22 1975s47
+321V13*Serialize{string} 54|1116s64
+322V13*Parse_Pair{239R9} 54|1116s45
+326V13*Serialize{string} 54|1146s22 1151s62 1187s25
+327V13*Parse_Bag{244R9} 54|1151s44 1175s22
+328V13*To_JSON{49|15R9} 54|1415s50
+329V13*From_JSON{244R9} 54|1988s44
+331V13*Serialize{string} 54|1217s22 1222s66 1241s39 1243s25
+332V13*Parse_Outer{251R9} 54|1222s46 1241s19
+333V13*To_JSON{49|15R9} 54|1454s51
+334V13*From_JSON{251R9} 54|2002s19
+336V13*Serialize{string} 54|1213s50 1214s50 1215s50
+341V13*Serialize{string} 54|2271s64
+342V13*Parse_Tree{262R9} 54|2271s45
+346V13*Serialize{string} 54|1356s64 1373s25
+347V13*Parse_Maps{269R9} 54|1356s45
+348V13*To_JSON{49|15R9} 54|1435s50
+349V13*From_JSON{269R9} 54|2008s19
+356V13*Serialize{string} 54|2054s67
+357V13*Parse_Nest{280R9} 54|2054s48
+358V13*To_JSON{49|15R9} 54|2085s50
+359V13*From_JSON{280R9} 54|2094s22
+361V13*Serialize{string} 54|2113s25 2119s65 2136s40 2147s25
+362V13*Parse_Opt{287R9} 54|2119s47 2136s22
+363V13*To_JSON{49|15R9} 54|2160s50
+364V13*From_JSON{287R9} 54|2166s22
+366V13*Serialize{string} 54|1267s25 1270s71 1286s71 1304s71 1319s43 1332s25
+367V13*Parse_Choice{305R9} 54|1270s50 1286s50 1304s50 1320s50
+368V13*To_JSON{49|15R9} 54|1460s51
+369V13*From_JSON{305R9} 54|2006s19
 X 56 system.ads
 67M9*Address
 X 65 s-memory.ads

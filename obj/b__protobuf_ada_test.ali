@@ -19,12 +19,12 @@ RV NO_IMPLICIT_LOOPS
 RV NO_ELABORATION_CODE
 RV NO_OBSOLESCENT_FEATURES
 
-U ada_main%b		b__protobuf_ada_test.adb  aa379b25 OO PK IL
+U ada_main%b		b__protobuf_ada_test.adb  ba5b5b39 OO PK IL
 W ada%s			ada.ads			ada.ali
 W ada.exceptions%s	a-except.adb		a-except.ali
 Z system%s		system.ads		system.ali
 
-U ada_main%s		b__protobuf_ada_test.ads  58d08587 EE NE OO PK IL
+U ada_main%s		b__protobuf_ada_test.ads  48bc459b EE NE OO PK IL
 W system%s		system.ads		system.ali
 W system.parameters%s	s-parame.adb		s-parame.ali
 W system.secondary_stack%s  s-secsta.adb	s-secsta.ali
@@ -32,8 +32,8 @@ W system.secondary_stack%s  s-secsta.adb	s-secsta.ali
 D ada.ads		20240620080806 76789da1 ada%s
 D a-except.ads		20240620080806 2a7d8d70 ada.exceptions%s
 D a-unccon.ads		20240620080806 0e9b276f ada.unchecked_conversion%s
-D b__protobuf_ada_test.ads  20260612161646 4c53253e ada_main%s
-D b__protobuf_ada_test.adb  20260612161646 cc19336b ada_main%b
+D b__protobuf_ada_test.ads  20260612170022 5c3fe522 ada_main%s
+D b__protobuf_ada_test.adb  20260612170022 cc19336b ada_main%b
 D system.ads		20240620080806 a2da961d system%s
 D s-parame.ads		20240620080806 d494a4a6 system.parameters%s
 D s-secsta.ads		20240620080806 62cd9202 system.secondary_stack%s

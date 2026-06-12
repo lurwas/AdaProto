@@ -69,8 +69,12 @@ emission (wire and JSON) is governed by that flag rather than the value -- so an
 `optional` set to its default (e.g. `0`) is still written, while an absent one is
 omitted. Implicit-presence (no-`optional`) scalars keep the omit-at-default rule.
 
-Unsupported constructs (nested type definitions) raise a clear
-`Compile_Error` with line number.
+**Nested type definitions**: messages and enums declared inside a message are
+supported. They are flattened to top-level Ada types under their fully-qualified
+name (`Outer.Inner` -> `Outer_Inner`), and each field's type reference is bound
+to the type it denotes via proto's innermost-out scope search before code
+generation. Corecursion (a nested message referring back to its enclosing type)
+works through the same controlled holders as ordinary recursion.
 
 ### Well-known types (`src/proto_wkt.*`)
 
@@ -111,19 +115,19 @@ numbers); `Conformance_Harness.Handle` (unit-tested) parses the payload and
 re-serializes it in the requested format across protobuf and JSON.
 
 To drive Google's official suite, point its `conformance-test-runner` at
-`bin/conformance-runner`. The catch: the suite exercises
-`protobuf_test_messages.proto3.TestAllTypesProto3`, which needs **nested type
-definitions** -- proto3 **`optional`** is now supported, but nested message/enum
-definitions are not yet -- so the harness currently handles a self-contained
-`conformance_test.TestMessage` and `skips` other message types. Closing that
-remaining gap (nested types) is what a certified end-to-end run additionally
-requires.
+`bin/conformance-runner`. The generator now supports the constructs
+`protobuf_test_messages.proto3.TestAllTypesProto3` is built from -- nested type
+definitions and proto3 `optional` (alongside maps, oneofs, enums, and the
+well-known types). The remaining step toward a certified end-to-end run is to
+generate `TestAllTypesProto3` itself and route the harness to it; the harness
+currently handles a self-contained `conformance_test.TestMessage` and `skips`
+other message types.
 
 ### Codegen roadmap (toward 100% proto3 + JSON)
 
-1. Generator: nested message/enum definitions, so `TestAllTypesProto3` can be
-   generated and the official conformance suite run end-to-end. Also: well-known
-   types as map values / oneof members. (proto3 `optional`: done.)
+1. Wire up `TestAllTypesProto3` itself and route the conformance harness to it,
+   so the official suite runs end-to-end. (Nested types and proto3 `optional`:
+   done.) Also: well-known types as map values / oneof members.
 
 ## Explicitly not implemented (yet)
 

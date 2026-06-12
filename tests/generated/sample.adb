@@ -138,6 +138,38 @@ package body Sample is
    function Element (H : Maps_Holder) return Maps is (H.Ptr.all);
    function Is_Empty (H : Maps_Holder) return Boolean is (H.Ptr = null);
 
+   procedure Free_Nest_Item is new Ada.Unchecked_Deallocation (Nest_Item, Nest_Item_Access);
+   overriding procedure Adjust (H : in out Nest_Item_Holder) is
+   begin
+      if H.Ptr /= null then H.Ptr := new Nest_Item'(H.Ptr.all); end if;
+   end Adjust;
+   overriding procedure Finalize (H : in out Nest_Item_Holder) is
+   begin
+      Free_Nest_Item (H.Ptr);
+   end Finalize;
+   function To_Holder (Value : Nest_Item) return Nest_Item_Holder is
+   begin
+      return H : Nest_Item_Holder do H.Ptr := new Nest_Item'(Value); end return;
+   end To_Holder;
+   function Element (H : Nest_Item_Holder) return Nest_Item is (H.Ptr.all);
+   function Is_Empty (H : Nest_Item_Holder) return Boolean is (H.Ptr = null);
+
+   procedure Free_Nest is new Ada.Unchecked_Deallocation (Nest, Nest_Access);
+   overriding procedure Adjust (H : in out Nest_Holder) is
+   begin
+      if H.Ptr /= null then H.Ptr := new Nest'(H.Ptr.all); end if;
+   end Adjust;
+   overriding procedure Finalize (H : in out Nest_Holder) is
+   begin
+      Free_Nest (H.Ptr);
+   end Finalize;
+   function To_Holder (Value : Nest) return Nest_Holder is
+   begin
+      return H : Nest_Holder do H.Ptr := new Nest'(Value); end return;
+   end To_Holder;
+   function Element (H : Nest_Holder) return Nest is (H.Ptr.all);
+   function Is_Empty (H : Nest_Holder) return Boolean is (H.Ptr = null);
+
    procedure Free_Opt is new Ada.Unchecked_Deallocation (Opt, Opt_Access);
    overriding procedure Adjust (H : in out Opt_Holder) is
    begin
@@ -260,6 +292,31 @@ package body Sample is
          return Color (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (V)));
       end if;
    end Color_From_JSON;
+
+   function Nest_Kind_To_JSON (V : Nest_Kind) return JSON.JSON_Value is
+   begin
+      case V is
+         when 0 => return JSON.To_Value ("KIND_UNKNOWN");
+         when 1 => return JSON.To_Value ("KIND_LEAF");
+         when 2 => return JSON.To_Value ("KIND_NODE");
+         when others => return JSON.Number (Proto_JSON.Image (Interfaces.Integer_64 (V)));
+      end case;
+   end Nest_Kind_To_JSON;
+   function Nest_Kind_From_JSON (V : JSON.JSON_Value) return Nest_Kind is
+   begin
+      if JSON.Kind (V) = JSON.JSON_String then
+         declare
+            S : constant String := JSON.As_String (V);
+         begin
+            if S = "KIND_UNKNOWN" then return 0; end if;
+            if S = "KIND_LEAF" then return 1; end if;
+            if S = "KIND_NODE" then return 2; end if;
+            raise Proto_JSON.Decode_Error with "unknown enum value name";
+         end;
+      else
+         return Nest_Kind (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (V)));
+      end if;
+   end Nest_Kind_From_JSON;
 
    function Serialize (Message : Box) return String is
       Buffer : Protobuf.Message_Buffer;
@@ -1069,6 +1126,221 @@ package body Sample is
                   VV : constant JSON.JSON_Value := JSON.Get (FV, Kstr);
                begin
                   Result.Items.Include (Interfaces.Integer_32 (Proto_JSON.To_Int64 (Kstr)), To_Holder (Inner'(From_JSON (VV))));
+               end;
+            end loop;
+         end if;
+      end;
+      return Result;
+   end From_JSON;
+
+   function Serialize (Message : Nest_Item) return String is
+      Buffer : Protobuf.Message_Buffer;
+   begin
+      if Message.A /= 0 then
+         Protobuf.Add_Int32 (Buffer, 1, Message.A);
+      end if;
+      if not Message.Parent.Is_Empty then
+         Protobuf.Add_Message (Buffer, 2, Serialize (Message.Parent.Element));
+      end if;
+      if Message.Kind /= 0 then
+         Protobuf.Add_Int32 (Buffer, 3, Message.Kind);
+      end if;
+      return Protobuf.To_String (Buffer);
+   end Serialize;
+
+   function Parse_Nest_Item (Data : String) return Nest_Item is
+      Result : Nest_Item;
+      Fields : constant Protobuf.Parsed_Field_Vectors.Vector :=
+        Protobuf.Parse_From_String (Data);
+   begin
+      for Item of Fields loop
+         case Item.Number is
+            when 1 =>
+               Result.A := Protobuf.As_Int32 (Item);
+            when 2 =>
+               Result.Parent := To_Holder (Parse_Nest (Protobuf.As_Message_Bytes (Item)));
+            when 3 =>
+               Result.Kind := Protobuf.As_Int32 (Item);
+            when others => null;
+         end case;
+      end loop;
+      return Result;
+   end Parse_Nest_Item;
+
+   function To_JSON (Message : Nest_Item) return JSON.JSON_Value is
+      Obj : JSON.JSON_Value := JSON.Empty_Object;
+   begin
+      if Message.A /= 0 then
+         JSON.Insert (Obj, "a", JSON.Number (Proto_JSON.Image (Interfaces.Integer_64 (Message.A))));
+      end if;
+      if not Message.Parent.Is_Empty then
+         JSON.Insert (Obj, "parent", To_JSON (Message.Parent.Element));
+      end if;
+      if Message.Kind /= 0 then
+         JSON.Insert (Obj, "kind", Nest_Kind_To_JSON (Message.Kind));
+      end if;
+      return Obj;
+   end To_JSON;
+
+   function From_JSON (V : JSON.JSON_Value) return Nest_Item is
+      Result : Nest_Item;
+   begin
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "a");
+      begin
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.A := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "parent");
+      begin
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.Parent := To_Holder (Nest'(From_JSON (FV)));
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "kind");
+      begin
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.Kind := Nest_Kind_From_JSON (FV);
+         end if;
+      end;
+      return Result;
+   end From_JSON;
+
+   function Serialize (Message : Nest) return String is
+      Buffer : Protobuf.Message_Buffer;
+   begin
+      if not Message.Head.Is_Empty then
+         Protobuf.Add_Message (Buffer, 1, Serialize (Message.Head.Element));
+      end if;
+      for I in Message.Items.First_Index .. Message.Items.Last_Index loop
+         Protobuf.Add_Message (Buffer, 2, Serialize (Element (Message.Items (I))));
+      end loop;
+      if Message.Kind /= 0 then
+         Protobuf.Add_Int32 (Buffer, 3, Message.Kind);
+      end if;
+      for Cur in Message.By_name.Iterate loop
+         declare
+            Entry_Buf : Protobuf.Message_Buffer;
+            K : constant Ada.Strings.Unbounded.Unbounded_String := Unbounded_String_Nest_Item_Maps.Key (Cur);
+            V : constant Nest_Item_Holder := Unbounded_String_Nest_Item_Maps.Element (Cur);
+         begin
+            if Length (K) > 0 then
+               Protobuf.Add_String (Entry_Buf, 1, To_String (K));
+            end if;
+            Protobuf.Add_Message (Entry_Buf, 2, Serialize (V.Element));
+            Protobuf.Add_Message (Buffer, 4, Protobuf.To_String (Entry_Buf));
+         end;
+      end loop;
+      return Protobuf.To_String (Buffer);
+   end Serialize;
+
+   function Parse_Nest (Data : String) return Nest is
+      Result : Nest;
+      Fields : constant Protobuf.Parsed_Field_Vectors.Vector :=
+        Protobuf.Parse_From_String (Data);
+   begin
+      for Item of Fields loop
+         case Item.Number is
+            when 1 =>
+               Result.Head := To_Holder (Parse_Nest_Item (Protobuf.As_Message_Bytes (Item)));
+            when 2 =>
+               Result.Items.Append (To_Holder (Parse_Nest_Item (Protobuf.As_Message_Bytes (Item))));
+            when 3 =>
+               Result.Kind := Protobuf.As_Int32 (Item);
+            when 4 =>
+               declare
+                  Ent : constant Protobuf.Parsed_Field_Vectors.Vector :=
+                    Protobuf.Parse_From_String (Protobuf.As_Message_Bytes (Item));
+                  K : Ada.Strings.Unbounded.Unbounded_String := Ada.Strings.Unbounded.Null_Unbounded_String;
+                  V : Nest_Item_Holder;
+               begin
+                  for E of Ent loop
+                     case E.Number is
+                        when 1 => K := To_Unbounded_String (Proto_JSON.Checked_UTF8 (Protobuf.As_String (E)));
+                        when 2 => V := To_Holder (Parse_Nest_Item (Protobuf.As_Message_Bytes (E)));
+                        when others => null;
+                     end case;
+                  end loop;
+                  Result.By_name.Include (K, V);
+               end;
+            when others => null;
+         end case;
+      end loop;
+      return Result;
+   end Parse_Nest;
+
+   function To_JSON (Message : Nest) return JSON.JSON_Value is
+      Obj : JSON.JSON_Value := JSON.Empty_Object;
+   begin
+      if not Message.Head.Is_Empty then
+         JSON.Insert (Obj, "head", To_JSON (Message.Head.Element));
+      end if;
+      if not Message.Items.Is_Empty then
+         declare
+            Arr : JSON.JSON_Value := JSON.Empty_Array;
+         begin
+            for I in Message.Items.First_Index .. Message.Items.Last_Index loop
+               JSON.Append (Arr, To_JSON (Element (Message.Items (I))));
+            end loop;
+            JSON.Insert (Obj, "items", Arr);
+         end;
+      end if;
+      if Message.Kind /= 0 then
+         JSON.Insert (Obj, "kind", Nest_Kind_To_JSON (Message.Kind));
+      end if;
+      if not Message.By_name.Is_Empty then
+         declare
+            M2 : JSON.JSON_Value := JSON.Empty_Object;
+         begin
+            for Cur in Message.By_name.Iterate loop
+               JSON.Insert (M2, To_String (Unbounded_String_Nest_Item_Maps.Key (Cur)), To_JSON (Element (Unbounded_String_Nest_Item_Maps.Element (Cur))));
+            end loop;
+            JSON.Insert (Obj, "byName", M2);
+         end;
+      end if;
+      return Obj;
+   end To_JSON;
+
+   function From_JSON (V : JSON.JSON_Value) return Nest is
+      Result : Nest;
+   begin
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "head");
+      begin
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.Head := To_Holder (Nest_Item'(From_JSON (FV)));
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "items");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Array then
+            for I in 1 .. JSON.Length (FV) loop
+               Result.Items.Append (To_Holder (Nest_Item'(From_JSON (JSON.Element (FV, I)))));
+            end loop;
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "kind");
+      begin
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.Kind := Nest_Kind_From_JSON (FV);
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "byName");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "by_name"); end if;
+         if JSON.Kind (FV) = JSON.JSON_Object then
+            for I in 1 .. JSON.Length (FV) loop
+               declare
+                  Kstr : constant String := JSON.Key (FV, I);
+                  VV : constant JSON.JSON_Value := JSON.Get (FV, Kstr);
+               begin
+                  Result.By_name.Include (To_Unbounded_String (Kstr), To_Holder (Nest_Item'(From_JSON (VV))));
                end;
             end loop;
          end if;

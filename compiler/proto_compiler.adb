@@ -246,11 +246,15 @@ package body Proto_Compiler is
          end if;
       end Skip_Field_Options;
 
-      procedure Parse_Enum is
+      --  Qualify a type name with its enclosing scope (empty Prefix = top level).
+      function Qualify (Prefix, Name : String) return String is
+        (if Prefix = "" then Name else Prefix & "." & Name);
+
+      procedure Parse_Enum (Prefix : String) is
          E : Enum_Def;
       begin
          Adv;  -- 'enum'
-         E.Name := To_Unbounded_String (Expect_Ident);
+         E.Name := To_Unbounded_String (Qualify (Prefix, Expect_Ident));
          Expect_Symbol ("{");
          while not At_Symbol ("}") and then Cur.Kind /= T_EOF loop
             if At_Symbol (";") then
@@ -274,20 +278,23 @@ package body Proto_Compiler is
          Enums.Append (E);
       end Parse_Enum;
 
-      procedure Parse_Message is
-         M : Message_Def;
+      procedure Parse_Message (Prefix : String) is
+         M     : Message_Def;
+         FQ    : Unbounded_String;
       begin
          Adv;  -- 'message'
-         M.Name := To_Unbounded_String (Expect_Ident);
+         M.Name := To_Unbounded_String (Qualify (Prefix, Expect_Ident));
+         FQ := M.Name;
          Expect_Symbol ("{");
          while not At_Symbol ("}") and then Cur.Kind /= T_EOF loop
             if At_Symbol (";") then
                Adv;
             elsif At_Ident ("reserved") or else At_Ident ("option") then
                Skip_To_Semicolon;
-            elsif At_Ident ("message") or else At_Ident ("enum") then
-               Err ("nested '" & To_String (Cur.Text)
-                    & "' is not supported in this codegen phase");
+            elsif At_Ident ("message") then
+               Parse_Message (To_String (FQ));
+            elsif At_Ident ("enum") then
+               Parse_Enum (To_String (FQ));
             elsif At_Ident ("map") then
                Adv;  -- 'map'
                Expect_Symbol ("<");
@@ -382,9 +389,9 @@ package body Proto_Compiler is
             Adv;
             Skip_To_Semicolon;
          elsif At_Ident ("message") then
-            Parse_Message;
+            Parse_Message ("");
          elsif At_Ident ("enum") then
-            Parse_Enum;
+            Parse_Enum ("");
          elsif At_Symbol (";") then
             Adv;
          else
@@ -528,13 +535,33 @@ package body Proto_Compiler is
       return Ada.Strings.Fixed.Index (Reserved_Words, " " & Lower_Name & " ") > 0;
    end Is_Reserved;
 
-   function Ada_Id (Proto_Name : String) return String is
+   --  Map one proto identifier segment to a legal Ada identifier (capitalised,
+   --  reserved words suffixed "_F").
+   function Ada_Seg (Proto_Name : String) return String is
    begin
       if Is_Reserved (To_Lower (Proto_Name)) then
          return Cap (Proto_Name) & "_F";
       else
          return Cap (Proto_Name);
       end if;
+   end Ada_Seg;
+
+   --  Map a (possibly dotted) proto type name to an Ada identifier. A nested
+   --  type's fully-qualified name "Outer.Inner" flattens to "Outer_Inner",
+   --  each segment escaped independently. Simple names pass through unchanged.
+   function Ada_Id (Proto_Name : String) return String is
+      R     : Unbounded_String;
+      Start : Natural := Proto_Name'First;
+   begin
+      for I in Proto_Name'Range loop
+         if Proto_Name (I) = '.' then
+            Append (R, Ada_Seg (Proto_Name (Start .. I - 1)));
+            Append (R, '_');
+            Start := I + 1;
+         end if;
+      end loop;
+      Append (R, Ada_Seg (Proto_Name (Start .. Proto_Name'Last)));
+      return To_String (R);
    end Ada_Id;
 
    --  proto3 JSON field name: snake_case -> lowerCamelCase.
@@ -764,6 +791,98 @@ package body Proto_Compiler is
 
    begin
       Parse (Toks, Pkg, Msgs, Enums);
+
+      --  Resolve every field's type reference to the fully-qualified name of the
+      --  type it denotes, using proto's innermost-out scope search. Nested types
+      --  are flattened into Msgs/Enums under dotted FQ names ("Outer.Inner"); a
+      --  reference like "Inner" from within "Outer" must bind to "Outer.Inner"
+      --  here, so that code generation thereafter matches purely by FQ name.
+      declare
+         function Is_Declared (Name : String) return Boolean is
+         begin
+            for M of Msgs loop
+               if To_String (M.Name) = Name then
+                  return True;
+               end if;
+            end loop;
+            for E of Enums loop
+               if To_String (E.Name) = Name then
+                  return True;
+               end if;
+            end loop;
+            return False;
+         end Is_Declared;
+
+         --  The FQ declared type a reference binds to within Scope, or "" if it
+         --  is not a user-declared type (scalar / google.protobuf.* / unknown).
+         function Resolve_Ref (Ref, Scope : String) return String is
+            S : Unbounded_String := To_Unbounded_String (Scope);
+         begin
+            loop
+               declare
+                  Cand : constant String :=
+                    (if Length (S) = 0 then Ref
+                     else To_String (S) & "." & Ref);
+               begin
+                  if Is_Declared (Cand) then
+                     return Cand;
+                  end if;
+               end;
+               exit when Length (S) = 0;
+               --  Ascend to the enclosing scope (strip the last dotted segment).
+               declare
+                  Cur_S : constant String := To_String (S);
+                  Dot   : Natural := 0;
+               begin
+                  for I in Cur_S'Range loop
+                     if Cur_S (I) = '.' then
+                        Dot := I;
+                     end if;
+                  end loop;
+                  S := To_Unbounded_String
+                         (if Dot = 0 then "" else Cur_S (Cur_S'First .. Dot - 1));
+               end;
+            end loop;
+            return "";
+         end Resolve_Ref;
+      begin
+         for MI in Msgs.First_Index .. Msgs.Last_Index loop
+            declare
+               M     : Message_Def := Msgs (MI);
+               Scope : constant String := To_String (M.Name);
+            begin
+               for FI in M.Fields.First_Index .. M.Fields.Last_Index loop
+                  declare
+                     F : Field_Def := M.Fields (FI);
+                  begin
+                     if F.Is_Map then
+                        declare
+                           R : constant String :=
+                             Resolve_Ref (To_String (F.Map_Value), Scope);
+                        begin
+                           if R /= "" then
+                              F.Map_Value := To_Unbounded_String (R);
+                              M.Fields.Replace_Element (FI, F);
+                           end if;
+                        end;
+                     else
+                        declare
+                           R : constant String :=
+                             Resolve_Ref (To_String (F.Proto_Type), Scope);
+                        begin
+                           if R /= "" then
+                              F.Proto_Type := To_Unbounded_String (R);
+                              M.Fields.Replace_Element (FI, F);
+                           end if;
+                        end;
+                     end if;
+                  end;
+               end loop;
+               Msgs.Replace_Element (MI, M);
+            end;
+         end loop;
+      end;
+
       for E of Enums loop
          Enum_Names.Append (E.Name);
       end loop;

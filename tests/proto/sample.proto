@@ -72,6 +72,26 @@ message Maps {
   map<int32, Inner>  items  = 2;
 }
 
+// Nested type definitions: a message and an enum declared inside another
+// message, plus corecursion (a nested message that refers back to its
+// enclosing type) and a sibling reference resolved by proto's scope rules.
+message Nest {
+  message Item {
+    int32 a      = 1;
+    Nest  parent = 2;   // corecursive: refers to the enclosing message
+    Kind  kind   = 3;   // sibling nested enum, resolved outward
+  }
+  enum Kind {
+    KIND_UNKNOWN = 0;
+    KIND_LEAF    = 1;
+    KIND_NODE    = 2;
+  }
+  Item              head    = 1;   // singular nested message
+  repeated Item     items   = 2;   // repeated nested message
+  Kind              kind    = 3;   // nested enum field
+  map<string, Item> by_name = 4;   // nested message as a map value
+}
+
 // proto3 `optional`: explicit-presence scalars. `maybe` set to its default
 // value (0) is still emitted/present; an absent `maybe` is omitted. `plain`
 // keeps no-presence (implicit) semantics for contrast.
