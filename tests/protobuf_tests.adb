@@ -11,6 +11,7 @@ with AUnit.Simple_Test_Cases;
 with AUnit.Test_Suites;
 with Fixture_Loader;
 with Interfaces;
+with JSON;
 with Protobuf;
 with Sample;
 
@@ -1368,6 +1369,84 @@ package body Protobuf_Tests is
       end;
    end Test_Generated_Maps;
 
+   --  Phase 2: the JSON DOM library (writer + recursive-descent parser).
+   procedure Test_JSON_Library is
+      use type JSON.Value_Kind;
+      Q : constant Character := '"';
+   begin
+      --  Programmatic build serializes compactly and in insertion order.
+      declare
+         O : JSON.JSON_Value := JSON.Empty_Object;
+         A : JSON.JSON_Value := JSON.Empty_Array;
+      begin
+         JSON.Append (A, JSON.Number ("1"));
+         JSON.Append (A, JSON.To_Value ("x"));
+         JSON.Insert (O, "nums", A);
+         JSON.Insert (O, "ok", JSON.To_Value (True));
+         Assert (JSON.Serialize (O) =
+                   "{" & Q & "nums" & Q & ":[1," & Q & "x" & Q & "],"
+                       & Q & "ok" & Q & ":true}",
+                 "programmatic JSON serializes compactly in order");
+      end;
+
+      --  Parse + query a nested document.
+      declare
+         V : constant JSON.JSON_Value :=
+           JSON.Parse ("{ " & Q & "a" & Q & " : [1, 2, {" & Q & "b" & Q
+                       & ": true}], " & Q & "c" & Q & ": null }");
+      begin
+         Assert (JSON.Kind (V) = JSON.JSON_Object, "parsed an object");
+         Assert (JSON.Has (V, "a") and then not JSON.Has (V, "zzz"),
+                 "object key presence");
+         Assert (JSON.Kind (JSON.Get (V, "c")) = JSON.JSON_Null, "null value");
+         declare
+            A : constant JSON.JSON_Value := JSON.Get (V, "a");
+         begin
+            Assert (JSON.Length (A) = 3, "array length");
+            Assert (JSON.As_Number (JSON.Element (A, 1)) = "1", "array element");
+            Assert (JSON.As_Boolean (JSON.Get (JSON.Element (A, 3), "b")),
+                    "nested object bool");
+         end;
+      end;
+
+      --  64-bit integer precision is preserved (numbers kept as text).
+      Assert (JSON.As_Number (JSON.Parse ("123456789012345678"))
+              = "123456789012345678",
+              "large integer preserved exactly as text");
+
+      --  String escapes decode and re-encode.
+      declare
+         S : constant JSON.JSON_Value :=
+           JSON.Parse (Q & "a\nb\" & Q & "cA" & Q);
+      begin
+         Assert (JSON.As_String (S) = "a" & ASCII.LF & "b" & Q & "cA",
+                 "string escapes (\\n, \\"", \\u) decode");
+         Assert (JSON.Serialize (S) = Q & "a\nb\" & Q & "cA" & Q,
+                 "string escapes re-encode");
+      end;
+
+      --  A BMP \u escape becomes UTF-8 (U+00E9 -> 0xC3 0xA9).
+      Assert (JSON.As_String (JSON.Parse (Q & "\u00e9" & Q))
+              = Character'Val (16#C3#) & Character'Val (16#A9#),
+              "\\u escape becomes UTF-8");
+
+      --  Malformed input raises Parse_Error.
+      declare
+         Raised : Boolean := False;
+      begin
+         begin
+            declare
+               Ignore : constant JSON.JSON_Value := JSON.Parse ("{bad}");
+            begin
+               null;
+            end;
+         exception
+            when JSON.Parse_Error => Raised := True;
+         end;
+         Assert (Raised, "malformed JSON raises Parse_Error");
+      end;
+   end Test_JSON_Library;
+
    --  Phase 1c: a recursive message (Tree). The generated memory-safe holder
    --  (controlled, deep-copy on assignment, free on finalize) breaks the type
    --  cycle. Builds a small tree, round-trips it, and exercises value semantics.
@@ -1551,6 +1630,7 @@ package body Protobuf_Tests is
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated oneof", Test_Generated_Oneof'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated maps", Test_Generated_Maps'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated recursive message", Test_Generated_Recursive'Access));
+         AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("json library", Test_JSON_Library'Access));
       end if;
       return Registered_Suite;
    end Suite;
