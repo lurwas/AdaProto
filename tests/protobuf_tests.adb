@@ -11,7 +11,10 @@ with AUnit.Simple_Test_Cases;
 with AUnit.Test_Suites;
 with Fixture_Loader;
 with Interfaces;
+with JSON;
 with Protobuf;
+with Proto_JSON;
+with Sample;
 
 package body Protobuf_Tests is
    use AUnit.Assertions;
@@ -1055,6 +1058,667 @@ package body Protobuf_Tests is
       end;
    end Test_Packed_UInt64_And_SInt64;
 
+   --  Proves the protoc-ada generated types (Sample.Person / Sample.Pair):
+   --  (1) serialize byte-identically to hand-written runtime calls,
+   --  (2) round-trip through encode + decode,
+   --  (3) honour proto3 default omission (default scalars are not emitted),
+   --  including the reserved-word-escaped field Delta_F (proto field "delta").
+   procedure Test_Generated_Types_Roundtrip is
+      use Ada.Strings.Unbounded;
+      P : constant Sample.Person :=
+        (Id      => 42,
+         Name    => To_Unbounded_String ("alice"),
+         Active  => True,
+         Balance => 3.5,
+         Delta_F => -7,
+         Blob    => To_Unbounded_String ("blob"));
+      Reference : Protobuf.Message_Buffer;
+   begin
+      --  Wire compatibility: the generated encoder must match the exact bytes
+      --  produced by the equivalent runtime calls, in field-number order.
+      Protobuf.Add_Int32  (Reference, 1, 42);
+      Protobuf.Add_String (Reference, 2, "alice");
+      Protobuf.Add_Bool   (Reference, 3, True);
+      Protobuf.Add_Double (Reference, 4, 3.5);
+      Protobuf.Add_SInt64 (Reference, 5, -7);
+      Protobuf.Add_Bytes  (Reference, 6, "blob");
+      Assert (Sample.Serialize (P) = Protobuf.To_String (Reference),
+              "generated Serialize matches hand-written wire bytes");
+
+      --  Round-trip.
+      declare
+         D : constant Sample.Person :=
+           Sample.Parse_Person (Sample.Serialize (P));
+      begin
+         Assert (D.Id = 42, "id round-trips");
+         Assert (To_String (D.Name) = "alice", "name round-trips");
+         Assert (D.Active = True, "active round-trips");
+         Assert (D.Balance = 3.5, "balance round-trips");
+         Assert (D.Delta_F = -7, "reserved-word field round-trips");
+         Assert (To_String (D.Blob) = "blob", "bytes round-trip");
+      end;
+
+      --  proto3 default omission: an all-default message encodes to nothing.
+      declare
+         Empty : Sample.Person;
+      begin
+         Assert (Sample.Serialize (Empty) = "",
+                 "default scalar fields are omitted on the wire");
+      end;
+
+      --  A second generated message type in the same unit.
+      declare
+         Q : constant Sample.Pair := (First => 1, Second => 2);
+         R : constant Sample.Pair := Sample.Parse_Pair (Sample.Serialize (Q));
+      begin
+         Assert (R.First = 1 and R.Second = 2, "Pair round-trips");
+      end;
+   end Test_Generated_Types_Roundtrip;
+
+   --  Phase 1b: enums (open, int32-valued) and repeated fields. Proves packed
+   --  encode/decode wire-compatibility, repeated-string handling, and that the
+   --  decoder also accepts the unpacked repeated encoding (conformance).
+   procedure Test_Generated_Enums_And_Repeated is
+      use Ada.Strings.Unbounded;
+      B : Sample.Bag;
+      Reference : Protobuf.Message_Buffer;
+   begin
+      B.Numbers.Append (1);
+      B.Numbers.Append (2);
+      B.Numbers.Append (-3);
+      B.Tags.Append (To_Unbounded_String ("a"));
+      B.Tags.Append (To_Unbounded_String ("bb"));
+      B.Color_F := Sample.Color_GREEN;
+      B.Palette.Append (Sample.Color_RED);
+      B.Palette.Append (Sample.Color_BLUE);
+
+      --  Wire compatibility: packed repeated scalars, repeated strings (one
+      --  field each), and the enum encoded as int32.
+      Protobuf.Add_Packed_Int32 (Reference, 1, (1, 2, -3));
+      Protobuf.Add_String       (Reference, 2, "a");
+      Protobuf.Add_String       (Reference, 2, "bb");
+      Protobuf.Add_Int32        (Reference, 3, 2);
+      Protobuf.Add_Packed_Int32 (Reference, 4, (1, 3));
+      Assert (Sample.Serialize (B) = Protobuf.To_String (Reference),
+              "generated repeated/enum encoder matches hand-written bytes");
+
+      --  Round-trip.
+      declare
+         D : constant Sample.Bag := Sample.Parse_Bag (Sample.Serialize (B));
+      begin
+         Assert (Natural (D.Numbers.Length) = 3
+                 and then D.Numbers (1) = 1 and then D.Numbers (3) = -3,
+                 "packed repeated int32 round-trips");
+         Assert (Natural (D.Tags.Length) = 2
+                 and then To_String (D.Tags (2)) = "bb",
+                 "repeated string round-trips");
+         Assert (D.Color_F = Sample.Color_GREEN, "enum round-trips");
+         Assert (Natural (D.Palette.Length) = 2
+                 and then D.Palette (1) = Sample.Color_RED
+                 and then D.Palette (2) = Sample.Color_BLUE,
+                 "repeated enum round-trips");
+      end;
+
+      --  Conformance: the decoder must also accept the *unpacked* encoding of a
+      --  packable repeated field (each element as a separate field entry).
+      declare
+         Unpacked : Protobuf.Message_Buffer;
+      begin
+         Protobuf.Add_Int32 (Unpacked, 1, 7);
+         Protobuf.Add_Int32 (Unpacked, 1, 8);
+         declare
+            D : constant Sample.Bag :=
+              Sample.Parse_Bag (Protobuf.To_String (Unpacked));
+         begin
+            Assert (Natural (D.Numbers.Length) = 2
+                    and then D.Numbers (1) = 7 and then D.Numbers (2) = 8,
+                    "decoder accepts unpacked repeated encoding");
+         end;
+      end;
+
+      --  Empty repeated fields and a default enum encode to nothing.
+      declare
+         Empty : Sample.Bag;
+      begin
+         Assert (Sample.Serialize (Empty) = "",
+                 "empty repeated fields and default enum are omitted");
+      end;
+   end Test_Generated_Enums_And_Repeated;
+
+   --  Phase 1c: nested (non-recursive) message fields via Indefinite_Holders
+   --  (singular, with presence) and Vectors (repeated). Proves topological
+   --  ordering, delegated encode/decode, and message-field presence semantics.
+   procedure Test_Generated_Nested_Messages is
+      use Ada.Strings.Unbounded;
+      I1 : Sample.Inner;
+      I2 : Sample.Inner;
+      O  : Sample.Outer;
+      Reference : Protobuf.Message_Buffer;
+   begin
+      I1.X := 5;
+      I1.Label := To_Unbounded_String ("hi");
+      I2.X := 9;
+      I2.Label := To_Unbounded_String ("yo");
+      O.One := Sample.To_Holder (I1);
+      O.Many.Append (Sample.To_Holder (I2));
+      O.Many.Append (Sample.To_Holder (I1));
+      O.Note := To_Unbounded_String ("note");
+
+      --  Wire compatibility: a singular message is one length-delimited field;
+      --  a repeated message is one length-delimited field per element.
+      Protobuf.Add_Message (Reference, 1, Sample.Serialize (I1));
+      Protobuf.Add_Message (Reference, 2, Sample.Serialize (I2));
+      Protobuf.Add_Message (Reference, 2, Sample.Serialize (I1));
+      Protobuf.Add_String  (Reference, 3, "note");
+      Assert (Sample.Serialize (O) = Protobuf.To_String (Reference),
+              "nested message encoder matches hand-composed bytes");
+
+      --  Round-trip.
+      declare
+         D : constant Sample.Outer := Sample.Parse_Outer (Sample.Serialize (O));
+      begin
+         Assert (not D.One.Is_Empty, "singular nested message is present");
+         Assert (D.One.Element.X = 5
+                 and then To_String (D.One.Element.Label) = "hi",
+                 "singular nested message round-trips");
+         Assert (Natural (D.Many.Length) = 2, "repeated message count");
+         Assert (Sample.Element (D.Many (1)).X = 9
+                 and then Sample.Element (D.Many (2)).X = 5,
+                 "repeated nested messages round-trip in order");
+         Assert (To_String (D.Note) = "note",
+                 "scalar field after message fields round-trips");
+      end;
+
+      --  Presence: an absent singular message is not serialized and stays
+      --  absent after a round-trip.
+      declare
+         Empty : Sample.Outer;
+         D     : constant Sample.Outer :=
+           Sample.Parse_Outer (Sample.Serialize (Empty));
+      begin
+         Assert (Sample.Serialize (Empty) = "", "empty Outer omits all fields");
+         Assert (D.One.Is_Empty, "absent singular message stays absent");
+      end;
+   end Test_Generated_Nested_Messages;
+
+   --  Phase 1c: oneof as an Ada discriminated record. Proves wire-compat (a
+   --  member is just its field number), round-trip of scalar/string/message
+   --  members, that a member set to its default value is still emitted, and
+   --  that an unset oneof emits nothing.
+   procedure Test_Generated_Oneof is
+      use Ada.Strings.Unbounded;
+      use type Sample.Choice_Pick_Selector;
+   begin
+      --  Scalar member, with regular fields on either side.
+      declare
+         C   : Sample.Choice;
+         Ref : Protobuf.Message_Buffer;
+      begin
+         C.Before := To_Unbounded_String ("b");
+         C.Pick   := (Which => Sample.Choice_Pick_Count, Count => 7);
+         C.After  := True;
+         Protobuf.Add_String (Ref, 1, "b");
+         Protobuf.Add_Int32  (Ref, 2, 7);
+         Protobuf.Add_Bool   (Ref, 5, True);
+         Assert (Sample.Serialize (C) = Protobuf.To_String (Ref),
+                 "oneof scalar member is wire-compatible");
+         declare
+            D : constant Sample.Choice := Sample.Parse_Choice (Sample.Serialize (C));
+         begin
+            Assert (D.Pick.Which = Sample.Choice_Pick_Count
+                    and then D.Pick.Count = 7, "oneof count round-trips");
+            Assert (To_String (D.Before) = "b" and then D.After,
+                    "fields around the oneof round-trip");
+         end;
+      end;
+
+      --  String member.
+      declare
+         C : Sample.Choice;
+      begin
+         C.Pick := (Which => Sample.Choice_Pick_Text,
+                    Text  => To_Unbounded_String ("hello"));
+         declare
+            D : constant Sample.Choice := Sample.Parse_Choice (Sample.Serialize (C));
+         begin
+            Assert (D.Pick.Which = Sample.Choice_Pick_Text
+                    and then To_String (D.Pick.Text) = "hello",
+                    "oneof string member round-trips");
+         end;
+      end;
+
+      --  Message member.
+      declare
+         C : Sample.Choice;
+         I : Sample.Inner;
+      begin
+         I.X := 3;
+         I.Label := To_Unbounded_String ("z");
+         C.Pick := (Which => Sample.Choice_Pick_Inner,
+                    Inner_F => Sample.To_Holder (I));
+         declare
+            D : constant Sample.Choice := Sample.Parse_Choice (Sample.Serialize (C));
+         begin
+            Assert (D.Pick.Which = Sample.Choice_Pick_Inner
+                    and then D.Pick.Inner_F.Element.X = 3
+                    and then To_String (D.Pick.Inner_F.Element.Label) = "z",
+                    "oneof message member round-trips");
+         end;
+      end;
+
+      --  A oneof member set to its default value is still serialized.
+      declare
+         C : Sample.Choice;
+      begin
+         C.Pick := (Which => Sample.Choice_Pick_Count, Count => 0);
+         declare
+            S : constant String := Sample.Serialize (C);
+            D : constant Sample.Choice := Sample.Parse_Choice (S);
+         begin
+            Assert (S'Length > 0, "default-valued oneof member is still emitted");
+            Assert (D.Pick.Which = Sample.Choice_Pick_Count and then D.Pick.Count = 0,
+                    "default-valued oneof member round-trips as set, not unset");
+         end;
+      end;
+
+      --  An unset oneof emits nothing.
+      declare
+         C : Sample.Choice;
+      begin
+         Assert (Sample.Serialize (C) = "", "unset oneof emits nothing");
+      end;
+   end Test_Generated_Oneof;
+
+   --  Phase 1c: map<K,V> as an Ada Ordered_Maps. Proves round-trip of a
+   --  scalar-valued map (including an entry whose value is the default) and a
+   --  message-valued map, and that an empty map emits nothing. Map ordering on
+   --  the wire is unspecified, so this round-trips rather than byte-compares.
+   procedure Test_Generated_Maps is
+      use Ada.Strings.Unbounded;
+      M  : Sample.Maps;
+      I1 : Sample.Inner;
+      I2 : Sample.Inner;
+   begin
+      M.Counts.Include (To_Unbounded_String ("a"), 1);
+      M.Counts.Include (To_Unbounded_String ("b"), 2);
+      M.Counts.Include (To_Unbounded_String ("c"), 0);  --  default value, still present
+      I1.X := 10;
+      I1.Label := To_Unbounded_String ("ten");
+      I2.X := 20;
+      M.Items.Include (5, Sample.To_Holder (I1));
+      M.Items.Include (6, Sample.To_Holder (I2));
+
+      declare
+         D : constant Sample.Maps := Sample.Parse_Maps (Sample.Serialize (M));
+      begin
+         Assert (Natural (D.Counts.Length) = 3, "string->int32 map size");
+         Assert (D.Counts.Element (To_Unbounded_String ("a")) = 1
+                 and then D.Counts.Element (To_Unbounded_String ("b")) = 2
+                 and then D.Counts.Element (To_Unbounded_String ("c")) = 0,
+                 "string->int32 map round-trips, including a default-valued entry");
+         Assert (Natural (D.Items.Length) = 2, "int32->message map size");
+         Assert (D.Items.Element (5).Element.X = 10
+                 and then To_String (D.Items.Element (5).Element.Label) = "ten"
+                 and then D.Items.Element (6).Element.X = 20,
+                 "int32->message map round-trips");
+      end;
+
+      declare
+         Empty : Sample.Maps;
+      begin
+         Assert (Sample.Serialize (Empty) = "", "empty maps emit nothing");
+      end;
+   end Test_Generated_Maps;
+
+   --  Phase 2: generated To_JSON implements the proto3 JSON mapping. Each case
+   --  serializes to JSON text, parses it back, and checks the mapping rules.
+   procedure Test_Generated_To_JSON is
+      use Ada.Strings.Unbounded;
+   begin
+      --  Scalars: 32-bit int as number, int64 as string, bytes as base64,
+      --  bool, string, double (round-trips numerically).
+      declare
+         P : Sample.Person;
+         J : JSON.JSON_Value;
+      begin
+         P.Id := 42;
+         P.Name := To_Unbounded_String ("alice");
+         P.Active := True;
+         P.Balance := 3.5;
+         P.Delta_F := -7;
+         P.Blob := To_Unbounded_String ("AB");
+         J := JSON.Parse (JSON.Serialize (Sample.To_JSON (P)));
+         Assert (JSON.As_Number (JSON.Get (J, "id")) = "42", "int32 -> JSON number");
+         Assert (JSON.As_String (JSON.Get (J, "name")) = "alice", "string field");
+         Assert (JSON.As_Boolean (JSON.Get (J, "active")), "bool field");
+         Assert (JSON.As_String (JSON.Get (J, "delta")) = "-7",
+                 "int64 -> JSON string");
+         Assert (JSON.As_String (JSON.Get (J, "blob")) = "QUI=",
+                 "bytes -> base64");
+         Assert (Long_Float'Value (JSON.As_Number (JSON.Get (J, "balance"))) = 3.5,
+                 "double round-trips through JSON number");
+      end;
+
+      --  Enum as name, repeated scalar/enum as arrays.
+      declare
+         B : Sample.Bag;
+         J : JSON.JSON_Value;
+      begin
+         B.Numbers.Append (1);
+         B.Numbers.Append (2);
+         B.Color_F := Sample.Color_GREEN;
+         B.Palette.Append (Sample.Color_RED);
+         J := JSON.Parse (JSON.Serialize (Sample.To_JSON (B)));
+         Assert (JSON.As_String (JSON.Get (J, "color")) = "GREEN",
+                 "enum -> JSON name");
+         Assert (JSON.Length (JSON.Get (J, "numbers")) = 2
+                 and then JSON.As_Number
+                            (JSON.Element (JSON.Get (J, "numbers"), 1)) = "1",
+                 "repeated int -> JSON array");
+         Assert (JSON.As_String (JSON.Element (JSON.Get (J, "palette"), 1)) = "RED",
+                 "repeated enum -> JSON array of names");
+      end;
+
+      --  Map: object keyed by stringified key; message value nests.
+      declare
+         M  : Sample.Maps;
+         I1 : Sample.Inner;
+         J  : JSON.JSON_Value;
+      begin
+         M.Counts.Include (To_Unbounded_String ("a"), 1);
+         I1.X := 10;
+         M.Items.Include (5, Sample.To_Holder (I1));
+         J := JSON.Parse (JSON.Serialize (Sample.To_JSON (M)));
+         Assert (JSON.As_Number (JSON.Get (JSON.Get (J, "counts"), "a")) = "1",
+                 "map<string,int32> -> JSON object");
+         Assert (JSON.As_Number
+                   (JSON.Get (JSON.Get (JSON.Get (J, "items"), "5"), "x")) = "10",
+                 "map<int32,msg> -> JSON object with stringified int key");
+      end;
+
+      --  Nested message and oneof member.
+      declare
+         O  : Sample.Outer;
+         I1 : Sample.Inner;
+         C  : Sample.Choice;
+         JO : JSON.JSON_Value;
+         JC : JSON.JSON_Value;
+      begin
+         I1.X := 5;
+         O.One := Sample.To_Holder (I1);
+         O.Note := To_Unbounded_String ("n");
+         JO := JSON.Parse (JSON.Serialize (Sample.To_JSON (O)));
+         Assert (JSON.As_Number (JSON.Get (JSON.Get (JO, "one"), "x")) = "5",
+                 "singular nested message -> nested JSON object");
+
+         C.Before := To_Unbounded_String ("b");
+         C.Pick := (Which => Sample.Choice_Pick_Count, Count => 7);
+         JC := JSON.Parse (JSON.Serialize (Sample.To_JSON (C)));
+         Assert (JSON.As_Number (JSON.Get (JC, "count")) = "7",
+                 "oneof member -> its own JSON field");
+         Assert (not JSON.Has (JC, "text"), "inactive oneof members omitted");
+      end;
+
+      --  Default-valued fields are omitted.
+      declare
+         P : Sample.Person;
+      begin
+         Assert (JSON.Serialize (Sample.To_JSON (P)) = "{}",
+                 "an all-default message is an empty JSON object");
+      end;
+   end Test_Generated_To_JSON;
+
+   --  Phase 3: proto3 requires `string` fields to be valid UTF-8, but `bytes`
+   --  fields may hold arbitrary octets.
+   procedure Test_Generated_UTF8_Validation is
+      use Ada.Strings.Unbounded;
+      E_Acute : constant String :=
+        Character'Val (16#C3#) & Character'Val (16#A9#);   --  "é"
+   begin
+      --  Valid UTF-8 in a string field round-trips.
+      declare
+         P : Sample.Person;
+      begin
+         P.Name := To_Unbounded_String (E_Acute);
+         Assert (To_String (Sample.Parse_Person (Sample.Serialize (P)).Name)
+                 = E_Acute, "valid UTF-8 string round-trips");
+      end;
+
+      --  Invalid UTF-8 bytes in a string field on the wire are rejected.
+      declare
+         Raw    : Protobuf.Message_Buffer;
+         Raised : Boolean := False;
+      begin
+         Protobuf.Add_String (Raw, 2, Character'Val (16#FF#) & "x");
+         begin
+            declare
+               Ignore : constant Sample.Person :=
+                 Sample.Parse_Person (Protobuf.To_String (Raw));
+            begin
+               null;
+            end;
+         exception
+            when Proto_JSON.Decode_Error => Raised := True;
+         end;
+         Assert (Raised, "invalid UTF-8 in a string field is rejected");
+      end;
+
+      --  bytes fields accept arbitrary (non-UTF-8) octets.
+      declare
+         Raw : Protobuf.Message_Buffer;
+         Bad : constant String :=
+           Character'Val (16#FF#) & Character'Val (16#FE#);
+      begin
+         Protobuf.Add_Bytes (Raw, 6, Bad);
+         Assert (To_String (Sample.Parse_Person (Protobuf.To_String (Raw)).Blob)
+                 = Bad, "bytes field accepts arbitrary octets");
+      end;
+   end Test_Generated_UTF8_Validation;
+
+   --  Phase 2: generated From_JSON (JSON -> message). Round-trips through JSON
+   --  and parses canonical JSON to check the inverse mapping rules.
+   procedure Test_Generated_From_JSON is
+      use Ada.Strings.Unbounded;
+      use type Sample.Choice_Pick_Selector;
+      Q : constant Character := '"';
+   begin
+      --  Full round-trip via JSON.
+      declare
+         P : Sample.Person;
+         D : Sample.Person;
+      begin
+         P.Id := 42;
+         P.Name := To_Unbounded_String ("alice");
+         P.Active := True;
+         P.Balance := 3.5;
+         P.Delta_F := -7;
+         P.Blob := To_Unbounded_String ("AB");
+         D := Sample.From_JSON (JSON.Parse (JSON.Serialize (Sample.To_JSON (P))));
+         Assert (D.Id = 42 and then To_String (D.Name) = "alice" and then D.Active
+                 and then D.Balance = 3.5 and then D.Delta_F = -7
+                 and then To_String (D.Blob) = "AB",
+                 "Person round-trips through JSON");
+      end;
+
+      --  Parse canonical JSON: ints accepted as strings, int64 string, base64.
+      declare
+         J : constant String :=
+           "{" & Q & "id" & Q & ":" & Q & "5" & Q & "," & Q & "delta" & Q & ":"
+           & Q & "-99" & Q & "," & Q & "blob" & Q & ":" & Q & "QUI=" & Q & ","
+           & Q & "active" & Q & ":true}";
+         D : constant Sample.Person := Sample.From_JSON (JSON.Parse (J));
+      begin
+         Assert (D.Id = 5, "int32 accepts a JSON string");
+         Assert (D.Delta_F = -99, "int64 from JSON string");
+         Assert (To_String (D.Blob) = "AB", "bytes from base64");
+         Assert (D.Active, "bool from JSON");
+      end;
+
+      --  Enum by name and by number; repeated arrays.
+      declare
+         J : constant String :=
+           "{" & Q & "color" & Q & ":" & Q & "GREEN" & Q & "," & Q & "numbers"
+           & Q & ":[1,2,3]," & Q & "palette" & Q & ":[" & Q & "RED" & Q & ",2]}";
+         D : constant Sample.Bag := Sample.From_JSON (JSON.Parse (J));
+      begin
+         Assert (D.Color_F = Sample.Color_GREEN, "enum from name");
+         Assert (Natural (D.Numbers.Length) = 3 and then D.Numbers (2) = 2,
+                 "repeated int from JSON array");
+         Assert (Natural (D.Palette.Length) = 2
+                 and then D.Palette (1) = Sample.Color_RED
+                 and then D.Palette (2) = Sample.Color_GREEN,
+                 "repeated enum accepts name and number");
+      end;
+
+      --  Nested message, oneof, and maps.
+      declare
+         O : constant Sample.Outer :=
+           Sample.From_JSON (JSON.Parse
+             ("{" & Q & "one" & Q & ":{" & Q & "x" & Q & ":5}," & Q & "note"
+              & Q & ":" & Q & "n" & Q & "}"));
+         C : constant Sample.Choice :=
+           Sample.From_JSON (JSON.Parse ("{" & Q & "count" & Q & ":7}"));
+         M : constant Sample.Maps :=
+           Sample.From_JSON (JSON.Parse
+             ("{" & Q & "counts" & Q & ":{" & Q & "a" & Q & ":1}," & Q & "items"
+              & Q & ":{" & Q & "5" & Q & ":{" & Q & "x" & Q & ":9}}}"));
+      begin
+         Assert (not O.One.Is_Empty and then O.One.Element.X = 5
+                 and then To_String (O.Note) = "n", "nested message from JSON");
+         Assert (C.Pick.Which = Sample.Choice_Pick_Count
+                 and then C.Pick.Count = 7, "oneof member from JSON");
+         Assert (M.Counts.Element (To_Unbounded_String ("a")) = 1,
+                 "map<string,int32> from JSON");
+         Assert (M.Items.Element (5).Element.X = 9,
+                 "map<int32,message> from JSON, key parsed from string");
+      end;
+   end Test_Generated_From_JSON;
+
+   --  Phase 2: the JSON DOM library (writer + recursive-descent parser).
+   procedure Test_JSON_Library is
+      use type JSON.Value_Kind;
+      Q : constant Character := '"';
+   begin
+      --  Programmatic build serializes compactly and in insertion order.
+      declare
+         O : JSON.JSON_Value := JSON.Empty_Object;
+         A : JSON.JSON_Value := JSON.Empty_Array;
+      begin
+         JSON.Append (A, JSON.Number ("1"));
+         JSON.Append (A, JSON.To_Value ("x"));
+         JSON.Insert (O, "nums", A);
+         JSON.Insert (O, "ok", JSON.To_Value (True));
+         Assert (JSON.Serialize (O) =
+                   "{" & Q & "nums" & Q & ":[1," & Q & "x" & Q & "],"
+                       & Q & "ok" & Q & ":true}",
+                 "programmatic JSON serializes compactly in order");
+      end;
+
+      --  Parse + query a nested document.
+      declare
+         V : constant JSON.JSON_Value :=
+           JSON.Parse ("{ " & Q & "a" & Q & " : [1, 2, {" & Q & "b" & Q
+                       & ": true}], " & Q & "c" & Q & ": null }");
+      begin
+         Assert (JSON.Kind (V) = JSON.JSON_Object, "parsed an object");
+         Assert (JSON.Has (V, "a") and then not JSON.Has (V, "zzz"),
+                 "object key presence");
+         Assert (JSON.Kind (JSON.Get (V, "c")) = JSON.JSON_Null, "null value");
+         declare
+            A : constant JSON.JSON_Value := JSON.Get (V, "a");
+         begin
+            Assert (JSON.Length (A) = 3, "array length");
+            Assert (JSON.As_Number (JSON.Element (A, 1)) = "1", "array element");
+            Assert (JSON.As_Boolean (JSON.Get (JSON.Element (A, 3), "b")),
+                    "nested object bool");
+         end;
+      end;
+
+      --  64-bit integer precision is preserved (numbers kept as text).
+      Assert (JSON.As_Number (JSON.Parse ("123456789012345678"))
+              = "123456789012345678",
+              "large integer preserved exactly as text");
+
+      --  String escapes decode and re-encode.
+      declare
+         S : constant JSON.JSON_Value :=
+           JSON.Parse (Q & "a\nb\" & Q & "cA" & Q);
+      begin
+         Assert (JSON.As_String (S) = "a" & ASCII.LF & "b" & Q & "cA",
+                 "string escapes (\\n, \\"", \\u) decode");
+         Assert (JSON.Serialize (S) = Q & "a\nb\" & Q & "cA" & Q,
+                 "string escapes re-encode");
+      end;
+
+      --  A BMP \u escape becomes UTF-8 (U+00E9 -> 0xC3 0xA9).
+      Assert (JSON.As_String (JSON.Parse (Q & "\u00e9" & Q))
+              = Character'Val (16#C3#) & Character'Val (16#A9#),
+              "\\u escape becomes UTF-8");
+
+      --  Malformed input raises Parse_Error.
+      declare
+         Raised : Boolean := False;
+      begin
+         begin
+            declare
+               Ignore : constant JSON.JSON_Value := JSON.Parse ("{bad}");
+            begin
+               null;
+            end;
+         exception
+            when JSON.Parse_Error => Raised := True;
+         end;
+         Assert (Raised, "malformed JSON raises Parse_Error");
+      end;
+   end Test_JSON_Library;
+
+   --  Phase 1c: a recursive message (Tree). The generated memory-safe holder
+   --  (controlled, deep-copy on assignment, free on finalize) breaks the type
+   --  cycle. Builds a small tree, round-trips it, and exercises value semantics.
+   procedure Test_Generated_Recursive is
+      Root : Sample.Tree;
+      L    : Sample.Tree;
+      R    : Sample.Tree;
+      C1   : Sample.Tree;
+   begin
+      L.Value := 2;
+      R.Value := 3;
+      C1.Value := 9;
+      R.Left := Sample.To_Holder (C1);          --  nested two levels deep
+      Root.Value := 1;
+      Root.Left := Sample.To_Holder (L);
+      Root.Right := Sample.To_Holder (R);
+      Root.Children.Append (Sample.To_Holder (L));
+      Root.Children.Append (Sample.To_Holder (R));
+
+      declare
+         D : constant Sample.Tree := Sample.Parse_Tree (Sample.Serialize (Root));
+      begin
+         Assert (D.Value = 1, "tree root value");
+         Assert (not D.Left.Is_Empty and then D.Left.Element.Value = 2,
+                 "tree.left round-trips");
+         Assert (not D.Right.Is_Empty
+                 and then D.Right.Element.Right.Is_Empty
+                 and then D.Right.Element.Left.Element.Value = 9,
+                 "two-level-deep recursive child round-trips");
+         Assert (Natural (D.Children.Length) = 2
+                 and then Sample.Element (D.Children (1)).Value = 2
+                 and then Sample.Element (D.Children (2)).Value = 3,
+                 "repeated recursive children round-trip");
+      end;
+
+      --  Value semantics: copying a tree and mutating the copy must not touch
+      --  the original (the controlled holder deep-copies on assignment).
+      declare
+         Copy : Sample.Tree := Root;
+      begin
+         Copy.Left := Sample.To_Holder (R);  --  was L (value 2), now R (value 3)
+         Assert (Root.Left.Element.Value = 2,
+                 "deep-copy: mutating a copy leaves the original intact");
+         Assert (Copy.Left.Element.Value = 3, "copy reflects its own mutation");
+      end;
+   end Test_Generated_Recursive;
+
    --  Exercises the reserve-once / geometrically-grown serialization buffer:
    --  many fields force several reallocations past the initial capacity, a
    --  maximal varint exercises the 10-byte worst case, and Clear+reuse must
@@ -1185,6 +1849,16 @@ package body Protobuf_Tests is
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("stream serialization empty", Test_Stream_Serialization_Empty_Buffer'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("packed uint64 and sint64", Test_Packed_UInt64_And_SInt64'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("serialization buffer growth and reuse", Test_Serialization_Buffer_Growth_And_Reuse'Access));
+         AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated types roundtrip", Test_Generated_Types_Roundtrip'Access));
+         AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated enums and repeated", Test_Generated_Enums_And_Repeated'Access));
+         AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated nested messages", Test_Generated_Nested_Messages'Access));
+         AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated oneof", Test_Generated_Oneof'Access));
+         AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated maps", Test_Generated_Maps'Access));
+         AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated recursive message", Test_Generated_Recursive'Access));
+         AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("json library", Test_JSON_Library'Access));
+         AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated to_json", Test_Generated_To_JSON'Access));
+         AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated from_json", Test_Generated_From_JSON'Access));
+         AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated utf8 validation", Test_Generated_UTF8_Validation'Access));
       end if;
       return Registered_Suite;
    end Suite;

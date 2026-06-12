@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+package sample;
+
+// Exercises the Phase 1a code generator: singular scalar fields of every
+// supported wire category.
+message Person {
+  int32  id      = 1;
+  string name    = 2;
+  bool   active  = 3;
+  double balance = 4;
+  sint64 delta   = 5;
+  bytes  blob    = 6;
+}
+
+message Pair {
+  uint32 first  = 1;
+  uint32 second = 2;
+}
+
+enum Color {
+  COLOR_UNSPECIFIED = 0;
+  RED               = 1;
+  GREEN             = 2;
+  BLUE              = 3;
+}
+
+// Exercises Phase 1b: enums plus repeated packed scalars and repeated strings.
+message Bag {
+  repeated int32  numbers = 1;
+  repeated string tags    = 2;
+  Color           color   = 3;
+  repeated Color  palette = 4;
+}
+
+// Phase 1c: nested (non-recursive) message fields. Outer is declared BEFORE
+// Inner on purpose, to exercise topological ordering of generated types.
+message Outer {
+  Inner          one  = 1;
+  repeated Inner many = 2;
+  string         note = 3;
+}
+
+message Inner {
+  int32  x     = 1;
+  string label = 2;
+}
+
+// Phase 1c: a recursive message (self-referential, singular + repeated).
+message Tree {
+  int32         value    = 1;
+  Tree          left     = 2;
+  Tree          right    = 3;
+  repeated Tree children = 4;
+}
+
+// Phase 1c: maps with a scalar value and with a message value.
+message Maps {
+  map<string, int32> counts = 1;
+  map<int32, Inner>  items  = 2;
+}
+
+// Phase 1c: a oneof with scalar, string, and message members.
+message Choice {
+  string before = 1;
+  oneof pick {
+    int32  count = 2;
+    string text  = 3;
+    Inner  inner = 4;
+  }
+  bool after = 5;
+}
