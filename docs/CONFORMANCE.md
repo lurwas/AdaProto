@@ -77,13 +77,14 @@ A runtime library of `google.protobuf.*` types with their binary wire
 - `Duration` (`{seconds, nanos}`; JSON `"<secs>[.<frac>]s"` with 0/3/6/9 frac
   digits and sign) and `Timestamp` (JSON RFC 3339, always emitted as UTC `…Z`;
   parsing accepts a `Z` or a numeric offset).
+- `FieldMask` (repeated `paths`; JSON one comma-joined string of lowerCamelCase
+  paths).
 
 ### Codegen roadmap (toward 100% proto3 + JSON)
 
-1. **3 (remaining)** the rest of the well-known types — `FieldMask`,
-   `Struct`/`Value`/`ListValue` (dynamic), `Any` (type-URL registry) — plus
-   wiring them into the generator so a field of type `google.protobuf.X`
-   resolves to `Proto_WKT.X`.
+1. **3 (remaining)** `Struct`/`Value`/`ListValue` (dynamic) and `Any`
+   (type-URL registry), plus wiring all the well-known types into the generator
+   so a field of type `google.protobuf.X` resolves to `Proto_WKT.X`.
 2. **4** wire up Google's official conformance-test-runner protocol and drive
    the proto3 + JSON conformance suite to a green (or explicitly-documented) run.
 

@@ -483,4 +483,98 @@ package body Proto_WKT is
          Nanos   => Integer_32 (Nanos));
    end From_JSON;
 
+   ---------------------------------------------------------------------------
+   --  FieldMask
+   ---------------------------------------------------------------------------
+
+   function Serialize (X : Field_Mask) return String is
+      B : Protobuf.Message_Buffer;
+   begin
+      for P of X.Paths loop
+         Protobuf.Add_String (B, 1, To_String (P));
+      end loop;
+      return Protobuf.To_String (B);
+   end Serialize;
+
+   function Parse_Field_Mask (Data : String) return Field_Mask is
+      R      : Field_Mask;
+      Fields : constant Protobuf.Parsed_Field_Vectors.Vector :=
+        Protobuf.Parse_From_String (Data);
+   begin
+      for F of Fields loop
+         if F.Number = 1 then
+            R.Paths.Append (To_Unbounded_String (Protobuf.As_String (F)));
+         end if;
+      end loop;
+      return R;
+   end Parse_Field_Mask;
+
+   --  snake_case -> lowerCamelCase, leaving the '.' path separators alone.
+   function Snake_To_Camel (S : String) return String is
+      R  : Unbounded_String;
+      Up : Boolean := False;
+   begin
+      for C of S loop
+         if C = '_' then
+            Up := True;
+         elsif C = '.' then
+            Append (R, '.');
+            Up := False;
+         elsif Up then
+            Append (R, To_Upper (C));
+            Up := False;
+         else
+            Append (R, C);
+         end if;
+      end loop;
+      return To_String (R);
+   end Snake_To_Camel;
+
+   function Camel_To_Snake (S : String) return String is
+      R : Unbounded_String;
+   begin
+      for C of S loop
+         if C in 'A' .. 'Z' then
+            Append (R, '_');
+            Append (R, To_Lower (C));
+         else
+            Append (R, C);
+         end if;
+      end loop;
+      return To_String (R);
+   end Camel_To_Snake;
+
+   function To_JSON (X : Field_Mask) return JSON.JSON_Value is
+      R     : Unbounded_String;
+      First : Boolean := True;
+   begin
+      for P of X.Paths loop
+         if not First then
+            Append (R, ',');
+         end if;
+         First := False;
+         Append (R, Snake_To_Camel (To_String (P)));
+      end loop;
+      return JSON.To_Value (To_String (R));
+   end To_JSON;
+
+   function From_JSON (V : JSON.JSON_Value) return Field_Mask is
+      S     : constant String := JSON.As_String (V);
+      R     : Field_Mask;
+      Start : Natural := S'First;
+   begin
+      if S'Length = 0 then
+         return R;
+      end if;
+      for I in S'Range loop
+         if S (I) = ',' then
+            R.Paths.Append
+              (To_Unbounded_String (Camel_To_Snake (S (Start .. I - 1))));
+            Start := I + 1;
+         end if;
+      end loop;
+      R.Paths.Append (To_Unbounded_String (Camel_To_Snake (S (Start .. S'Last))));
+      return R;
+   end From_JSON;
+
 end Proto_WKT;

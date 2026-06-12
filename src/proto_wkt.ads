@@ -1,4 +1,5 @@
 with Interfaces;
+with Ada.Containers.Vectors;
 with Ada.Strings.Unbounded;
 with JSON;
 
@@ -104,6 +105,23 @@ package Proto_WKT is
    function Parse_Timestamp (Data : String) return Timestamp;
    function To_JSON (X : Timestamp) return JSON.JSON_Value;
    function From_JSON (V : JSON.JSON_Value) return Timestamp;
+
+   ---------------------------------------------------------------------------
+   --  FieldMask (repeated string paths=1). JSON is one comma-joined string of
+   --  the paths with each path's segments rendered in lowerCamelCase.
+   ---------------------------------------------------------------------------
+
+   use type U.Unbounded_String;
+   package Path_Vectors is new Ada.Containers.Vectors (Positive, U.Unbounded_String);
+
+   type Field_Mask is record
+      Paths : Path_Vectors.Vector;
+   end record;
+
+   function Serialize (X : Field_Mask) return String;
+   function Parse_Field_Mask (Data : String) return Field_Mask;
+   function To_JSON (X : Field_Mask) return JSON.JSON_Value;
+   function From_JSON (V : JSON.JSON_Value) return Field_Mask;
 
 end Proto_WKT;
 

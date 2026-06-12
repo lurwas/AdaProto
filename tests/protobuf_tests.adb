@@ -1538,6 +1538,41 @@ package body Protobuf_Tests is
       end;
    end Test_WKT_Wrappers;
 
+   --  Phase 3: FieldMask -- a comma-joined string of lowerCamelCase paths.
+   procedure Test_WKT_FieldMask is
+      use Ada.Strings.Unbounded;
+      Q : constant Character := '"';
+      M : Proto_WKT.Field_Mask;
+   begin
+      M.Paths.Append (To_Unbounded_String ("user.display_name"));
+      M.Paths.Append (To_Unbounded_String ("photo"));
+      Assert (JSON.As_String (Proto_WKT.To_JSON (M)) = "user.displayName,photo",
+              "FieldMask -> camelCase comma string");
+      declare
+         D : constant Proto_WKT.Field_Mask :=
+           Proto_WKT.From_JSON (JSON.Parse (Q & "user.displayName,photo" & Q));
+      begin
+         Assert (Natural (D.Paths.Length) = 2
+                 and then To_String (D.Paths (1)) = "user.display_name"
+                 and then To_String (D.Paths (2)) = "photo",
+                 "FieldMask from JSON -> snake_case paths");
+      end;
+      declare
+         D : constant Proto_WKT.Field_Mask :=
+           Proto_WKT.Parse_Field_Mask (Proto_WKT.Serialize (M));
+      begin
+         Assert (Natural (D.Paths.Length) = 2
+                 and then To_String (D.Paths (1)) = "user.display_name",
+                 "FieldMask binary round-trips");
+      end;
+      declare
+         Empty : Proto_WKT.Field_Mask;
+      begin
+         Assert (JSON.As_String (Proto_WKT.To_JSON (Empty)) = "",
+                 "empty FieldMask -> empty string");
+      end;
+   end Test_WKT_FieldMask;
+
    --  Phase 3: Duration and Timestamp well-known types and their string JSON.
    procedure Test_WKT_Duration_Timestamp is
       Q : constant Character := '"';
@@ -1980,6 +2015,7 @@ package body Protobuf_Tests is
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated utf8 validation", Test_Generated_UTF8_Validation'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("wkt wrappers and empty", Test_WKT_Wrappers'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("wkt duration and timestamp", Test_WKT_Duration_Timestamp'Access));
+         AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("wkt fieldmask", Test_WKT_FieldMask'Access));
       end if;
       return Registered_Suite;
    end Suite;
