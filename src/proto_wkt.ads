@@ -123,5 +123,31 @@ package Proto_WKT is
    function To_JSON (X : Field_Mask) return JSON.JSON_Value;
    function From_JSON (V : JSON.JSON_Value) return Field_Mask;
 
+   ---------------------------------------------------------------------------
+   --  Struct / Value / ListValue -- dynamic, recursive JSON-shaped values.
+   --  Backed by the JSON DOM directly (JSON conversion is pass-through); the
+   --  binary form is the google.protobuf.Value/Struct/ListValue wire encoding.
+   ---------------------------------------------------------------------------
+
+   type Value      is record Val : JSON.JSON_Value; end record;   --  any JSON
+   type Struct     is record Val : JSON.JSON_Value; end record;   --  a JSON object
+   type List_Value is record Val : JSON.JSON_Value; end record;   --  a JSON array
+
+   function Serialize (X : Value) return String;
+   function Serialize (X : Struct) return String;
+   function Serialize (X : List_Value) return String;
+
+   function Parse_Value (Data : String) return Value;
+   function Parse_Struct (Data : String) return Struct;
+   function Parse_List_Value (Data : String) return List_Value;
+
+   function To_JSON (X : Value) return JSON.JSON_Value;
+   function To_JSON (X : Struct) return JSON.JSON_Value;
+   function To_JSON (X : List_Value) return JSON.JSON_Value;
+
+   function From_JSON (V : JSON.JSON_Value) return Value;
+   function From_JSON (V : JSON.JSON_Value) return Struct;
+   function From_JSON (V : JSON.JSON_Value) return List_Value;
+
 end Proto_WKT;
 

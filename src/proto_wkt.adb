@@ -6,6 +6,8 @@ with Proto_JSON;
 
 package body Proto_WKT is
 
+   use type JSON.Value_Kind;
+
    --  Find the single wrapper field (number 1) in a parsed message, if present.
    generic
       type Result_Type is private;
@@ -576,5 +578,141 @@ package body Proto_WKT is
       R.Paths.Append (To_Unbounded_String (Camel_To_Snake (S (Start .. S'Last))));
       return R;
    end From_JSON;
+
+   ---------------------------------------------------------------------------
+   --  Struct / Value / ListValue binary <-> JSON DOM (recursive)
+   ---------------------------------------------------------------------------
+
+   function Encode_Value (J : JSON.JSON_Value) return String;
+   function Encode_Struct (J : JSON.JSON_Value) return String;
+   function Encode_List (J : JSON.JSON_Value) return String;
+   function Decode_Value (Data : String) return JSON.JSON_Value;
+   function Decode_Struct (Data : String) return JSON.JSON_Value;
+   function Decode_List (Data : String) return JSON.JSON_Value;
+
+   function Encode_Value (J : JSON.JSON_Value) return String is
+      B : Protobuf.Message_Buffer;
+   begin
+      case JSON.Kind (J) is
+         when JSON.JSON_Null =>
+            Protobuf.Add_Int32 (B, 1, 0);                 --  null_value
+         when JSON.JSON_Number =>
+            Protobuf.Add_Double
+              (B, 2, Proto_JSON.To_Double (JSON.As_Number (J)));
+         when JSON.JSON_String =>
+            Protobuf.Add_String (B, 3, JSON.As_String (J));
+         when JSON.JSON_Bool =>
+            Protobuf.Add_Bool (B, 4, JSON.As_Boolean (J));
+         when JSON.JSON_Object =>
+            Protobuf.Add_Message (B, 5, Encode_Struct (J));
+         when JSON.JSON_Array =>
+            Protobuf.Add_Message (B, 6, Encode_List (J));
+      end case;
+      return Protobuf.To_String (B);
+   end Encode_Value;
+
+   function Encode_Struct (J : JSON.JSON_Value) return String is
+      B : Protobuf.Message_Buffer;
+   begin
+      for I in 1 .. JSON.Length (J) loop
+         declare
+            Entry_B : Protobuf.Message_Buffer;
+         begin
+            Protobuf.Add_String (Entry_B, 1, JSON.Key (J, I));
+            Protobuf.Add_Message
+              (Entry_B, 2, Encode_Value (JSON.Get (J, JSON.Key (J, I))));
+            Protobuf.Add_Message (B, 1, Protobuf.To_String (Entry_B));
+         end;
+      end loop;
+      return Protobuf.To_String (B);
+   end Encode_Struct;
+
+   function Encode_List (J : JSON.JSON_Value) return String is
+      B : Protobuf.Message_Buffer;
+   begin
+      for I in 1 .. JSON.Length (J) loop
+         Protobuf.Add_Message (B, 1, Encode_Value (JSON.Element (J, I)));
+      end loop;
+      return Protobuf.To_String (B);
+   end Encode_List;
+
+   function Decode_Value (Data : String) return JSON.JSON_Value is
+      Fields : constant Protobuf.Parsed_Field_Vectors.Vector :=
+        Protobuf.Parse_From_String (Data);
+      R : JSON.JSON_Value := JSON.Null_Value;
+   begin
+      for F of Fields loop
+         case Natural (F.Number) is
+            when 1 => R := JSON.Null_Value;
+            when 2 => R := Proto_JSON.Double_To_JSON (Protobuf.As_Double (F));
+            when 3 => R := JSON.To_Value
+                             (Proto_JSON.Checked_UTF8 (Protobuf.As_String (F)));
+            when 4 => R := JSON.To_Value (Protobuf.As_Bool (F));
+            when 5 => R := Decode_Struct (Protobuf.As_Message_Bytes (F));
+            when 6 => R := Decode_List (Protobuf.As_Message_Bytes (F));
+            when others => null;
+         end case;
+      end loop;
+      return R;
+   end Decode_Value;
+
+   function Decode_Struct (Data : String) return JSON.JSON_Value is
+      Fields : constant Protobuf.Parsed_Field_Vectors.Vector :=
+        Protobuf.Parse_From_String (Data);
+      R : JSON.JSON_Value := JSON.Empty_Object;
+   begin
+      for F of Fields loop
+         if F.Number = 1 then
+            declare
+               Entry_Fields : constant Protobuf.Parsed_Field_Vectors.Vector :=
+                 Protobuf.Parse_From_String (Protobuf.As_Message_Bytes (F));
+               Key : Unbounded_String;
+               Val : JSON.JSON_Value := JSON.Null_Value;
+            begin
+               for EF of Entry_Fields loop
+                  if EF.Number = 1 then
+                     Key := To_Unbounded_String (Protobuf.As_String (EF));
+                  elsif EF.Number = 2 then
+                     Val := Decode_Value (Protobuf.As_Message_Bytes (EF));
+                  end if;
+               end loop;
+               JSON.Insert (R, To_String (Key), Val);
+            end;
+         end if;
+      end loop;
+      return R;
+   end Decode_Struct;
+
+   function Decode_List (Data : String) return JSON.JSON_Value is
+      Fields : constant Protobuf.Parsed_Field_Vectors.Vector :=
+        Protobuf.Parse_From_String (Data);
+      R : JSON.JSON_Value := JSON.Empty_Array;
+   begin
+      for F of Fields loop
+         if F.Number = 1 then
+            JSON.Append (R, Decode_Value (Protobuf.As_Message_Bytes (F)));
+         end if;
+      end loop;
+      return R;
+   end Decode_List;
+
+   function Serialize (X : Value) return String is (Encode_Value (X.Val));
+   function Serialize (X : Struct) return String is (Encode_Struct (X.Val));
+   function Serialize (X : List_Value) return String is (Encode_List (X.Val));
+
+   function Parse_Value (Data : String) return Value is
+     ((Val => Decode_Value (Data)));
+   function Parse_Struct (Data : String) return Struct is
+     ((Val => Decode_Struct (Data)));
+   function Parse_List_Value (Data : String) return List_Value is
+     ((Val => Decode_List (Data)));
+
+   function To_JSON (X : Value) return JSON.JSON_Value is (X.Val);
+   function To_JSON (X : Struct) return JSON.JSON_Value is (X.Val);
+   function To_JSON (X : List_Value) return JSON.JSON_Value is (X.Val);
+
+   function From_JSON (V : JSON.JSON_Value) return Value is ((Val => V));
+   function From_JSON (V : JSON.JSON_Value) return Struct is ((Val => V));
+   function From_JSON (V : JSON.JSON_Value) return List_Value is ((Val => V));
 
 end Proto_WKT;

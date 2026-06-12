@@ -1538,6 +1538,59 @@ package body Protobuf_Tests is
       end;
    end Test_WKT_Wrappers;
 
+   --  Phase 3: Struct / Value / ListValue -- dynamic, recursive JSON shapes.
+   --  Verified by value (Struct numbers are doubles, so a JSON integer survives
+   --  in value but not in text through a binary round-trip).
+   procedure Test_WKT_Struct_Value is
+      use type JSON.Value_Kind;
+      Q : constant Character := '"';
+      J : constant JSON.JSON_Value :=
+        JSON.Parse
+          ("{" & Q & "n" & Q & ":42," & Q & "s" & Q & ":" & Q & "hi" & Q & ","
+           & Q & "b" & Q & ":true," & Q & "z" & Q & ":null," & Q & "arr" & Q
+           & ":[1," & Q & "two" & Q & ",false,{" & Q & "k" & Q & ":9}]}");
+      S : constant Proto_WKT.Struct := (Val => J);
+   begin
+      --  JSON is pass-through.
+      Assert (JSON.Serialize (Proto_WKT.To_JSON (S)) = JSON.Serialize (J),
+              "Struct JSON is pass-through");
+
+      --  Binary round-trip preserves the recursive dynamic shape.
+      declare
+         D  : constant Proto_WKT.Struct :=
+           Proto_WKT.Parse_Struct (Proto_WKT.Serialize (S));
+         DJ : constant JSON.JSON_Value := Proto_WKT.To_JSON (D);
+         Arr : constant JSON.JSON_Value := JSON.Get (DJ, "arr");
+      begin
+         Assert (Long_Float'Value (JSON.As_Number (JSON.Get (DJ, "n"))) = 42.0,
+                 "Struct number value survives");
+         Assert (JSON.As_String (JSON.Get (DJ, "s")) = "hi", "Struct string");
+         Assert (JSON.As_Boolean (JSON.Get (DJ, "b")), "Struct bool");
+         Assert (JSON.Kind (JSON.Get (DJ, "z")) = JSON.JSON_Null, "Struct null");
+         Assert (JSON.Length (Arr) = 4, "nested ListValue length");
+         Assert (Long_Float'Value (JSON.As_Number (JSON.Element (Arr, 1))) = 1.0
+                 and then JSON.As_String (JSON.Element (Arr, 2)) = "two"
+                 and then not JSON.As_Boolean (JSON.Element (Arr, 3)),
+                 "nested array element values");
+         Assert (Long_Float'Value
+                   (JSON.As_Number (JSON.Get (JSON.Element (Arr, 4), "k"))) = 9.0,
+                 "deeply nested object inside the list");
+      end;
+
+      --  Scalar Value and a ListValue, on their own.
+      declare
+         V  : constant Proto_WKT.Value := (Val => JSON.Number ("3.5"));
+         DV : constant Proto_WKT.Value := Proto_WKT.Parse_Value (Proto_WKT.Serialize (V));
+         L  : constant Proto_WKT.List_Value := (Val => JSON.Parse ("[1,2,3]"));
+         DL : constant Proto_WKT.List_Value :=
+           Proto_WKT.Parse_List_Value (Proto_WKT.Serialize (L));
+      begin
+         Assert (Long_Float'Value (JSON.As_Number (Proto_WKT.To_JSON (DV))) = 3.5,
+                 "scalar Value round-trips");
+         Assert (JSON.Length (Proto_WKT.To_JSON (DL)) = 3, "ListValue round-trips");
+      end;
+   end Test_WKT_Struct_Value;
+
    --  Phase 3: FieldMask -- a comma-joined string of lowerCamelCase paths.
    procedure Test_WKT_FieldMask is
       use Ada.Strings.Unbounded;
@@ -2016,6 +2069,7 @@ package body Protobuf_Tests is
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("wkt wrappers and empty", Test_WKT_Wrappers'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("wkt duration and timestamp", Test_WKT_Duration_Timestamp'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("wkt fieldmask", Test_WKT_FieldMask'Access));
+         AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("wkt struct value listvalue", Test_WKT_Struct_Value'Access));
       end if;
       return Registered_Suite;
    end Suite;

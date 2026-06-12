@@ -21,8 +21,9 @@ A `.proto` -> Ada code generator is being built toward full proto3 + JSON
 conformance, in phases. Build it with `gprbuild -P protoc_ada.gpr`; regenerate
 the checked-in sources with `tools/generate_ada.sh`.
 
-**Phases 1a + 1b (current).** Generates a typed Ada record per message plus
-`Serialize`/`Parse_<Message>` over the wire runtime. Supported:
+**The generator** produces a typed Ada package per `.proto`, with a record
+per message plus binary `Serialize`/`Parse_<Message>` over the wire runtime.
+Supported:
 
 - `syntax = "proto3";`, `package`, `import`/`option` (ignored), top-level
   `message` and `enum`.
@@ -79,12 +80,15 @@ A runtime library of `google.protobuf.*` types with their binary wire
   parsing accepts a `Z` or a numeric offset).
 - `FieldMask` (repeated `paths`; JSON one comma-joined string of lowerCamelCase
   paths).
+- `Struct`/`Value`/`ListValue` -- dynamic, recursive JSON-shaped values backed
+  by the JSON DOM (JSON is pass-through; binary is the recursive Value wire
+  encoding). Note: `Struct` numbers are doubles, per proto3.
 
 ### Codegen roadmap (toward 100% proto3 + JSON)
 
-1. **3 (remaining)** `Struct`/`Value`/`ListValue` (dynamic) and `Any`
-   (type-URL registry), plus wiring all the well-known types into the generator
-   so a field of type `google.protobuf.X` resolves to `Proto_WKT.X`.
+1. **3 (remaining)** `Any` (type-URL registry), plus wiring all the well-known
+   types into the generator so a field of type `google.protobuf.X` resolves to
+   `Proto_WKT.X`.
 2. **4** wire up Google's official conformance-test-runner protocol and drive
    the proto3 + JSON conformance suite to a green (or explicitly-documented) run.
 
@@ -92,7 +96,7 @@ A runtime library of `google.protobuf.*` types with their binary wire
 
 - Groups (wire types 3/4): parser raises `Parse_Error` (a proto2-only feature
   removed from proto3, so rejecting them is correct).
-- JSON mapping, well-known types, reflection/descriptors, text format.
+- Reflection/descriptors, text format, and `Any` (the remaining WKT).
 - Proto2 field presence semantics and extensions.
 - `map`/`oneof` semantic helpers in generated code (maps are still parseable as
   nested message bytes via the runtime).
