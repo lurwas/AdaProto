@@ -859,6 +859,8 @@ package body Proto_Compiler is
                end loop;
                SL (Spec, "   function " & EName & "_To_JSON (V : " & EName
                          & ") return JSON.JSON_Value;");
+               SL (Spec, "   function " & EName & "_From_JSON (V : JSON.JSON_Value)"
+                         & " return " & EName & ";");
                SL (Spec, "");
             end;
          end loop;
@@ -1048,6 +1050,8 @@ package body Proto_Compiler is
                          & " (Data : String) return " & TName & ";");
                SL (Spec, "   function To_JSON (Message : " & TName
                          & ") return JSON.JSON_Value;");
+               SL (Spec, "   function From_JSON (V : JSON.JSON_Value) return "
+                         & TName & ";");
                SL (Spec, "");
             end;
          end loop;
@@ -1060,6 +1064,7 @@ package body Proto_Compiler is
          SL (Body_Text, "with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;");
          SL (Body_Text, "with Protobuf;");
          SL (Body_Text, "with JSON;");
+         SL (Body_Text, "use type JSON.Value_Kind;");
          SL (Body_Text, "with Proto_JSON;");
          if N_Msgs > 0 then
             SL (Body_Text, "with Ada.Unchecked_Deallocation;");
@@ -1123,6 +1128,25 @@ package body Proto_Compiler is
                               & "(Proto_JSON.Image (Interfaces.Integer_64 (V)));");
                SL (Body_Text, "      end case;");
                SL (Body_Text, "   end " & EName & "_To_JSON;");
+               SL (Body_Text, "   function " & EName & "_From_JSON (V : JSON.JSON_Value)"
+                              & " return " & EName & " is");
+               SL (Body_Text, "   begin");
+               SL (Body_Text, "      if JSON.Kind (V) = JSON.JSON_String then");
+               SL (Body_Text, "         declare");
+               SL (Body_Text, "            S : constant String := JSON.As_String (V);");
+               SL (Body_Text, "         begin");
+               for Val of E.Values loop
+                  SL (Body_Text, "            if S = " & Q & To_String (Val.Name) & Q
+                                 & " then return" & Val.Number'Image & "; end if;");
+               end loop;
+               SL (Body_Text, "            raise Proto_JSON.Decode_Error with " & Q
+                              & "unknown enum value name" & Q & ";");
+               SL (Body_Text, "         end;");
+               SL (Body_Text, "      else");
+               SL (Body_Text, "         return " & EName
+                              & " (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (V)));");
+               SL (Body_Text, "      end if;");
+               SL (Body_Text, "   end " & EName & "_From_JSON;");
                SL (Body_Text, "");
             end;
          end loop;
@@ -1567,6 +1591,153 @@ package body Proto_Compiler is
                   SL (Body_Text, "      end if;");
                end Emit_Map_JSON;
 
+               --  Expression decoding a JSON value FV into a field's Ada value
+               --  (message values are returned bare; callers wrap To_Holder).
+               function From_JSON_Expr (Proto, FV : String) return String is
+                  T : constant Type_Info := Resolve (Proto);
+                  S : constant String := To_String (T.Suffix);
+               begin
+                  if Is_Enum (Proto) then
+                     return Ada_Id (Proto) & "_From_JSON (" & FV & ")";
+                  end if;
+                  case T.Category is
+                     when Cat_Int =>
+                        if S = "Int32" or else S = "SInt32" or else S = "SFixed32"
+                        then
+                           return "Interfaces.Integer_32 (Proto_JSON.To_Int64 "
+                                  & "(Proto_JSON.Scalar_Text (" & FV & ")))";
+                        elsif S = "UInt32" or else S = "Fixed32" then
+                           return "Interfaces.Unsigned_32 (Proto_JSON.To_UInt64 "
+                                  & "(Proto_JSON.Scalar_Text (" & FV & ")))";
+                        elsif S = "UInt64" or else S = "Fixed64" then
+                           return "Proto_JSON.To_UInt64 (Proto_JSON.Scalar_Text ("
+                                  & FV & "))";
+                        else
+                           return "Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text ("
+                                  & FV & "))";
+                        end if;
+                     when Cat_Float =>
+                        return (if S = "Float" then "Proto_JSON.To_Float"
+                                else "Proto_JSON.To_Double")
+                               & " (Proto_JSON.Scalar_Text (" & FV & "))";
+                     when Cat_Bool =>
+                        return "JSON.As_Boolean (" & FV & ")";
+                     when Cat_Str =>
+                        if S = "Bytes" then
+                           return "To_Unbounded_String (Proto_JSON.From_Base64 "
+                                  & "(JSON.As_String (" & FV & ")))";
+                        else
+                           return "To_Unbounded_String (JSON.As_String (" & FV & "))";
+                        end if;
+                     when Cat_Message =>
+                        return Ada_Id (Proto) & "'(From_JSON (" & FV & "))";
+                  end case;
+               end From_JSON_Expr;
+
+               --  Wrap a message decode in To_Holder; pass other values through.
+               function Stored_From_JSON (Proto, FV : String) return String is
+               begin
+                  if Resolve (Proto).Category = Cat_Message then
+                     return "To_Holder (" & From_JSON_Expr (Proto, FV) & ")";
+                  else
+                     return From_JSON_Expr (Proto, FV);
+                  end if;
+               end Stored_From_JSON;
+
+               --  Emit "FV := the field's JSON value, trying camelCase then the
+               --  raw proto name" as a declare/begin opener.
+               procedure Emit_Lookup (F : Field_Def) is
+                  JN : constant String := Json_Name (To_String (F.Name));
+                  PN : constant String := To_String (F.Name);
+               begin
+                  SL (Body_Text, "      declare");
+                  SL (Body_Text, "         FV : JSON.JSON_Value := JSON.Get (V, "
+                                 & Q & JN & Q & ");");
+                  SL (Body_Text, "      begin");
+                  if JN /= PN then
+                     SL (Body_Text, "         if JSON.Kind (FV) = JSON.JSON_Null "
+                                    & "then FV := JSON.Get (V, " & Q & PN & Q
+                                    & "); end if;");
+                  end if;
+               end Emit_Lookup;
+
+               procedure Emit_From_JSON_Field (F : Field_Def) is
+                  T : constant Type_Info := Resolve (To_String (F.Proto_Type));
+                  C : constant String := Field_Ident (F);
+                  P : constant String := To_String (F.Proto_Type);
+               begin
+                  Emit_Lookup (F);
+                  if F.Repeated then
+                     SL (Body_Text, "         if JSON.Kind (FV) = JSON.JSON_Array then");
+                     SL (Body_Text, "            for I in 1 .. JSON.Length (FV) loop");
+                     SL (Body_Text, "               Result." & C & ".Append ("
+                                    & Stored_From_JSON (P, "JSON.Element (FV, I)")
+                                    & ");");
+                     SL (Body_Text, "            end loop;");
+                     SL (Body_Text, "         end if;");
+                  else
+                     SL (Body_Text, "         if JSON.Kind (FV) /= JSON.JSON_Null then");
+                     SL (Body_Text, "            Result." & C & " := "
+                                    & Stored_From_JSON (P, "FV") & ";");
+                     SL (Body_Text, "         end if;");
+                  end if;
+                  SL (Body_Text, "      end;");
+               end Emit_From_JSON_Field;
+
+               procedure Emit_Oneof_From_JSON (F : Field_Def) is
+                  P   : constant String := To_String (F.Proto_Type);
+                  ON  : constant String := To_String (F.Oneof);
+                  Mem : constant String := Oneof_Member_Ident (F);
+               begin
+                  Emit_Lookup (F);
+                  SL (Body_Text, "         if JSON.Kind (FV) /= JSON.JSON_Null then");
+                  SL (Body_Text, "            Result." & Ada_Id (ON) & " := (Which => "
+                                 & Lit_Mem (TName, ON, To_String (F.Name)) & ", " & Mem
+                                 & " => " & Stored_From_JSON (P, "FV") & ");");
+                  SL (Body_Text, "         end if;");
+                  SL (Body_Text, "      end;");
+               end Emit_Oneof_From_JSON;
+
+               procedure Emit_Map_From_JSON (F : Field_Def) is
+                  KT : constant Type_Info := Resolve (To_String (F.Map_Key));
+                  C  : constant String := Ada_Id (To_String (F.Name));
+                  KS : constant String := To_String (KT.Suffix);
+                  Key_Expr : constant String :=
+                    (case KT.Category is
+                        when Cat_Str  => "To_Unbounded_String (Kstr)",
+                        when Cat_Bool => "(Kstr = " & Q & "true" & Q & ")",
+                        when others   =>
+                          (if KS = "UInt32" then
+                              "Interfaces.Unsigned_32 (Proto_JSON.To_UInt64 (Kstr))"
+                           elsif KS = "Fixed32" then
+                              "Interfaces.Unsigned_32 (Proto_JSON.To_UInt64 (Kstr))"
+                           elsif KS = "UInt64" or else KS = "Fixed64" then
+                              "Proto_JSON.To_UInt64 (Kstr)"
+                           elsif KS = "Int64" or else KS = "SInt64"
+                             or else KS = "SFixed64" then
+                              "Proto_JSON.To_Int64 (Kstr)"
+                           else
+                              "Interfaces.Integer_32 (Proto_JSON.To_Int64 (Kstr))"));
+               begin
+                  Emit_Lookup (F);
+                  SL (Body_Text, "         if JSON.Kind (FV) = JSON.JSON_Object then");
+                  SL (Body_Text, "            for I in 1 .. JSON.Length (FV) loop");
+                  SL (Body_Text, "               declare");
+                  SL (Body_Text, "                  Kstr : constant String := "
+                                 & "JSON.Key (FV, I);");
+                  SL (Body_Text, "                  VV : constant JSON.JSON_Value := "
+                                 & "JSON.Get (FV, Kstr);");
+                  SL (Body_Text, "               begin");
+                  SL (Body_Text, "                  Result." & C & ".Include ("
+                                 & Key_Expr & ", "
+                                 & Stored_From_JSON (To_String (F.Map_Value), "VV")
+                                 & ");");
+                  SL (Body_Text, "               end;");
+                  SL (Body_Text, "            end loop;");
+                  SL (Body_Text, "         end if;");
+                  SL (Body_Text, "      end;");
+               end Emit_Map_From_JSON;
+
                Encoded_Oneofs : String_Vectors.Vector;
                JSON_Oneofs    : String_Vectors.Vector;
             begin
@@ -1628,6 +1799,25 @@ package body Proto_Compiler is
                end loop;
                SL (Body_Text, "      return Obj;");
                SL (Body_Text, "   end To_JSON;");
+               SL (Body_Text, "");
+
+               --  From_JSON: the inverse mapping. Missing/null fields keep their
+               --  default; field names match either camelCase or the proto name.
+               SL (Body_Text, "   function From_JSON (V : JSON.JSON_Value) return "
+                              & TName & " is");
+               SL (Body_Text, "      Result : " & TName & ";");
+               SL (Body_Text, "   begin");
+               for F of M.Fields loop
+                  if F.Is_Map then
+                     Emit_Map_From_JSON (F);
+                  elsif Length (F.Oneof) > 0 then
+                     Emit_Oneof_From_JSON (F);
+                  else
+                     Emit_From_JSON_Field (F);
+                  end if;
+               end loop;
+               SL (Body_Text, "      return Result;");
+               SL (Body_Text, "   end From_JSON;");
                SL (Body_Text, "");
             end;
          end loop;

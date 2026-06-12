@@ -1467,6 +1467,85 @@ package body Protobuf_Tests is
       end;
    end Test_Generated_To_JSON;
 
+   --  Phase 2: generated From_JSON (JSON -> message). Round-trips through JSON
+   --  and parses canonical JSON to check the inverse mapping rules.
+   procedure Test_Generated_From_JSON is
+      use Ada.Strings.Unbounded;
+      use type Sample.Choice_Pick_Selector;
+      Q : constant Character := '"';
+   begin
+      --  Full round-trip via JSON.
+      declare
+         P : Sample.Person;
+         D : Sample.Person;
+      begin
+         P.Id := 42;
+         P.Name := To_Unbounded_String ("alice");
+         P.Active := True;
+         P.Balance := 3.5;
+         P.Delta_F := -7;
+         P.Blob := To_Unbounded_String ("AB");
+         D := Sample.From_JSON (JSON.Parse (JSON.Serialize (Sample.To_JSON (P))));
+         Assert (D.Id = 42 and then To_String (D.Name) = "alice" and then D.Active
+                 and then D.Balance = 3.5 and then D.Delta_F = -7
+                 and then To_String (D.Blob) = "AB",
+                 "Person round-trips through JSON");
+      end;
+
+      --  Parse canonical JSON: ints accepted as strings, int64 string, base64.
+      declare
+         J : constant String :=
+           "{" & Q & "id" & Q & ":" & Q & "5" & Q & "," & Q & "delta" & Q & ":"
+           & Q & "-99" & Q & "," & Q & "blob" & Q & ":" & Q & "QUI=" & Q & ","
+           & Q & "active" & Q & ":true}";
+         D : constant Sample.Person := Sample.From_JSON (JSON.Parse (J));
+      begin
+         Assert (D.Id = 5, "int32 accepts a JSON string");
+         Assert (D.Delta_F = -99, "int64 from JSON string");
+         Assert (To_String (D.Blob) = "AB", "bytes from base64");
+         Assert (D.Active, "bool from JSON");
+      end;
+
+      --  Enum by name and by number; repeated arrays.
+      declare
+         J : constant String :=
+           "{" & Q & "color" & Q & ":" & Q & "GREEN" & Q & "," & Q & "numbers"
+           & Q & ":[1,2,3]," & Q & "palette" & Q & ":[" & Q & "RED" & Q & ",2]}";
+         D : constant Sample.Bag := Sample.From_JSON (JSON.Parse (J));
+      begin
+         Assert (D.Color_F = Sample.Color_GREEN, "enum from name");
+         Assert (Natural (D.Numbers.Length) = 3 and then D.Numbers (2) = 2,
+                 "repeated int from JSON array");
+         Assert (Natural (D.Palette.Length) = 2
+                 and then D.Palette (1) = Sample.Color_RED
+                 and then D.Palette (2) = Sample.Color_GREEN,
+                 "repeated enum accepts name and number");
+      end;
+
+      --  Nested message, oneof, and maps.
+      declare
+         O : constant Sample.Outer :=
+           Sample.From_JSON (JSON.Parse
+             ("{" & Q & "one" & Q & ":{" & Q & "x" & Q & ":5}," & Q & "note"
+              & Q & ":" & Q & "n" & Q & "}"));
+         C : constant Sample.Choice :=
+           Sample.From_JSON (JSON.Parse ("{" & Q & "count" & Q & ":7}"));
+         M : constant Sample.Maps :=
+           Sample.From_JSON (JSON.Parse
+             ("{" & Q & "counts" & Q & ":{" & Q & "a" & Q & ":1}," & Q & "items"
+              & Q & ":{" & Q & "5" & Q & ":{" & Q & "x" & Q & ":9}}}"));
+      begin
+         Assert (not O.One.Is_Empty and then O.One.Element.X = 5
+                 and then To_String (O.Note) = "n", "nested message from JSON");
+         Assert (C.Pick.Which = Sample.Choice_Pick_Count
+                 and then C.Pick.Count = 7, "oneof member from JSON");
+         Assert (M.Counts.Element (To_Unbounded_String ("a")) = 1,
+                 "map<string,int32> from JSON");
+         Assert (M.Items.Element (5).Element.X = 9,
+                 "map<int32,message> from JSON, key parsed from string");
+      end;
+   end Test_Generated_From_JSON;
+
    --  Phase 2: the JSON DOM library (writer + recursive-descent parser).
    procedure Test_JSON_Library is
       use type JSON.Value_Kind;
@@ -1730,6 +1809,7 @@ package body Protobuf_Tests is
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated recursive message", Test_Generated_Recursive'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("json library", Test_JSON_Library'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated to_json", Test_Generated_To_JSON'Access));
+         AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated from_json", Test_Generated_From_JSON'Access));
       end if;
       return Registered_Suite;
    end Suite;

@@ -1,8 +1,20 @@
 with Ada.Strings.Unbounded;  use Ada.Strings.Unbounded;
+with Ada.Unchecked_Conversion;
 
 package body Proto_JSON is
 
    use type Interfaces.IEEE_Float_64;
+   use type JSON.Value_Kind;
+
+   function Bits_To_Double is new Ada.Unchecked_Conversion
+     (Interfaces.Unsigned_64, Interfaces.IEEE_Float_64);
+
+   Pos_Inf : constant Interfaces.IEEE_Float_64 :=
+     Bits_To_Double (16#7FF0_0000_0000_0000#);
+   Neg_Inf : constant Interfaces.IEEE_Float_64 :=
+     Bits_To_Double (16#FFF0_0000_0000_0000#);
+   Nan_Val : constant Interfaces.IEEE_Float_64 :=
+     Bits_To_Double (16#7FF8_0000_0000_0000#);
 
    function Strip (S : String) return String is
      (if S'Length > 0 and then S (S'First) = ' '
@@ -105,5 +117,50 @@ package body Proto_JSON is
       end loop;
       return To_String (Buf);
    end From_Base64;
+
+   ---------------------------------------------------------------------------
+   --  Parsing helpers
+   ---------------------------------------------------------------------------
+
+   function Scalar_Text (V : JSON.JSON_Value) return String is
+   begin
+      case JSON.Kind (V) is
+         when JSON.JSON_Number => return JSON.As_Number (V);
+         when JSON.JSON_String => return JSON.As_String (V);
+         when others => raise Decode_Error with "expected a number or string";
+      end case;
+   end Scalar_Text;
+
+   function To_Int64 (Text : String) return Interfaces.Integer_64 is
+   begin
+      return Interfaces.Integer_64'Value (Text);
+   exception
+      when Constraint_Error =>
+         return Interfaces.Integer_64 (Long_Float'Value (Text));
+   end To_Int64;
+
+   function To_UInt64 (Text : String) return Interfaces.Unsigned_64 is
+   begin
+      return Interfaces.Unsigned_64'Value (Text);
+   exception
+      when Constraint_Error =>
+         return Interfaces.Unsigned_64 (Long_Float'Value (Text));
+   end To_UInt64;
+
+   function To_Double (Text : String) return Interfaces.IEEE_Float_64 is
+   begin
+      if Text = "NaN" then
+         return Nan_Val;
+      elsif Text = "Infinity" or else Text = "+Infinity" then
+         return Pos_Inf;
+      elsif Text = "-Infinity" then
+         return Neg_Inf;
+      else
+         return Interfaces.IEEE_Float_64 (Long_Float'Value (Text));
+      end if;
+   end To_Double;
+
+   function To_Float (Text : String) return Interfaces.IEEE_Float_32 is
+     (Interfaces.IEEE_Float_32 (To_Double (Text)));
 
 end Proto_JSON;

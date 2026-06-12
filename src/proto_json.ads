@@ -19,6 +19,14 @@ package Proto_JSON is
    function To_Base64 (S : String) return String;
    function From_Base64 (S : String) return String;
 
+   --  Parsing helpers for generated From_JSON code. The numeric text of a JSON
+   --  value (proto3 JSON accepts numbers either bare or quoted as strings).
+   function Scalar_Text (V : JSON.JSON_Value) return String;
+   function To_Int64 (Text : String) return Interfaces.Integer_64;
+   function To_UInt64 (Text : String) return Interfaces.Unsigned_64;
+   function To_Double (Text : String) return Interfaces.IEEE_Float_64;
+   function To_Float (Text : String) return Interfaces.IEEE_Float_32;
+
    Decode_Error : exception;
 
 end Proto_JSON;

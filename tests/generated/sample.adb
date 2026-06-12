@@ -3,6 +3,7 @@ with Interfaces; use Interfaces;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Protobuf;
 with JSON;
+use type JSON.Value_Kind;
 with Proto_JSON;
 with Ada.Unchecked_Deallocation;
 use type Protobuf.Wire_Type;
@@ -146,6 +147,22 @@ package body Sample is
          when others => return JSON.Number (Proto_JSON.Image (Interfaces.Integer_64 (V)));
       end case;
    end Color_To_JSON;
+   function Color_From_JSON (V : JSON.JSON_Value) return Color is
+   begin
+      if JSON.Kind (V) = JSON.JSON_String then
+         declare
+            S : constant String := JSON.As_String (V);
+         begin
+            if S = "COLOR_UNSPECIFIED" then return 0; end if;
+            if S = "RED" then return 1; end if;
+            if S = "GREEN" then return 2; end if;
+            if S = "BLUE" then return 3; end if;
+            raise Proto_JSON.Decode_Error with "unknown enum value name";
+         end;
+      else
+         return Color (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (V)));
+      end if;
+   end Color_From_JSON;
 
    function Serialize (Message : Person) return String is
       Buffer : Protobuf.Message_Buffer;
@@ -220,6 +237,54 @@ package body Sample is
       return Obj;
    end To_JSON;
 
+   function From_JSON (V : JSON.JSON_Value) return Person is
+      Result : Person;
+   begin
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "id");
+      begin
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.Id := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "name");
+      begin
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.Name := To_Unbounded_String (JSON.As_String (FV));
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "active");
+      begin
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.Active := JSON.As_Boolean (FV);
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "balance");
+      begin
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.Balance := Proto_JSON.To_Double (Proto_JSON.Scalar_Text (FV));
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "delta");
+      begin
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.Delta_F := Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV));
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "blob");
+      begin
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.Blob := To_Unbounded_String (Proto_JSON.From_Base64 (JSON.As_String (FV)));
+         end if;
+      end;
+      return Result;
+   end From_JSON;
+
    function Serialize (Message : Pair) return String is
       Buffer : Protobuf.Message_Buffer;
    begin
@@ -260,6 +325,26 @@ package body Sample is
       end if;
       return Obj;
    end To_JSON;
+
+   function From_JSON (V : JSON.JSON_Value) return Pair is
+      Result : Pair;
+   begin
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "first");
+      begin
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.First := Interfaces.Unsigned_32 (Proto_JSON.To_UInt64 (Proto_JSON.Scalar_Text (FV)));
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "second");
+      begin
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.Second := Interfaces.Unsigned_32 (Proto_JSON.To_UInt64 (Proto_JSON.Scalar_Text (FV)));
+         end if;
+      end;
+      return Result;
+   end From_JSON;
 
    function Serialize (Message : Bag) return String is
       Buffer : Protobuf.Message_Buffer;
@@ -369,6 +454,46 @@ package body Sample is
       return Obj;
    end To_JSON;
 
+   function From_JSON (V : JSON.JSON_Value) return Bag is
+      Result : Bag;
+   begin
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "numbers");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Array then
+            for I in 1 .. JSON.Length (FV) loop
+               Result.Numbers.Append (Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (JSON.Element (FV, I)))));
+            end loop;
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "tags");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Array then
+            for I in 1 .. JSON.Length (FV) loop
+               Result.Tags.Append (To_Unbounded_String (JSON.As_String (JSON.Element (FV, I))));
+            end loop;
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "color");
+      begin
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.Color_F := Color_From_JSON (FV);
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "palette");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Array then
+            for I in 1 .. JSON.Length (FV) loop
+               Result.Palette.Append (Color_From_JSON (JSON.Element (FV, I)));
+            end loop;
+         end if;
+      end;
+      return Result;
+   end From_JSON;
+
    function Serialize (Message : Outer) return String is
       Buffer : Protobuf.Message_Buffer;
    begin
@@ -425,6 +550,35 @@ package body Sample is
       return Obj;
    end To_JSON;
 
+   function From_JSON (V : JSON.JSON_Value) return Outer is
+      Result : Outer;
+   begin
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "one");
+      begin
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.One := To_Holder (Inner'(From_JSON (FV)));
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "many");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Array then
+            for I in 1 .. JSON.Length (FV) loop
+               Result.Many.Append (To_Holder (Inner'(From_JSON (JSON.Element (FV, I)))));
+            end loop;
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "note");
+      begin
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.Note := To_Unbounded_String (JSON.As_String (FV));
+         end if;
+      end;
+      return Result;
+   end From_JSON;
+
    function Serialize (Message : Inner) return String is
       Buffer : Protobuf.Message_Buffer;
    begin
@@ -465,6 +619,26 @@ package body Sample is
       end if;
       return Obj;
    end To_JSON;
+
+   function From_JSON (V : JSON.JSON_Value) return Inner is
+      Result : Inner;
+   begin
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "x");
+      begin
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.X := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "label");
+      begin
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.Label := To_Unbounded_String (JSON.As_String (FV));
+         end if;
+      end;
+      return Result;
+   end From_JSON;
 
    function Serialize (Message : Tree) return String is
       Buffer : Protobuf.Message_Buffer;
@@ -529,6 +703,42 @@ package body Sample is
       end if;
       return Obj;
    end To_JSON;
+
+   function From_JSON (V : JSON.JSON_Value) return Tree is
+      Result : Tree;
+   begin
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "value");
+      begin
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.Value := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "left");
+      begin
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.Left := To_Holder (Tree'(From_JSON (FV)));
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "right");
+      begin
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.Right := To_Holder (Tree'(From_JSON (FV)));
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "children");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Array then
+            for I in 1 .. JSON.Length (FV) loop
+               Result.Children.Append (To_Holder (Tree'(From_JSON (JSON.Element (FV, I)))));
+            end loop;
+         end if;
+      end;
+      return Result;
+   end From_JSON;
 
    function Serialize (Message : Maps) return String is
       Buffer : Protobuf.Message_Buffer;
@@ -635,6 +845,40 @@ package body Sample is
       return Obj;
    end To_JSON;
 
+   function From_JSON (V : JSON.JSON_Value) return Maps is
+      Result : Maps;
+   begin
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "counts");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Object then
+            for I in 1 .. JSON.Length (FV) loop
+               declare
+                  Kstr : constant String := JSON.Key (FV, I);
+                  VV : constant JSON.JSON_Value := JSON.Get (FV, Kstr);
+               begin
+                  Result.Counts.Include (To_Unbounded_String (Kstr), Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (VV))));
+               end;
+            end loop;
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "items");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Object then
+            for I in 1 .. JSON.Length (FV) loop
+               declare
+                  Kstr : constant String := JSON.Key (FV, I);
+                  VV : constant JSON.JSON_Value := JSON.Get (FV, Kstr);
+               begin
+                  Result.Items.Include (Interfaces.Integer_32 (Proto_JSON.To_Int64 (Kstr)), To_Holder (Inner'(From_JSON (VV))));
+               end;
+            end loop;
+         end if;
+      end;
+      return Result;
+   end From_JSON;
+
    function Serialize (Message : Choice) return String is
       Buffer : Protobuf.Message_Buffer;
    begin
@@ -696,6 +940,47 @@ package body Sample is
       end if;
       return Obj;
    end To_JSON;
+
+   function From_JSON (V : JSON.JSON_Value) return Choice is
+      Result : Choice;
+   begin
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "before");
+      begin
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.Before := To_Unbounded_String (JSON.As_String (FV));
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "count");
+      begin
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.Pick := (Which => Choice_Pick_Count, Count => Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV))));
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "text");
+      begin
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.Pick := (Which => Choice_Pick_Text, Text => To_Unbounded_String (JSON.As_String (FV)));
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "inner");
+      begin
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.Pick := (Which => Choice_Pick_Inner, Inner_F => To_Holder (Inner'(From_JSON (FV))));
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "after");
+      begin
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.After := JSON.As_Boolean (FV);
+         end if;
+      end;
+      return Result;
+   end From_JSON;
 
 end Sample;
 
