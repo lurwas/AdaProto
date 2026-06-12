@@ -3,7 +3,7 @@
 with Interfaces;
 with Ada.Strings.Unbounded;
 with Ada.Containers.Vectors;
-with Ada.Containers.Indefinite_Holders;
+with Ada.Finalization;
 with Ada.Containers.Ordered_Maps;
 package Sample is
 
@@ -13,16 +13,110 @@ package Sample is
    Color_GREEN : constant Color := 2;
    Color_BLUE : constant Color := 3;
 
+   type Person;
+   type Person_Access is access Person;
+   type Person_Holder is new Ada.Finalization.Controlled with record
+      Ptr : Person_Access := null;
+   end record;
+   overriding procedure Adjust (H : in out Person_Holder);
+   overriding procedure Finalize (H : in out Person_Holder);
+   function To_Holder (Value : Person) return Person_Holder;
+   function Element (H : Person_Holder) return Person;
+   function Is_Empty (H : Person_Holder) return Boolean;
+
+   type Pair;
+   type Pair_Access is access Pair;
+   type Pair_Holder is new Ada.Finalization.Controlled with record
+      Ptr : Pair_Access := null;
+   end record;
+   overriding procedure Adjust (H : in out Pair_Holder);
+   overriding procedure Finalize (H : in out Pair_Holder);
+   function To_Holder (Value : Pair) return Pair_Holder;
+   function Element (H : Pair_Holder) return Pair;
+   function Is_Empty (H : Pair_Holder) return Boolean;
+
+   type Bag;
+   type Bag_Access is access Bag;
+   type Bag_Holder is new Ada.Finalization.Controlled with record
+      Ptr : Bag_Access := null;
+   end record;
+   overriding procedure Adjust (H : in out Bag_Holder);
+   overriding procedure Finalize (H : in out Bag_Holder);
+   function To_Holder (Value : Bag) return Bag_Holder;
+   function Element (H : Bag_Holder) return Bag;
+   function Is_Empty (H : Bag_Holder) return Boolean;
+
+   type Outer;
+   type Outer_Access is access Outer;
+   type Outer_Holder is new Ada.Finalization.Controlled with record
+      Ptr : Outer_Access := null;
+   end record;
+   overriding procedure Adjust (H : in out Outer_Holder);
+   overriding procedure Finalize (H : in out Outer_Holder);
+   function To_Holder (Value : Outer) return Outer_Holder;
+   function Element (H : Outer_Holder) return Outer;
+   function Is_Empty (H : Outer_Holder) return Boolean;
+
+   type Inner;
+   type Inner_Access is access Inner;
+   type Inner_Holder is new Ada.Finalization.Controlled with record
+      Ptr : Inner_Access := null;
+   end record;
+   overriding procedure Adjust (H : in out Inner_Holder);
+   overriding procedure Finalize (H : in out Inner_Holder);
+   function To_Holder (Value : Inner) return Inner_Holder;
+   function Element (H : Inner_Holder) return Inner;
+   function Is_Empty (H : Inner_Holder) return Boolean;
+
+   type Tree;
+   type Tree_Access is access Tree;
+   type Tree_Holder is new Ada.Finalization.Controlled with record
+      Ptr : Tree_Access := null;
+   end record;
+   overriding procedure Adjust (H : in out Tree_Holder);
+   overriding procedure Finalize (H : in out Tree_Holder);
+   function To_Holder (Value : Tree) return Tree_Holder;
+   function Element (H : Tree_Holder) return Tree;
+   function Is_Empty (H : Tree_Holder) return Boolean;
+
+   type Maps;
+   type Maps_Access is access Maps;
+   type Maps_Holder is new Ada.Finalization.Controlled with record
+      Ptr : Maps_Access := null;
+   end record;
+   overriding procedure Adjust (H : in out Maps_Holder);
+   overriding procedure Finalize (H : in out Maps_Holder);
+   function To_Holder (Value : Maps) return Maps_Holder;
+   function Element (H : Maps_Holder) return Maps;
+   function Is_Empty (H : Maps_Holder) return Boolean;
+
+   type Choice;
+   type Choice_Access is access Choice;
+   type Choice_Holder is new Ada.Finalization.Controlled with record
+      Ptr : Choice_Access := null;
+   end record;
+   overriding procedure Adjust (H : in out Choice_Holder);
+   overriding procedure Finalize (H : in out Choice_Holder);
+   function To_Holder (Value : Choice) return Choice_Holder;
+   function Element (H : Choice_Holder) return Choice;
+   function Is_Empty (H : Choice_Holder) return Boolean;
+
    use type Interfaces.Integer_32;
    use type Ada.Strings.Unbounded.Unbounded_String;
    use type Color;
    package Integer_32_Vectors is new Ada.Containers.Vectors (Positive, Interfaces.Integer_32);
    package Unbounded_String_Vectors is new Ada.Containers.Vectors (Positive, Ada.Strings.Unbounded.Unbounded_String);
    package Color_Vectors is new Ada.Containers.Vectors (Positive, Color);
-
+   use type Inner_Holder;
+   package Inner_Vectors is new Ada.Containers.Vectors (Positive, Inner_Holder);
+   use type Tree_Holder;
+   package Tree_Vectors is new Ada.Containers.Vectors (Positive, Tree_Holder);
    use type Ada.Strings.Unbounded.Unbounded_String;
    use type Interfaces.Integer_32;
    package Unbounded_String_Integer_32_Maps is new Ada.Containers.Ordered_Maps (Ada.Strings.Unbounded.Unbounded_String, Interfaces.Integer_32);
+   use type Interfaces.Integer_32;
+   use type Inner_Holder;
+   package Integer_32_Inner_Maps is new Ada.Containers.Ordered_Maps (Interfaces.Integer_32, Inner_Holder);
 
    type Person is record
       Id : Interfaces.Integer_32 := 0;
@@ -33,16 +127,10 @@ package Sample is
       Blob : Ada.Strings.Unbounded.Unbounded_String := Ada.Strings.Unbounded.Null_Unbounded_String;
    end record;
 
-   function Serialize (Message : Person) return String;
-   function Parse_Person (Data : String) return Person;
-
    type Pair is record
       First : Interfaces.Unsigned_32 := 0;
       Second : Interfaces.Unsigned_32 := 0;
    end record;
-
-   function Serialize (Message : Pair) return String;
-   function Parse_Pair (Data : String) return Pair;
 
    type Bag is record
       Numbers : Integer_32_Vectors.Vector;
@@ -51,39 +139,28 @@ package Sample is
       Palette : Color_Vectors.Vector;
    end record;
 
-   function Serialize (Message : Bag) return String;
-   function Parse_Bag (Data : String) return Bag;
+   type Outer is record
+      One : Inner_Holder;
+      Many : Inner_Vectors.Vector;
+      Note : Ada.Strings.Unbounded.Unbounded_String := Ada.Strings.Unbounded.Null_Unbounded_String;
+   end record;
 
    type Inner is record
       X : Interfaces.Integer_32 := 0;
       Label : Ada.Strings.Unbounded.Unbounded_String := Ada.Strings.Unbounded.Null_Unbounded_String;
    end record;
-   use type Inner;
-   package Inner_Holders is new Ada.Containers.Indefinite_Holders (Inner);
-   package Inner_Vectors is new Ada.Containers.Vectors (Positive, Inner);
-   use type Interfaces.Integer_32;
-   use type Inner;
-   package Integer_32_Inner_Maps is new Ada.Containers.Ordered_Maps (Interfaces.Integer_32, Inner);
 
-   function Serialize (Message : Inner) return String;
-   function Parse_Inner (Data : String) return Inner;
-
-   type Outer is record
-      One : Inner_Holders.Holder;
-      Many : Inner_Vectors.Vector;
-      Note : Ada.Strings.Unbounded.Unbounded_String := Ada.Strings.Unbounded.Null_Unbounded_String;
+   type Tree is record
+      Value : Interfaces.Integer_32 := 0;
+      Left : Tree_Holder;
+      Right : Tree_Holder;
+      Children : Tree_Vectors.Vector;
    end record;
-
-   function Serialize (Message : Outer) return String;
-   function Parse_Outer (Data : String) return Outer;
 
    type Maps is record
       Counts : Unbounded_String_Integer_32_Maps.Map;
       Items : Integer_32_Inner_Maps.Map;
    end record;
-
-   function Serialize (Message : Maps) return String;
-   function Parse_Maps (Data : String) return Maps;
 
    type Choice_Pick_Selector is
      (Choice_Pick_Not_Set, Choice_Pick_Count, Choice_Pick_Text, Choice_Pick_Inner);
@@ -92,7 +169,7 @@ package Sample is
          when Choice_Pick_Not_Set => null;
          when Choice_Pick_Count => Count : Interfaces.Integer_32;
          when Choice_Pick_Text => Text : Ada.Strings.Unbounded.Unbounded_String;
-         when Choice_Pick_Inner => Inner_F : Inner;
+         when Choice_Pick_Inner => Inner_F : Inner_Holder;
       end case;
    end record;
    type Choice is record
@@ -100,6 +177,27 @@ package Sample is
       Pick : Choice_Pick_Oneof;
       After : Boolean := False;
    end record;
+
+   function Serialize (Message : Person) return String;
+   function Parse_Person (Data : String) return Person;
+
+   function Serialize (Message : Pair) return String;
+   function Parse_Pair (Data : String) return Pair;
+
+   function Serialize (Message : Bag) return String;
+   function Parse_Bag (Data : String) return Bag;
+
+   function Serialize (Message : Outer) return String;
+   function Parse_Outer (Data : String) return Outer;
+
+   function Serialize (Message : Inner) return String;
+   function Parse_Inner (Data : String) return Inner;
+
+   function Serialize (Message : Tree) return String;
+   function Parse_Tree (Data : String) return Tree;
+
+   function Serialize (Message : Maps) return String;
+   function Parse_Maps (Data : String) return Maps;
 
    function Serialize (Message : Choice) return String;
    function Parse_Choice (Data : String) return Choice;

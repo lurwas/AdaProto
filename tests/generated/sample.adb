@@ -2,8 +2,137 @@
 with Interfaces; use Interfaces;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Protobuf;
+with Ada.Unchecked_Deallocation;
 use type Protobuf.Wire_Type;
 package body Sample is
+
+   procedure Free_Person is new Ada.Unchecked_Deallocation (Person, Person_Access);
+   overriding procedure Adjust (H : in out Person_Holder) is
+   begin
+      if H.Ptr /= null then H.Ptr := new Person'(H.Ptr.all); end if;
+   end Adjust;
+   overriding procedure Finalize (H : in out Person_Holder) is
+   begin
+      Free_Person (H.Ptr);
+   end Finalize;
+   function To_Holder (Value : Person) return Person_Holder is
+   begin
+      return H : Person_Holder do H.Ptr := new Person'(Value); end return;
+   end To_Holder;
+   function Element (H : Person_Holder) return Person is (H.Ptr.all);
+   function Is_Empty (H : Person_Holder) return Boolean is (H.Ptr = null);
+
+   procedure Free_Pair is new Ada.Unchecked_Deallocation (Pair, Pair_Access);
+   overriding procedure Adjust (H : in out Pair_Holder) is
+   begin
+      if H.Ptr /= null then H.Ptr := new Pair'(H.Ptr.all); end if;
+   end Adjust;
+   overriding procedure Finalize (H : in out Pair_Holder) is
+   begin
+      Free_Pair (H.Ptr);
+   end Finalize;
+   function To_Holder (Value : Pair) return Pair_Holder is
+   begin
+      return H : Pair_Holder do H.Ptr := new Pair'(Value); end return;
+   end To_Holder;
+   function Element (H : Pair_Holder) return Pair is (H.Ptr.all);
+   function Is_Empty (H : Pair_Holder) return Boolean is (H.Ptr = null);
+
+   procedure Free_Bag is new Ada.Unchecked_Deallocation (Bag, Bag_Access);
+   overriding procedure Adjust (H : in out Bag_Holder) is
+   begin
+      if H.Ptr /= null then H.Ptr := new Bag'(H.Ptr.all); end if;
+   end Adjust;
+   overriding procedure Finalize (H : in out Bag_Holder) is
+   begin
+      Free_Bag (H.Ptr);
+   end Finalize;
+   function To_Holder (Value : Bag) return Bag_Holder is
+   begin
+      return H : Bag_Holder do H.Ptr := new Bag'(Value); end return;
+   end To_Holder;
+   function Element (H : Bag_Holder) return Bag is (H.Ptr.all);
+   function Is_Empty (H : Bag_Holder) return Boolean is (H.Ptr = null);
+
+   procedure Free_Outer is new Ada.Unchecked_Deallocation (Outer, Outer_Access);
+   overriding procedure Adjust (H : in out Outer_Holder) is
+   begin
+      if H.Ptr /= null then H.Ptr := new Outer'(H.Ptr.all); end if;
+   end Adjust;
+   overriding procedure Finalize (H : in out Outer_Holder) is
+   begin
+      Free_Outer (H.Ptr);
+   end Finalize;
+   function To_Holder (Value : Outer) return Outer_Holder is
+   begin
+      return H : Outer_Holder do H.Ptr := new Outer'(Value); end return;
+   end To_Holder;
+   function Element (H : Outer_Holder) return Outer is (H.Ptr.all);
+   function Is_Empty (H : Outer_Holder) return Boolean is (H.Ptr = null);
+
+   procedure Free_Inner is new Ada.Unchecked_Deallocation (Inner, Inner_Access);
+   overriding procedure Adjust (H : in out Inner_Holder) is
+   begin
+      if H.Ptr /= null then H.Ptr := new Inner'(H.Ptr.all); end if;
+   end Adjust;
+   overriding procedure Finalize (H : in out Inner_Holder) is
+   begin
+      Free_Inner (H.Ptr);
+   end Finalize;
+   function To_Holder (Value : Inner) return Inner_Holder is
+   begin
+      return H : Inner_Holder do H.Ptr := new Inner'(Value); end return;
+   end To_Holder;
+   function Element (H : Inner_Holder) return Inner is (H.Ptr.all);
+   function Is_Empty (H : Inner_Holder) return Boolean is (H.Ptr = null);
+
+   procedure Free_Tree is new Ada.Unchecked_Deallocation (Tree, Tree_Access);
+   overriding procedure Adjust (H : in out Tree_Holder) is
+   begin
+      if H.Ptr /= null then H.Ptr := new Tree'(H.Ptr.all); end if;
+   end Adjust;
+   overriding procedure Finalize (H : in out Tree_Holder) is
+   begin
+      Free_Tree (H.Ptr);
+   end Finalize;
+   function To_Holder (Value : Tree) return Tree_Holder is
+   begin
+      return H : Tree_Holder do H.Ptr := new Tree'(Value); end return;
+   end To_Holder;
+   function Element (H : Tree_Holder) return Tree is (H.Ptr.all);
+   function Is_Empty (H : Tree_Holder) return Boolean is (H.Ptr = null);
+
+   procedure Free_Maps is new Ada.Unchecked_Deallocation (Maps, Maps_Access);
+   overriding procedure Adjust (H : in out Maps_Holder) is
+   begin
+      if H.Ptr /= null then H.Ptr := new Maps'(H.Ptr.all); end if;
+   end Adjust;
+   overriding procedure Finalize (H : in out Maps_Holder) is
+   begin
+      Free_Maps (H.Ptr);
+   end Finalize;
+   function To_Holder (Value : Maps) return Maps_Holder is
+   begin
+      return H : Maps_Holder do H.Ptr := new Maps'(Value); end return;
+   end To_Holder;
+   function Element (H : Maps_Holder) return Maps is (H.Ptr.all);
+   function Is_Empty (H : Maps_Holder) return Boolean is (H.Ptr = null);
+
+   procedure Free_Choice is new Ada.Unchecked_Deallocation (Choice, Choice_Access);
+   overriding procedure Adjust (H : in out Choice_Holder) is
+   begin
+      if H.Ptr /= null then H.Ptr := new Choice'(H.Ptr.all); end if;
+   end Adjust;
+   overriding procedure Finalize (H : in out Choice_Holder) is
+   begin
+      Free_Choice (H.Ptr);
+   end Finalize;
+   function To_Holder (Value : Choice) return Choice_Holder is
+   begin
+      return H : Choice_Holder do H.Ptr := new Choice'(Value); end return;
+   end To_Holder;
+   function Element (H : Choice_Holder) return Choice is (H.Ptr.all);
+   function Is_Empty (H : Choice_Holder) return Boolean is (H.Ptr = null);
 
    function Serialize (Message : Person) return String is
       Buffer : Protobuf.Message_Buffer;
@@ -152,6 +281,40 @@ package body Sample is
       return Result;
    end Parse_Bag;
 
+   function Serialize (Message : Outer) return String is
+      Buffer : Protobuf.Message_Buffer;
+   begin
+      if not Message.One.Is_Empty then
+         Protobuf.Add_Message (Buffer, 1, Serialize (Message.One.Element));
+      end if;
+      for I in Message.Many.First_Index .. Message.Many.Last_Index loop
+         Protobuf.Add_Message (Buffer, 2, Serialize (Element (Message.Many (I))));
+      end loop;
+      if Length (Message.Note) > 0 then
+         Protobuf.Add_String (Buffer, 3, To_String (Message.Note));
+      end if;
+      return Protobuf.To_String (Buffer);
+   end Serialize;
+
+   function Parse_Outer (Data : String) return Outer is
+      Result : Outer;
+      Fields : constant Protobuf.Parsed_Field_Vectors.Vector :=
+        Protobuf.Parse_From_String (Data);
+   begin
+      for Item of Fields loop
+         case Item.Number is
+            when 1 =>
+               Result.One := To_Holder (Parse_Inner (Protobuf.As_Message_Bytes (Item)));
+            when 2 =>
+               Result.Many.Append (To_Holder (Parse_Inner (Protobuf.As_Message_Bytes (Item))));
+            when 3 =>
+               Result.Note := To_Unbounded_String (Protobuf.As_String (Item));
+            when others => null;
+         end case;
+      end loop;
+      return Result;
+   end Parse_Outer;
+
    function Serialize (Message : Inner) return String is
       Buffer : Protobuf.Message_Buffer;
    begin
@@ -181,39 +344,44 @@ package body Sample is
       return Result;
    end Parse_Inner;
 
-   function Serialize (Message : Outer) return String is
+   function Serialize (Message : Tree) return String is
       Buffer : Protobuf.Message_Buffer;
    begin
-      if not Message.One.Is_Empty then
-         Protobuf.Add_Message (Buffer, 1, Serialize (Message.One.Element));
+      if Message.Value /= 0 then
+         Protobuf.Add_Int32 (Buffer, 1, Message.Value);
       end if;
-      for I in Message.Many.First_Index .. Message.Many.Last_Index loop
-         Protobuf.Add_Message (Buffer, 2, Serialize (Message.Many (I)));
+      if not Message.Left.Is_Empty then
+         Protobuf.Add_Message (Buffer, 2, Serialize (Message.Left.Element));
+      end if;
+      if not Message.Right.Is_Empty then
+         Protobuf.Add_Message (Buffer, 3, Serialize (Message.Right.Element));
+      end if;
+      for I in Message.Children.First_Index .. Message.Children.Last_Index loop
+         Protobuf.Add_Message (Buffer, 4, Serialize (Element (Message.Children (I))));
       end loop;
-      if Length (Message.Note) > 0 then
-         Protobuf.Add_String (Buffer, 3, To_String (Message.Note));
-      end if;
       return Protobuf.To_String (Buffer);
    end Serialize;
 
-   function Parse_Outer (Data : String) return Outer is
-      Result : Outer;
+   function Parse_Tree (Data : String) return Tree is
+      Result : Tree;
       Fields : constant Protobuf.Parsed_Field_Vectors.Vector :=
         Protobuf.Parse_From_String (Data);
    begin
       for Item of Fields loop
          case Item.Number is
             when 1 =>
-               Result.One := Inner_Holders.To_Holder (Parse_Inner (Protobuf.As_Message_Bytes (Item)));
+               Result.Value := Protobuf.As_Int32 (Item);
             when 2 =>
-               Result.Many.Append (Parse_Inner (Protobuf.As_Message_Bytes (Item)));
+               Result.Left := To_Holder (Parse_Tree (Protobuf.As_Message_Bytes (Item)));
             when 3 =>
-               Result.Note := To_Unbounded_String (Protobuf.As_String (Item));
+               Result.Right := To_Holder (Parse_Tree (Protobuf.As_Message_Bytes (Item)));
+            when 4 =>
+               Result.Children.Append (To_Holder (Parse_Tree (Protobuf.As_Message_Bytes (Item))));
             when others => null;
          end case;
       end loop;
       return Result;
-   end Parse_Outer;
+   end Parse_Tree;
 
    function Serialize (Message : Maps) return String is
       Buffer : Protobuf.Message_Buffer;
@@ -237,12 +405,12 @@ package body Sample is
          declare
             Entry_Buf : Protobuf.Message_Buffer;
             K : constant Interfaces.Integer_32 := Integer_32_Inner_Maps.Key (Cur);
-            V : constant Inner := Integer_32_Inner_Maps.Element (Cur);
+            V : constant Inner_Holder := Integer_32_Inner_Maps.Element (Cur);
          begin
             if K /= 0 then
                Protobuf.Add_Int32 (Entry_Buf, 1, K);
             end if;
-            Protobuf.Add_Message (Entry_Buf, 2, Serialize (V));
+            Protobuf.Add_Message (Entry_Buf, 2, Serialize (V.Element));
             Protobuf.Add_Message (Buffer, 2, Protobuf.To_String (Entry_Buf));
          end;
       end loop;
@@ -277,12 +445,12 @@ package body Sample is
                   Ent : constant Protobuf.Parsed_Field_Vectors.Vector :=
                     Protobuf.Parse_From_String (Protobuf.As_Message_Bytes (Item));
                   K : Interfaces.Integer_32 := 0;
-                  V : Inner;
+                  V : Inner_Holder;
                begin
                   for E of Ent loop
                      case E.Number is
                         when 1 => K := Protobuf.As_Int32 (E);
-                        when 2 => V := Parse_Inner (Protobuf.As_Message_Bytes (E));
+                        when 2 => V := To_Holder (Parse_Inner (Protobuf.As_Message_Bytes (E)));
                         when others => null;
                      end case;
                   end loop;
@@ -307,7 +475,7 @@ package body Sample is
          when Choice_Pick_Text =>
             Protobuf.Add_String (Buffer, 3, To_String (Message.Pick.Text));
          when Choice_Pick_Inner =>
-            Protobuf.Add_Message (Buffer, 4, Serialize (Message.Pick.Inner_F));
+            Protobuf.Add_Message (Buffer, 4, Serialize (Message.Pick.Inner_F.Element));
       end case;
       if Message.After then
          Protobuf.Add_Bool (Buffer, 5, Message.After);
@@ -329,7 +497,7 @@ package body Sample is
             when 3 =>
                Result.Pick := (Which => Choice_Pick_Text, Text => To_Unbounded_String (Protobuf.As_String (Item)));
             when 4 =>
-               Result.Pick := (Which => Choice_Pick_Inner, Inner_F => Parse_Inner (Protobuf.As_Message_Bytes (Item)));
+               Result.Pick := (Which => Choice_Pick_Inner, Inner_F => To_Holder (Parse_Inner (Protobuf.As_Message_Bytes (Item))));
             when 5 =>
                Result.After := Protobuf.As_Bool (Item);
             when others => null;

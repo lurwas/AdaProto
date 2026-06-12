@@ -46,6 +46,14 @@ message Inner {
   string label = 2;
 }
 
+// Phase 1c: a recursive message (self-referential, singular + repeated).
+message Tree {
+  int32         value    = 1;
+  Tree          left     = 2;
+  Tree          right    = 3;
+  repeated Tree children = 4;
+}
+
 // Phase 1c: maps with a scalar value and with a message value.
 message Maps {
   map<string, int32> counts = 1;

@@ -31,9 +31,11 @@ the checked-in sources with `tools/generate_ada.sh`.
 - `enum` fields (open enums: int32-valued subtype + named constants).
 - `repeated` scalar/enum fields (packed encode; both packed and unpacked
   decode accepted) and `repeated string`/`bytes`.
-- Nested (non-recursive) `message` fields: singular fields use
-  `Indefinite_Holders` for presence, repeated use `Vectors`. Generated types
-  are topologically ordered so a field's type is always declared first.
+- `message` fields, including recursive and mutually-recursive ones. Each
+  message gets a generated memory-safe controlled holder (an access type
+  wrapped in a `Controlled` record that deep-copies on assignment and frees on
+  finalize); singular fields use the holder for presence, repeated use vectors
+  of holders. Forward declarations let types reference one another in any order.
 - `oneof` -> a discriminated (variant) record; a set member is always written
   (even at its default value) and last-seen wins on decode.
 - `map<K,V>` -> `Ordered_Maps`; encoded as repeated key(1)/value(2) entry
@@ -42,18 +44,15 @@ the checked-in sources with `tools/generate_ada.sh`.
 - Ada reserved-word field names are escaped (e.g. `delta` -> `Delta_F`), and
   field names that collide with their own type (`color : Color`) are escaped.
 
-Unsupported constructs raise a clear `Compile_Error` with line number.
-Recursive/mutually-recursive messages are detected and rejected: pure
-`Indefinite_Holders` cannot break the cycle (instantiation needs a complete
-type), so that case needs access types -- a planned follow-up.
+Unsupported constructs (nested type definitions, `optional`) raise a clear
+`Compile_Error` with line number.
 
 ### Codegen roadmap (toward 100% proto3 + JSON)
 
-1. **1c (remaining)** recursive/mutually-recursive messages via access types.
-3. **2** proto3 canonical JSON mapping (parse + serialize).
-4. **3** well-known types (`Any`, `Timestamp`, `Duration`, `Struct`, wrappers,
+1. **2** proto3 canonical JSON mapping (parse + serialize).
+2. **3** well-known types (`Any`, `Timestamp`, `Duration`, `Struct`, wrappers,
    `FieldMask`, `Empty`), UTF-8 validation of `string` fields.
-5. **4** wire up Google's official conformance-test-runner protocol and drive
+3. **4** wire up Google's official conformance-test-runner protocol and drive
    the proto3 + JSON conformance suite to a green (or explicitly-documented) run.
 
 ## Explicitly not implemented (yet)

@@ -1197,9 +1197,9 @@ package body Protobuf_Tests is
       I1.Label := To_Unbounded_String ("hi");
       I2.X := 9;
       I2.Label := To_Unbounded_String ("yo");
-      O.One := Sample.Inner_Holders.To_Holder (I1);
-      O.Many.Append (I2);
-      O.Many.Append (I1);
+      O.One := Sample.To_Holder (I1);
+      O.Many.Append (Sample.To_Holder (I2));
+      O.Many.Append (Sample.To_Holder (I1));
       O.Note := To_Unbounded_String ("note");
 
       --  Wire compatibility: a singular message is one length-delimited field;
@@ -1220,7 +1220,8 @@ package body Protobuf_Tests is
                  and then To_String (D.One.Element.Label) = "hi",
                  "singular nested message round-trips");
          Assert (Natural (D.Many.Length) = 2, "repeated message count");
-         Assert (D.Many (1).X = 9 and then D.Many (2).X = 5,
+         Assert (Sample.Element (D.Many (1)).X = 9
+                 and then Sample.Element (D.Many (2)).X = 5,
                  "repeated nested messages round-trip in order");
          Assert (To_String (D.Note) = "note",
                  "scalar field after message fields round-trips");
@@ -1291,13 +1292,14 @@ package body Protobuf_Tests is
       begin
          I.X := 3;
          I.Label := To_Unbounded_String ("z");
-         C.Pick := (Which => Sample.Choice_Pick_Inner, Inner_F => I);
+         C.Pick := (Which => Sample.Choice_Pick_Inner,
+                    Inner_F => Sample.To_Holder (I));
          declare
             D : constant Sample.Choice := Sample.Parse_Choice (Sample.Serialize (C));
          begin
             Assert (D.Pick.Which = Sample.Choice_Pick_Inner
-                    and then D.Pick.Inner_F.X = 3
-                    and then To_String (D.Pick.Inner_F.Label) = "z",
+                    and then D.Pick.Inner_F.Element.X = 3
+                    and then To_String (D.Pick.Inner_F.Element.Label) = "z",
                     "oneof message member round-trips");
          end;
       end;
@@ -1341,8 +1343,8 @@ package body Protobuf_Tests is
       I1.X := 10;
       I1.Label := To_Unbounded_String ("ten");
       I2.X := 20;
-      M.Items.Include (5, I1);
-      M.Items.Include (6, I2);
+      M.Items.Include (5, Sample.To_Holder (I1));
+      M.Items.Include (6, Sample.To_Holder (I2));
 
       declare
          D : constant Sample.Maps := Sample.Parse_Maps (Sample.Serialize (M));
@@ -1353,9 +1355,9 @@ package body Protobuf_Tests is
                  and then D.Counts.Element (To_Unbounded_String ("c")) = 0,
                  "string->int32 map round-trips, including a default-valued entry");
          Assert (Natural (D.Items.Length) = 2, "int32->message map size");
-         Assert (D.Items.Element (5).X = 10
-                 and then To_String (D.Items.Element (5).Label) = "ten"
-                 and then D.Items.Element (6).X = 20,
+         Assert (D.Items.Element (5).Element.X = 10
+                 and then To_String (D.Items.Element (5).Element.Label) = "ten"
+                 and then D.Items.Element (6).Element.X = 20,
                  "int32->message map round-trips");
       end;
 
@@ -1365,6 +1367,53 @@ package body Protobuf_Tests is
          Assert (Sample.Serialize (Empty) = "", "empty maps emit nothing");
       end;
    end Test_Generated_Maps;
+
+   --  Phase 1c: a recursive message (Tree). The generated memory-safe holder
+   --  (controlled, deep-copy on assignment, free on finalize) breaks the type
+   --  cycle. Builds a small tree, round-trips it, and exercises value semantics.
+   procedure Test_Generated_Recursive is
+      Root : Sample.Tree;
+      L    : Sample.Tree;
+      R    : Sample.Tree;
+      C1   : Sample.Tree;
+   begin
+      L.Value := 2;
+      R.Value := 3;
+      C1.Value := 9;
+      R.Left := Sample.To_Holder (C1);          --  nested two levels deep
+      Root.Value := 1;
+      Root.Left := Sample.To_Holder (L);
+      Root.Right := Sample.To_Holder (R);
+      Root.Children.Append (Sample.To_Holder (L));
+      Root.Children.Append (Sample.To_Holder (R));
+
+      declare
+         D : constant Sample.Tree := Sample.Parse_Tree (Sample.Serialize (Root));
+      begin
+         Assert (D.Value = 1, "tree root value");
+         Assert (not D.Left.Is_Empty and then D.Left.Element.Value = 2,
+                 "tree.left round-trips");
+         Assert (not D.Right.Is_Empty
+                 and then D.Right.Element.Right.Is_Empty
+                 and then D.Right.Element.Left.Element.Value = 9,
+                 "two-level-deep recursive child round-trips");
+         Assert (Natural (D.Children.Length) = 2
+                 and then Sample.Element (D.Children (1)).Value = 2
+                 and then Sample.Element (D.Children (2)).Value = 3,
+                 "repeated recursive children round-trip");
+      end;
+
+      --  Value semantics: copying a tree and mutating the copy must not touch
+      --  the original (the controlled holder deep-copies on assignment).
+      declare
+         Copy : Sample.Tree := Root;
+      begin
+         Copy.Left := Sample.To_Holder (R);  --  was L (value 2), now R (value 3)
+         Assert (Root.Left.Element.Value = 2,
+                 "deep-copy: mutating a copy leaves the original intact");
+         Assert (Copy.Left.Element.Value = 3, "copy reflects its own mutation");
+      end;
+   end Test_Generated_Recursive;
 
    --  Exercises the reserve-once / geometrically-grown serialization buffer:
    --  many fields force several reallocations past the initial capacity, a
@@ -1501,6 +1550,7 @@ package body Protobuf_Tests is
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated nested messages", Test_Generated_Nested_Messages'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated oneof", Test_Generated_Oneof'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated maps", Test_Generated_Maps'Access));
+         AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated recursive message", Test_Generated_Recursive'Access));
       end if;
       return Registered_Suite;
    end Suite;
