@@ -1,5 +1,6 @@
-with Ada.Strings.Unbounded;  use Ada.Strings.Unbounded;
-with Interfaces;              use Interfaces;
+with Ada.Characters.Handling;  use Ada.Characters.Handling;
+with Ada.Strings.Unbounded;     use Ada.Strings.Unbounded;
+with Interfaces;                use Interfaces;
 with Protobuf;
 with Proto_JSON;
 
@@ -219,5 +220,267 @@ package body Proto_WKT is
                   (Proto_JSON.Checked_UTF8 (JSON.As_String (V)))));
    function From_JSON (V : JSON.JSON_Value) return Bytes_Value is
      ((Value => To_Unbounded_String (Proto_JSON.From_Base64 (JSON.As_String (V)))));
+
+   ---------------------------------------------------------------------------
+   --  Duration / Timestamp: shared { seconds=1, nanos=2 } binary form
+   ---------------------------------------------------------------------------
+
+   function Serialize_SN (Seconds : Integer_64; Nanos : Integer_32) return String is
+      B : Protobuf.Message_Buffer;
+   begin
+      if Seconds /= 0 then
+         Protobuf.Add_Int64 (B, 1, Seconds);
+      end if;
+      if Nanos /= 0 then
+         Protobuf.Add_Int32 (B, 2, Nanos);
+      end if;
+      return Protobuf.To_String (B);
+   end Serialize_SN;
+
+   procedure Parse_SN (Data : String; Seconds : out Integer_64; Nanos : out Integer_32)
+   is
+      Fields : constant Protobuf.Parsed_Field_Vectors.Vector :=
+        Protobuf.Parse_From_String (Data);
+   begin
+      Seconds := 0;
+      Nanos := 0;
+      for F of Fields loop
+         if F.Number = 1 then
+            Seconds := Protobuf.As_Int64 (F);
+         elsif F.Number = 2 then
+            Nanos := Protobuf.As_Int32 (F);
+         end if;
+      end loop;
+   end Parse_SN;
+
+   function Serialize (X : Duration) return String is
+     (Serialize_SN (X.Seconds, X.Nanos));
+   function Serialize (X : Timestamp) return String is
+     (Serialize_SN (X.Seconds, X.Nanos));
+
+   function Parse_Duration (Data : String) return Duration is
+      R : Duration;
+   begin
+      Parse_SN (Data, R.Seconds, R.Nanos);
+      return R;
+   end Parse_Duration;
+
+   function Parse_Timestamp (Data : String) return Timestamp is
+      R : Timestamp;
+   begin
+      Parse_SN (Data, R.Seconds, R.Nanos);
+      return R;
+   end Parse_Timestamp;
+
+   ---------------------------------------------------------------------------
+   --  Date arithmetic (Howard Hinnant's civil <-> days-since-epoch)
+   ---------------------------------------------------------------------------
+
+   function Days_From_Civil (Y0 : Integer_64; M, D : Integer) return Integer_64 is
+      Y   : constant Integer_64 := Y0 - (if M <= 2 then 1 else 0);
+      Era : constant Integer_64 := (if Y >= 0 then Y else Y - 399) / 400;
+      YOE : constant Integer_64 := Y - Era * 400;
+      MP  : constant Integer_64 := (if M > 2 then Integer_64 (M) - 3
+                                    else Integer_64 (M) + 9);
+      DOY : constant Integer_64 := (153 * MP + 2) / 5 + Integer_64 (D) - 1;
+      DOE : constant Integer_64 := YOE * 365 + YOE / 4 - YOE / 100 + DOY;
+   begin
+      return Era * 146097 + DOE - 719468;
+   end Days_From_Civil;
+
+   procedure Civil_From_Days
+     (Z0 : Integer_64; Y : out Integer_64; M : out Integer; D : out Integer)
+   is
+      Z   : constant Integer_64 := Z0 + 719468;
+      Era : constant Integer_64 := (if Z >= 0 then Z else Z - 146096) / 146097;
+      DOE : constant Integer_64 := Z - Era * 146097;
+      YOE : constant Integer_64 :=
+        (DOE - DOE / 1460 + DOE / 36524 - DOE / 146096) / 365;
+      DOY : constant Integer_64 := DOE - (365 * YOE + YOE / 4 - YOE / 100);
+      MP  : constant Integer_64 := (5 * DOY + 2) / 153;
+      Dd  : constant Integer_64 := DOY - (153 * MP + 2) / 5 + 1;
+      Mm  : constant Integer_64 := (if MP < 10 then MP + 3 else MP - 9);
+   begin
+      Y := YOE + Era * 400 + (if Mm <= 2 then 1 else 0);
+      M := Integer (Mm);
+      D := Integer (Dd);
+   end Civil_From_Days;
+
+   --  Zero-padded decimal of a non-negative value, at least Width digits.
+   function Pad (N : Integer_64; Width : Positive) return String is
+      Img : constant String := Proto_JSON.Image (Unsigned_64 (N));
+   begin
+      if Img'Length >= Width then
+         return Img;
+      else
+         return (1 .. Width - Img'Length => '0') & Img;
+      end if;
+   end Pad;
+
+   --  Fractional-second text: "" if zero, else "." + 3/6/9 digits.
+   function Frac (Nanos : Natural) return String is
+      F   : String (1 .. 9);
+      N   : Natural := Nanos;
+      Len : Natural := 9;
+   begin
+      if Nanos = 0 then
+         return "";
+      end if;
+      for I in reverse 1 .. 9 loop
+         F (I) := Character'Val (Character'Pos ('0') + N mod 10);
+         N := N / 10;
+      end loop;
+      while Len > 3 and then F (Len - 2 .. Len) = "000" loop
+         Len := Len - 3;
+      end loop;
+      return "." & F (1 .. Len);
+   end Frac;
+
+   ---------------------------------------------------------------------------
+   --  Duration JSON
+   ---------------------------------------------------------------------------
+
+   function To_JSON (X : Duration) return JSON.JSON_Value is
+      Neg : constant Boolean := X.Seconds < 0 or else X.Nanos < 0;
+   begin
+      return JSON.To_Value
+        ((if Neg then "-" else "")
+         & Proto_JSON.Image (abs X.Seconds)
+         & Frac (Natural (abs X.Nanos)) & "s");
+   end To_JSON;
+
+   function Frac_To_Nanos (Frac_Digits : String) return Natural is
+      Padded : String (1 .. 9) := (others => '0');
+      Len    : constant Natural := Natural'Min (9, Frac_Digits'Length);
+   begin
+      Padded (1 .. Len) :=
+        Frac_Digits (Frac_Digits'First .. Frac_Digits'First + Len - 1);
+      return Natural'Value (Padded);
+   end Frac_To_Nanos;
+
+   function From_JSON (V : JSON.JSON_Value) return Duration is
+      S    : constant String := JSON.As_String (V);
+      Last : Natural := S'Last;
+      Neg  : Boolean := False;
+      P    : Natural := S'First;
+      Dot  : Natural := 0;
+   begin
+      if Last < S'First or else S (Last) /= 's' then
+         raise Proto_JSON.Decode_Error with "duration must end in 's'";
+      end if;
+      Last := Last - 1;
+      if P <= Last and then S (P) = '-' then
+         Neg := True;
+         P := P + 1;
+      end if;
+      for I in P .. Last loop
+         if S (I) = '.' then
+            Dot := I;
+         end if;
+      end loop;
+      declare
+         Int_Part  : constant String :=
+           (if Dot = 0 then S (P .. Last) else S (P .. Dot - 1));
+         Frac_Part : constant String :=
+           (if Dot = 0 then "" else S (Dot + 1 .. Last));
+         Secs  : constant Integer_64 := Integer_64'Value (Int_Part);
+         Nanos : constant Integer_32 := Integer_32 (Frac_To_Nanos (Frac_Part));
+      begin
+         return (Seconds => (if Neg then -Secs else Secs),
+                 Nanos   => (if Neg then -Nanos else Nanos));
+      end;
+   end From_JSON;
+
+   ---------------------------------------------------------------------------
+   --  Timestamp JSON (RFC 3339, always emitted in UTC with a trailing Z)
+   ---------------------------------------------------------------------------
+
+   function To_JSON (X : Timestamp) return JSON.JSON_Value is
+      Secs_Of_Day : constant Integer_64 := X.Seconds mod 86400;
+      Days        : constant Integer_64 := (X.Seconds - Secs_Of_Day) / 86400;
+      Y : Integer_64;
+      M : Integer;
+      D : Integer;
+   begin
+      Civil_From_Days (Days, Y, M, D);
+      return JSON.To_Value
+        (Pad (Y, 4) & "-" & Pad (Integer_64 (M), 2) & "-" & Pad (Integer_64 (D), 2)
+         & "T" & Pad (Secs_Of_Day / 3600, 2)
+         & ":" & Pad ((Secs_Of_Day mod 3600) / 60, 2)
+         & ":" & Pad (Secs_Of_Day mod 60, 2)
+         & Frac (Natural (X.Nanos)) & "Z");
+   end To_JSON;
+
+   function From_JSON (V : JSON.JSON_Value) return Timestamp is
+      S : constant String := JSON.As_String (V);
+      P : Natural := S'First;
+
+      function Num (Count : Positive) return Integer_64 is
+         R : Integer_64 := 0;
+      begin
+         for I in 1 .. Count loop
+            if P > S'Last or else S (P) not in '0' .. '9' then
+               raise Proto_JSON.Decode_Error with "bad RFC3339 timestamp";
+            end if;
+            R := R * 10 + Integer_64 (Character'Pos (S (P)) - Character'Pos ('0'));
+            P := P + 1;
+         end loop;
+         return R;
+      end Num;
+
+      procedure Expect (C : Character) is
+      begin
+         if P > S'Last or else (S (P) /= C and then S (P) /= To_Lower (C)) then
+            raise Proto_JSON.Decode_Error with "bad RFC3339 timestamp";
+         end if;
+         P := P + 1;
+      end Expect;
+
+      Year, Mon, Day, Hr, Mi, Se : Integer_64;
+      Nanos       : Natural := 0;
+      Offset_Secs : Integer_64 := 0;
+   begin
+      Year := Num (4); Expect ('-');
+      Mon  := Num (2); Expect ('-');
+      Day  := Num (2); Expect ('T');
+      Hr   := Num (2); Expect (':');
+      Mi   := Num (2); Expect (':');
+      Se   := Num (2);
+
+      if P <= S'Last and then S (P) = '.' then
+         P := P + 1;
+         declare
+            Start : constant Natural := P;
+         begin
+            while P <= S'Last and then S (P) in '0' .. '9' loop
+               P := P + 1;
+            end loop;
+            Nanos := Frac_To_Nanos (S (Start .. P - 1));
+         end;
+      end if;
+
+      if P > S'Last then
+         raise Proto_JSON.Decode_Error with "RFC3339 timestamp needs a zone";
+      elsif S (P) = 'Z' or else S (P) = 'z' then
+         P := P + 1;
+      else
+         declare
+            Sign : constant Integer_64 := (if S (P) = '-' then -1 else 1);
+         begin
+            P := P + 1;
+            declare
+               OH : constant Integer_64 := Num (2);
+            begin
+               Expect (':');
+               Offset_Secs := Sign * (OH * 3600 + Num (2) * 60);
+            end;
+         end;
+      end if;
+
+      return
+        (Seconds => Days_From_Civil (Year, Integer (Mon), Integer (Day)) * 86400
+                    + Hr * 3600 + Mi * 60 + Se - Offset_Secs,
+         Nanos   => Integer_32 (Nanos));
+   end From_JSON;
 
 end Proto_WKT;

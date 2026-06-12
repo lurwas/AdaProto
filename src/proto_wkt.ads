@@ -80,4 +80,30 @@ package Proto_WKT is
    function From_JSON (V : JSON.JSON_Value) return String_Value;
    function From_JSON (V : JSON.JSON_Value) return Bytes_Value;
 
+   ---------------------------------------------------------------------------
+   --  Duration and Timestamp ({ seconds:int64=1, nanos:int32=2 } on the wire)
+   --  JSON: Duration is "<secs>[.<frac>]s"; Timestamp is an RFC 3339 UTC string.
+   ---------------------------------------------------------------------------
+
+   type Duration is record
+      Seconds : Interfaces.Integer_64 := 0;
+      Nanos   : Interfaces.Integer_32 := 0;
+   end record;
+
+   type Timestamp is record
+      Seconds : Interfaces.Integer_64 := 0;   --  since 1970-01-01T00:00:00Z
+      Nanos   : Interfaces.Integer_32 := 0;
+   end record;
+
+   function Serialize (X : Duration) return String;
+   function Parse_Duration (Data : String) return Duration;
+   function To_JSON (X : Duration) return JSON.JSON_Value;
+   function From_JSON (V : JSON.JSON_Value) return Duration;
+
+   function Serialize (X : Timestamp) return String;
+   function Parse_Timestamp (Data : String) return Timestamp;
+   function To_JSON (X : Timestamp) return JSON.JSON_Value;
+   function From_JSON (V : JSON.JSON_Value) return Timestamp;
+
 end Proto_WKT;
+

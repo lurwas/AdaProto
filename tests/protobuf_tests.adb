@@ -1538,6 +1538,55 @@ package body Protobuf_Tests is
       end;
    end Test_WKT_Wrappers;
 
+   --  Phase 3: Duration and Timestamp well-known types and their string JSON.
+   procedure Test_WKT_Duration_Timestamp is
+      Q : constant Character := '"';
+      use type Proto_WKT.Duration;
+      use type Proto_WKT.Timestamp;
+   begin
+      --  Duration: 0/3/6/9 fractional digits, sign, round-trips.
+      declare
+         D1 : constant Proto_WKT.Duration := (Seconds => 3, Nanos => 500_000_000);
+         D2 : constant Proto_WKT.Duration := (Seconds => 1, Nanos => 0);
+         D3 : constant Proto_WKT.Duration := (Seconds => 0, Nanos => 1);
+         D4 : constant Proto_WKT.Duration := (Seconds => -5, Nanos => -250_000_000);
+         R1 : constant Proto_WKT.Duration := Proto_WKT.From_JSON (Proto_WKT.To_JSON (D1));
+         R4 : constant Proto_WKT.Duration := Proto_WKT.From_JSON (Proto_WKT.To_JSON (D4));
+      begin
+         Assert (JSON.As_String (Proto_WKT.To_JSON (D1)) = "3.500s", "duration .500");
+         Assert (JSON.As_String (Proto_WKT.To_JSON (D2)) = "1s", "duration whole");
+         Assert (JSON.As_String (Proto_WKT.To_JSON (D3)) = "0.000000001s",
+                 "duration single nano");
+         Assert (JSON.As_String (Proto_WKT.To_JSON (D4)) = "-5.250s",
+                 "negative duration");
+         Assert (R1 = D1 and then R4 = D4, "duration JSON round-trips");
+         Assert (Proto_WKT.Parse_Duration (Proto_WKT.Serialize (D1)) = D1,
+                 "duration binary round-trips");
+      end;
+
+      --  Timestamp: RFC 3339 in UTC, a famous epoch value, nanos, offset parse.
+      declare
+         T0 : constant Proto_WKT.Timestamp := (Seconds => 0, Nanos => 0);
+         T1 : constant Proto_WKT.Timestamp := (Seconds => 1_234_567_890, Nanos => 0);
+         T2 : constant Proto_WKT.Timestamp := (Seconds => 0, Nanos => 123_000_000);
+         R1 : constant Proto_WKT.Timestamp := Proto_WKT.From_JSON (Proto_WKT.To_JSON (T1));
+         RO : constant Proto_WKT.Timestamp :=
+           Proto_WKT.From_JSON (JSON.Parse (Q & "1970-01-01T01:00:00+01:00" & Q));
+      begin
+         Assert (JSON.As_String (Proto_WKT.To_JSON (T0)) = "1970-01-01T00:00:00Z",
+                 "epoch timestamp");
+         Assert (JSON.As_String (Proto_WKT.To_JSON (T1)) = "2009-02-13T23:31:30Z",
+                 "known timestamp (unix 1234567890)");
+         Assert (JSON.As_String (Proto_WKT.To_JSON (T2))
+                 = "1970-01-01T00:00:00.123Z", "timestamp with nanos");
+         Assert (R1 = T1, "timestamp JSON round-trips");
+         Assert (RO.Seconds = 0 and then RO.Nanos = 0,
+                 "timezone offset is applied (01:00+01:00 = epoch)");
+         Assert (Proto_WKT.Parse_Timestamp (Proto_WKT.Serialize (T1)) = T1,
+                 "timestamp binary round-trips");
+      end;
+   end Test_WKT_Duration_Timestamp;
+
    --  Phase 3: proto3 requires `string` fields to be valid UTF-8, but `bytes`
    --  fields may hold arbitrary octets.
    procedure Test_Generated_UTF8_Validation is
@@ -1930,6 +1979,7 @@ package body Protobuf_Tests is
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated from_json", Test_Generated_From_JSON'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated utf8 validation", Test_Generated_UTF8_Validation'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("wkt wrappers and empty", Test_WKT_Wrappers'Access));
+         AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("wkt duration and timestamp", Test_WKT_Duration_Timestamp'Access));
       end if;
       return Registered_Suite;
    end Suite;
