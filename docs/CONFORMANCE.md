@@ -88,8 +88,6 @@ A runtime library of `google.protobuf.*` types with their binary wire
   messages inlined). All the WKTs above register themselves; generated code can
   register its own message types via `Proto_WKT.Register_Any_Type`.
 
-### Codegen roadmap (toward 100% proto3 + JSON)
-
 **Generator integration**: a field of type `google.protobuf.X` resolves to
 `Proto_WKT.X` -- the generator emits a controlled holder over the external WKT
 type (presence), routes binary encode/decode through `Proto_WKT.Serialize` /
