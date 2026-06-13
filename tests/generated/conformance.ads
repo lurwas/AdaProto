@@ -6,6 +6,8 @@ with JSON;
 with Ada.Finalization;
 package Conformance is
 
+   use type Interfaces.Integer_32;
+
    subtype WireFormat is Interfaces.Integer_32;
    WireFormat_UNSPECIFIED : constant WireFormat := 0;
    WireFormat_PROTOBUF : constant WireFormat := 1;

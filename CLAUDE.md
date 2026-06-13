@@ -97,7 +97,7 @@ This repository holds **two layers**, and a wise traveller must know which gate 
 1. A hand-written Ada 2012 **Proto3 wire runtime** — package `Protobuf` (`src/protobuf.ads` / `src/protobuf.adb`). Schema-agnostic encode/decode of the binary wire format.
 2. A **`.proto` → Ada code generator**, `protoc-ada` (`compiler/`, built via `protoc_ada.gpr`). It turns a proto3 schema into typed Ada records with binary `Serialize`/`Parse_<T>` **and** proto3-JSON `To_JSON`/`From_JSON`, layered on the runtime plus a small JSON DOM (`src/json.*`) and helpers (`src/proto_json.*`).
 
-> Branch note: the generator, the JSON library, and `From_JSON` live on `feature/proto-codegen`. `main` carries only the runtime. The codegen roadmap and conformance status live in `docs/CONFORMANCE.md`.
+> The runtime, the JSON library, the generator (incl. `From_JSON`), the well-known types, and the conformance runner all live on `main`. The codegen roadmap and conformance status live in `docs/CONFORMANCE.md`.
 
 ## Two build projects
 
@@ -168,7 +168,7 @@ Footguns the generator already guards against (and you must too if you touch it)
 - `src/proto_json.*` — runtime helpers the generated JSON code calls: 64-bit int → decimal text, float/double special values, base64 encode/decode, number/text parsing, and **UTF-8 validation** (`Checked_UTF8`, used to reject malformed `string` fields from both the wire and JSON — `bytes` fields are not validated).
 - proto3 JSON mapping highlights (in generated `To_JSON`/`From_JSON`): lowerCamelCase names (parse accepts both), 32-bit ints as numbers but **64-bit ints as strings**, `bytes` as base64, enums as value names, `map` as objects keyed by stringified keys.
 
-See `docs/CONFORMANCE.md` for the supported-feature list and the phased roadmap. Done: codegen 1a–1c (incl. recursion, oneof, map), JSON 2a–2c (`To_JSON`/`From_JSON`), and 3a (UTF-8 validation). Remaining: the well-known types and the conformance-runner that certifies "100%".
+See `docs/CONFORMANCE.md` for the supported-feature list and the phased roadmap. Done: codegen 1a–1c (incl. recursion, oneof, map), JSON 2a–2c (`To_JSON`/`From_JSON`), 3a (UTF-8 validation), the well-known types, proto3 `optional` and nested type definitions, and a conformance runner routed to `protobuf_test_messages.proto3.TestAllTypesProto3` (generated from `tests/proto/test_messages_proto3.proto`). Remaining for a fully certified run: the `NullValue` well-known enum, explicit `[packed=false]` repeats, JSON field-name edge cases, and WKTs as map values / oneof members.
 
 ## Golden fixtures
 
