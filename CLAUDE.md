@@ -101,17 +101,19 @@ This repository holds **two layers**, and a wise traveller must know which gate 
 
 ## Two build projects
 
-- `protobuf_ada.gpr` — the runtime, the JSON library, the checked-in generated `tests/generated/sample.*`, and the AUnit suite. `Source_Dirs = src, tests, tests/generated`; object dir `obj/`; builds the four executables into `bin/`.
+- `protobuf_ada.gpr` — the runtime, the JSON library, the well-known types, the checked-in generated schemas under `tests/generated/`, and the AUnit suite. `Source_Dirs = src, tests, tests/generated`; object dir `obj/`; builds five executables into `bin/` (test, junit, bench, fuzz, and the conformance runner).
 - `protoc_ada.gpr` — the code generator alone. `Source_Dirs = compiler`; object dir `obj_compiler/`; builds `bin/protoc-ada`.
 
 ## Build & test
 
 ```bash
-gprbuild -P protobuf_ada.gpr        # build runtime + generated code + the four executables
+gprbuild -P protobuf_ada.gpr        # build runtime + generated code + the five executables
 ./bin/protobuf-ada-test             # run the whole AUnit suite (prints pass/fail totals)
 ./bin/protobuf-ada-junit > tests/junit.xml   # same tests, JUnit XML output
 ./bin/protobuf-ada-bench            # encode/decode timing (prints encode_seconds=/decode_seconds=)
 ./bin/protobuf-ada-fuzz <input.bin> # parse one raw byte blob; nonzero exit on unexpected exception
+./bin/conformance-runner            # conformance testee: length-prefixed Request/Response on stdin/stdout
+tools/conformance_smoke.py          # drive conformance-runner end-to-end (binary TestAllTypesProto3 in, JSON out)
 
 gprbuild -P protoc_ada.gpr          # build the protoc-ada generator
 tools/generate_ada.sh               # regenerate tests/generated/ from tests/proto/*.proto (deterministic)
@@ -121,7 +123,7 @@ Compiler defaults (`protobuf_ada.gpr`): `-gnat2012 -O2 -gnata`. `-gnata` keeps a
 
 There is no single-test filter; the AUnit runner in `tests/protobuf_ada_test.adb` always runs the whole `Protobuf_Tests.Suite`. To narrow scope, edit the `Add_Test (Registered_Suite, New_Case (...))` registrations near the bottom of `tests/protobuf_tests.adb`.
 
-After changing the generator or a `.proto`, run `tools/generate_ada.sh` and commit the regenerated `tests/generated/sample.*` — the suite compiles against those committed files, and regeneration is byte-deterministic.
+After changing the generator or a `.proto`, run `tools/generate_ada.sh` and commit the regenerated `tests/generated/*` (`sample.*`, `conformance.*`, `protobuf_test_messages_proto3.*`) — the suite compiles against those committed files, and regeneration is byte-deterministic.
 
 CI (`.github/workflows/ci.yml`) additionally builds under ASan and UBSan, runs the suite under Valgrind (`--leak-check=full --error-exitcode=1`), and smoke-tests the fuzz harness. To reproduce a sanitizer build locally:
 
@@ -156,11 +158,14 @@ The benchmark guard reads `benchmarks/baseline.env` (`ENCODE_SECONDS`, `DECODE_S
 - a record type; enums become an `Interfaces.Integer_32` subtype + named constants (open enums, value-preserving);
 - **message fields use a generated memory-safe controlled holder** `<T>_Holder` (an access type wrapped in a `Controlled` record; `Adjust` deep-copies, `Finalize` frees). This — plus forward-declaring every message type — is what makes recursive and mutually-recursive messages compile, and why there is **no topological sort**;
 - `oneof` → a discriminated (variant) record; `map<K,V>` → `Ada.Containers.Ordered_Maps`; repeated → `Vectors` (of holders for message elements);
-- `Serialize` / `Parse_<T>` (binary wire) and `To_JSON` / `From_JSON` (proto3 JSON), with proto3 default omission.
+- **nested type definitions** (a `message`/`enum` declared inside a message) are flattened to top-level Ada types under their fully-qualified name (`Outer.Inner` → `Outer_Inner`). Parsing is recursive with a scope prefix; a post-parse pass binds every field's type reference to the type it denotes via proto's innermost-out scope search, so the rest of codegen matches purely by FQ name. Corecursion falls out of the same holders as ordinary recursion — still no topological sort;
+- **proto3 `optional`** (explicit presence) on a scalar field generates a `<field>_Has : Boolean` flag; emission (wire and JSON) is governed by the flag, not the value, so an `optional` set to its default is still written. Implicit-presence scalars keep proto3 default omission;
+- `Serialize` / `Parse_<T>` (binary wire) and `To_JSON` / `From_JSON` (proto3 JSON).
 
 Footguns the generator already guards against (and you must too if you touch it):
 - **Identifier escaping**: Ada reserved words (`delta` → `Delta_F`) and field names equal to their own type (`color : Color` → `Color_F`).
 - **Prefix `.Element` fails through vector indexing** — generated code must call `Element (V (I))` explicitly, never `V (I).Element` (the latter resolves to the container's reference type). Same care for numeric conversions over `V (I)`: use `V.Element (I)`.
+- **Negative enum constants** (e.g. `NEG = -1`) need the `Interfaces.Integer_32` operators visible, so each generated spec emits `use type Interfaces.Integer_32;`.
 
 ## JSON (`src/json.*`, `src/proto_json.*`)
 
