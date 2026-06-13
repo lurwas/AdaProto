@@ -1541,6 +1541,55 @@ package body Protobuf_Tests is
       end;
    end Test_WKT_Wrappers;
 
+   --  google.protobuf.NullValue: a well-known enum that is int32 on the wire
+   --  (its only value, NULL_VALUE = 0) but maps to/from JSON null. Exercised via
+   --  the conformance message's oneof_null_value (presence-selected) and the
+   --  singular optional_null_value (always default, hence omitted).
+   procedure Test_Generated_NullValue is
+      package TM renames Protobuf_test_messages_Proto3;
+      use type TM.TestAllTypesProto3_Oneof_field_Selector;
+      use type JSON.Value_Kind;
+   begin
+      --  Oneof NullValue member: To_JSON emits null, and a JSON null selects it.
+      declare
+         M : TM.TestAllTypesProto3;
+         J : JSON.JSON_Value;
+         R : TM.TestAllTypesProto3;
+      begin
+         M.Oneof_field :=
+           (Which            => TM.TestAllTypesProto3_Oneof_field_Oneof_null_value,
+            Oneof_null_value => 0);
+         J := JSON.Parse (JSON.Serialize (TM.To_JSON (M)));
+         Assert (JSON.Has (J, "oneofNullValue")
+                 and then JSON.Kind (JSON.Get (J, "oneofNullValue"))
+                          = JSON.JSON_Null,
+                 "oneof NullValue member -> JSON null");
+
+         R := TM.From_JSON (J);
+         Assert (R.Oneof_field.Which
+                 = TM.TestAllTypesProto3_Oneof_field_Oneof_null_value,
+                 "a JSON null selects the oneof NullValue member");
+
+         --  Binary round-trip: an int32 enum (value 0) on the wire.
+         R := TM.Parse_TestAllTypesProto3 (TM.Serialize (M));
+         Assert (R.Oneof_field.Which
+                 = TM.TestAllTypesProto3_Oneof_field_Oneof_null_value,
+                 "oneof NullValue member round-trips on the wire");
+      end;
+
+      --  A singular NullValue is always at its default (NULL_VALUE = 0), so
+      --  proto3 omits it from JSON.
+      declare
+         M : TM.TestAllTypesProto3;
+      begin
+         M.Optional_null_value := 0;
+         Assert (not JSON.Has
+                       (JSON.Parse (JSON.Serialize (TM.To_JSON (M))),
+                        "optionalNullValue"),
+                 "a default singular NullValue is omitted from JSON");
+      end;
+   end Test_Generated_NullValue;
+
    --  Phase 4: the conformance harness -- one ConformanceRequest dispatched to
    --  one ConformanceResponse (parse + reserialize across binary and JSON),
    --  now routed to Google's canonical protobuf_test_messages.proto3
@@ -2463,6 +2512,7 @@ package body Protobuf_Tests is
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("wkt struct value listvalue", Test_WKT_Struct_Value'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("wkt any", Test_WKT_Any'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated wkt fields", Test_Generated_WKT_Fields'Access));
+         AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated nullvalue", Test_Generated_NullValue'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("conformance harness", Test_Conformance_Harness'Access));
       end if;
       return Registered_Suite;

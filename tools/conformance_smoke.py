@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """End-to-end smoke test of bin/conformance-runner over its real wire protocol.
 
-Hand-encodes a ConformanceRequest carrying a binary TestAllTypesProto3 payload,
-asks for JSON output, frames it (4-byte LE length), pipes it to the runner, then
-unframes and inspects the ConformanceResponse.
+Hand-encodes ConformanceRequests carrying binary TestAllTypesProto3 payloads,
+asks for JSON output, frames each (4-byte LE length), pipes it to the runner,
+then unframes and inspects the ConformanceResponse.
 """
-import subprocess, struct, sys
+import subprocess, struct
 
 def varint(n):
     out = bytearray()
@@ -22,56 +22,56 @@ def tag(field, wire):
 def len_delim(field, data):
     return tag(field, 2) + varint(len(data)) + data
 
-# inner: TestAllTypesProto3 { optional_int32 = 42; optional_string = "hi"; }
-payload  = tag(1, 0) + varint(42)
-payload += len_delim(14, b"hi")
-
 MSG_TYPE = b"protobuf_test_messages.proto3.TestAllTypesProto3"
 
-# ConformanceRequest { protobuf_payload=1; requested_output_format=3; message_type=4 }
-# requested_output_format: JSON = 2
-req  = len_delim(1, payload)
-req += tag(3, 0) + varint(2)
-req += len_delim(4, MSG_TYPE)
+def request_json(payload):
+    """A ConformanceRequest: this protobuf payload in, JSON output requested."""
+    req  = len_delim(1, payload)            # protobuf_payload
+    req += tag(3, 0) + varint(2)            # requested_output_format = JSON
+    req += len_delim(4, MSG_TYPE)           # message_type
+    return req
 
-framed = struct.pack("<I", len(req)) + req
+def run(payload):
+    """Frame a request, drive the runner, unframe + parse the response fields."""
+    req = request_json(payload)
+    framed = struct.pack("<I", len(req)) + req
+    out = subprocess.run(["./bin/conformance-runner"], input=framed,
+                         stdout=subprocess.PIPE, timeout=10).stdout
+    assert len(out) >= 4, "no framed response"
+    n = struct.unpack("<I", out[:4])[0]
+    resp = out[4:4 + n]
+    assert len(resp) == n, f"short response: {len(resp)} != {n}"
 
-proc = subprocess.run(["./bin/conformance-runner"], input=framed,
-                      stdout=subprocess.PIPE, timeout=10)
-out = proc.stdout
-assert len(out) >= 4, "no framed response"
-resp_len = struct.unpack("<I", out[:4])[0]
-resp = out[4:4 + resp_len]
-assert len(resp) == resp_len, f"short response: {len(resp)} != {resp_len}"
+    i, found = 0, {}
+    while i < len(resp):
+        key = resp[i]; i += 1
+        field, wire = key >> 3, key & 7
+        if wire == 2:
+            ln = 0; shift = 0
+            while resp[i] & 0x80:
+                ln |= (resp[i] & 0x7F) << shift; shift += 7; i += 1
+            ln |= resp[i] << shift; i += 1
+            found[field] = resp[i:i + ln]; i += ln
+        elif wire == 0:
+            while resp[i] & 0x80: i += 1
+            i += 1
+        else:
+            raise SystemExit(f"unexpected wire type {wire}")
+    NAMES = {1: "parse_error", 2: "runtime_error", 5: "skipped", 6: "serialize_error"}
+    for f, v in found.items():
+        if f in NAMES:
+            raise SystemExit(f"runner returned {NAMES[f]}: {v!r}")
+    assert 4 in found, f"expected a json_payload result, got fields {list(found)}"
+    return found[4].decode()
 
-# Walk the ConformanceResponse fields; we want field 4 (json_payload, string)
-# or field 3 (protobuf_payload). Surface parse_error(1)/serialize_error(6)/
-# runtime_error(2)/skipped(5) if present.
-i = 0
-found = {}
-while i < len(resp):
-    key = resp[i]; i += 1
-    field, wire = key >> 3, key & 7
-    if wire == 2:
-        n = 0; shift = 0
-        while resp[i] & 0x80:
-            n |= (resp[i] & 0x7F) << shift; shift += 7; i += 1
-        n |= resp[i] << shift; i += 1
-        val = resp[i:i + n]; i += n
-        found[field] = val
-    elif wire == 0:
-        while resp[i] & 0x80: i += 1
-        i += 1
-    else:
-        raise SystemExit(f"unexpected wire type {wire}")
+# 1) scalars: optional_int32 = 42, optional_string = "hi"
+js = run(tag(1, 0) + varint(42) + len_delim(14, b"hi"))
+print(f"scalars -> {js}")
+assert '"optionalInt32":42' in js and '"optionalString":"hi"' in js, js
 
-NAMES = {1: "parse_error", 2: "runtime_error", 3: "protobuf_payload",
-         4: "json_payload", 5: "skipped", 6: "serialize_error", 10: "text_payload"}
-for f, v in found.items():
-    print(f"response.{NAMES.get(f, f)} = {v!r}")
+# 2) NullValue: oneof_null_value (field 120) set -> JSON null
+js = run(tag(120, 0) + varint(0))
+print(f"null    -> {js}")
+assert '"oneofNullValue":null' in js, js
 
-assert 4 in found, "expected a json_payload result"
-js = found[4].decode()
-assert '"optionalInt32"' in js and "42" in js, f"unexpected JSON: {js}"
-assert '"optionalString"' in js and "hi" in js, f"unexpected JSON: {js}"
-print("\nEND-TO-END OK: runner parsed protobuf TestAllTypesProto3 and emitted JSON")
+print("\nEND-TO-END OK: runner round-trips TestAllTypesProto3 incl. NullValue -> JSON null")

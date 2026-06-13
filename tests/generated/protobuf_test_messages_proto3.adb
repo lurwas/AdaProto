@@ -1123,6 +1123,8 @@ package body Protobuf_test_messages_Proto3 is
             Protobuf.Add_Double (Buffer, 118, Message.Oneof_field.Oneof_double);
          when TestAllTypesProto3_Oneof_field_Oneof_enum =>
             Protobuf.Add_Int32 (Buffer, 119, Message.Oneof_field.Oneof_enum);
+         when TestAllTypesProto3_Oneof_field_Oneof_null_value =>
+            Protobuf.Add_Int32 (Buffer, 120, Message.Oneof_field.Oneof_null_value);
       end case;
       if not Message.Optional_bool_wrapper.Is_Empty then
          Protobuf.Add_Message (Buffer, 201, Serialize (Message.Optional_bool_wrapper.Element));
@@ -1195,6 +1197,9 @@ package body Protobuf_test_messages_Proto3 is
       end if;
       if not Message.Optional_value.Is_Empty then
          Protobuf.Add_Message (Buffer, 306, Serialize (Message.Optional_value.Element));
+      end if;
+      if Message.Optional_null_value /= 0 then
+         Protobuf.Add_Int32 (Buffer, 307, Message.Optional_null_value);
       end if;
       return Protobuf.To_String (Buffer);
    end Serialize;
@@ -1866,6 +1871,8 @@ package body Protobuf_test_messages_Proto3 is
                Result.Oneof_field := (Which => TestAllTypesProto3_Oneof_field_Oneof_double, Oneof_double => Protobuf.As_Double (Item));
             when 119 =>
                Result.Oneof_field := (Which => TestAllTypesProto3_Oneof_field_Oneof_enum, Oneof_enum => Protobuf.As_Int32 (Item));
+            when 120 =>
+               Result.Oneof_field := (Which => TestAllTypesProto3_Oneof_field_Oneof_null_value, Oneof_null_value => Protobuf.As_Int32 (Item));
             when 201 =>
                Result.Optional_bool_wrapper := To_Holder (Proto_WKT.Parse_Bool_Value (Protobuf.As_Message_Bytes (Item)));
             when 202 =>
@@ -1914,6 +1921,8 @@ package body Protobuf_test_messages_Proto3 is
                Result.Optional_any := To_Holder (Proto_WKT.Parse_Any (Protobuf.As_Message_Bytes (Item)));
             when 306 =>
                Result.Optional_value := To_Holder (Proto_WKT.Parse_Value (Protobuf.As_Message_Bytes (Item)));
+            when 307 =>
+               Result.Optional_null_value := Protobuf.As_Int32 (Item);
             when others => null;
          end case;
       end loop;
@@ -2514,6 +2523,7 @@ package body Protobuf_test_messages_Proto3 is
          when TestAllTypesProto3_Oneof_field_Oneof_float => JSON.Insert (Obj, "oneofFloat", Proto_JSON.Float_To_JSON (Message.Oneof_field.Oneof_float));
          when TestAllTypesProto3_Oneof_field_Oneof_double => JSON.Insert (Obj, "oneofDouble", Proto_JSON.Double_To_JSON (Message.Oneof_field.Oneof_double));
          when TestAllTypesProto3_Oneof_field_Oneof_enum => JSON.Insert (Obj, "oneofEnum", TestAllTypesProto3_NestedEnum_To_JSON (Message.Oneof_field.Oneof_enum));
+         when TestAllTypesProto3_Oneof_field_Oneof_null_value => JSON.Insert (Obj, "oneofNullValue", JSON.Null_Value);
       end case;
       if not Message.Optional_bool_wrapper.Is_Empty then
          JSON.Insert (Obj, "optionalBoolWrapper", To_JSON (Message.Optional_bool_wrapper.Element));
@@ -2649,6 +2659,9 @@ package body Protobuf_test_messages_Proto3 is
       end if;
       if not Message.Optional_value.Is_Empty then
          JSON.Insert (Obj, "optionalValue", To_JSON (Message.Optional_value.Element));
+      end if;
+      if Message.Optional_null_value /= 0 then
+         JSON.Insert (Obj, "optionalNullValue", JSON.Null_Value);
       end if;
       return Obj;
    end To_JSON;
@@ -3503,6 +3516,10 @@ package body Protobuf_test_messages_Proto3 is
             Result.Oneof_field := (Which => TestAllTypesProto3_Oneof_field_Oneof_enum, Oneof_enum => TestAllTypesProto3_NestedEnum_From_JSON (FV));
          end if;
       end;
+      if JSON.Has (V, "oneofNullValue")
+        or else JSON.Has (V, "oneof_null_value") then
+         Result.Oneof_field := (Which => TestAllTypesProto3_Oneof_field_Oneof_null_value, Oneof_null_value => Interfaces.Integer_32'(0));
+      end if;
       declare
          FV : JSON.JSON_Value := JSON.Get (V, "optionalBoolWrapper");
       begin
@@ -3711,6 +3728,14 @@ package body Protobuf_test_messages_Proto3 is
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "optional_value"); end if;
          if JSON.Kind (FV) /= JSON.JSON_Null then
             Result.Optional_value := To_Holder (Proto_WKT.Value'(From_JSON (FV)));
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "optionalNullValue");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "optional_null_value"); end if;
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.Optional_null_value := Interfaces.Integer_32'(0);
          end if;
       end;
       return Result;

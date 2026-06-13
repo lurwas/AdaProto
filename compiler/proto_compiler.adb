@@ -413,6 +413,7 @@ package body Proto_Compiler is
       Array_Type : Unbounded_String;  --  Protobuf.<Array_Type> for packed
       Category   : Type_Category := Cat_Int;
       Is_WKT     : Boolean := False;  --  a google.protobuf.* well-known type
+      Is_Null    : Boolean := False;  --  google.protobuf.NullValue (JSON null)
    end record;
 
    function Info
@@ -426,7 +427,8 @@ package body Proto_Compiler is
          To_Unbounded_String (Suffix),
          To_Unbounded_String (Array_Type),
          Category,
-         Is_WKT => False);
+         Is_WKT  => False,
+         Is_Null => False);
    end Info;
 
    --  Map a google.protobuf.* type name to its Proto_WKT Ada type name, or ""
@@ -687,6 +689,17 @@ package body Proto_Compiler is
       begin
          if Found then
             return T;
+         elsif Proto = "google.protobuf.NullValue" then
+            --  A well-known *enum*: int32 on the wire (its only value,
+            --  NULL_VALUE, is 0), but JSON null. Modelled as a plain int32 so
+            --  the wire path is automatic; Is_Null drives the JSON mapping.
+            return (Ada_Type   => To_Unbounded_String ("Interfaces.Integer_32"),
+                    Default    => To_Unbounded_String ("0"),
+                    Suffix     => To_Unbounded_String ("Int32"),
+                    Array_Type => To_Unbounded_String ("Int32_Array"),
+                    Category   => Cat_Int,
+                    Is_WKT     => False,
+                    Is_Null    => True);
          elsif Is_Enum (Proto) then
             return Info (Ada_Id (Proto), "0", "Int32", "Int32_Array", Cat_Int);
          elsif Is_Message (Proto) then
@@ -699,7 +712,8 @@ package body Proto_Compiler is
                     Suffix     => To_Unbounded_String ("Message"),
                     Array_Type => Null_Unbounded_String,
                     Category   => Cat_Message,
-                    Is_WKT     => True);
+                    Is_WKT     => True,
+                    Is_Null    => False);
          else
             raise Compile_Error
               with "field type '" & Proto
@@ -1741,7 +1755,9 @@ package body Proto_Compiler is
                   T : constant Type_Info := Resolve (Proto);
                   S : constant String := To_String (T.Suffix);
                begin
-                  if Is_Enum (Proto) then
+                  if T.Is_Null then
+                     return "JSON.Null_Value";
+                  elsif Is_Enum (Proto) then
                      return Ada_Id (Proto) & "_To_JSON (" & Acc & ")";
                   end if;
                   case T.Category is
@@ -1895,7 +1911,10 @@ package body Proto_Compiler is
                   T : constant Type_Info := Resolve (Proto);
                   S : constant String := To_String (T.Suffix);
                begin
-                  if Is_Enum (Proto) then
+                  if T.Is_Null then
+                     --  NullValue's only value is NULL_VALUE (0).
+                     return "Interfaces.Integer_32'(0)";
+                  elsif Is_Enum (Proto) then
                      return Ada_Id (Proto) & "_From_JSON (" & FV & ")";
                   end if;
                   case T.Category is
@@ -1989,7 +2008,21 @@ package body Proto_Compiler is
                   P   : constant String := To_String (F.Proto_Type);
                   ON  : constant String := To_String (F.Oneof);
                   Mem : constant String := Oneof_Member_Ident (F);
+                  JN  : constant String := Json_Name (To_String (F.Name));
+                  PN  : constant String := To_String (F.Name);
                begin
+                  if Resolve (P).Is_Null then
+                     --  For a NullValue member, JSON null is the value, not
+                     --  "absent": the key being present selects the member.
+                     SL (Body_Text, "      if JSON.Has (V, " & Q & JN & Q & ")");
+                     SL (Body_Text, "        or else JSON.Has (V, " & Q & PN & Q
+                                    & ") then");
+                     SL (Body_Text, "         Result." & Ada_Id (ON) & " := (Which => "
+                                    & Lit_Mem (TName, ON, To_String (F.Name)) & ", "
+                                    & Mem & " => Interfaces.Integer_32'(0));");
+                     SL (Body_Text, "      end if;");
+                     return;
+                  end if;
                   Emit_Lookup (F);
                   SL (Body_Text, "         if JSON.Kind (FV) /= JSON.JSON_Null then");
                   SL (Body_Text, "            Result." & Ada_Id (ON) & " := (Which => "
