@@ -17,7 +17,7 @@ with Proto_JSON;
 with Proto_WKT;
 with Sample;
 with Conformance;
-with Conformance_test;
+with Protobuf_test_messages_Proto3;
 with Conformance_Harness;
 
 package body Protobuf_Tests is
@@ -1542,28 +1542,63 @@ package body Protobuf_Tests is
    end Test_WKT_Wrappers;
 
    --  Phase 4: the conformance harness -- one ConformanceRequest dispatched to
-   --  one ConformanceResponse (parse + reserialize across binary and JSON).
+   --  one ConformanceResponse (parse + reserialize across binary and JSON),
+   --  now routed to Google's canonical protobuf_test_messages.proto3
+   --  .TestAllTypesProto3 message.
    procedure Test_Conformance_Harness is
       use Ada.Strings.Unbounded;
       use type Conformance.ConformanceResponse_Result_Selector;
-      use type Conformance_test.TestMessage_Choice_Selector;
+      package TM renames Protobuf_test_messages_Proto3;
+      use type TM.TestAllTypesProto3_Oneof_field_Selector;
+      use type TM.TestAllTypesProto3_NestedEnum;
 
-      Known : constant String := "conformance_test.TestMessage";
+      Known : constant String :=
+        "protobuf_test_messages.proto3.TestAllTypesProto3";
 
-      function Sample_Message return Conformance_test.TestMessage is
-         M : Conformance_test.TestMessage;
+      --  A message touching a representative spread of constructs: scalars, a
+      --  nested message + nested enum, repeated, a map, a oneof, and a WKT.
+      function Sample_Message return TM.TestAllTypesProto3 is
+         M    : TM.TestAllTypesProto3;
+         Nest : TM.TestAllTypesProto3_NestedMessage;
       begin
-         M.I32 := 42;
-         M.S := To_Unbounded_String ("hi");
-         M.Color_F := Conformance_test.Color_C_RED;
-         M.Nums.Append (1);
-         M.Nums.Append (2);
-         M.Choice := (Which => Conformance_test.TestMessage_Choice_Ci, Ci => 9);
-         M.Counts.Include (To_Unbounded_String ("a"), 5);
+         M.Optional_int32 := 42;
+         M.Optional_string := To_Unbounded_String ("hi");
+         M.Optional_nested_enum := TM.TestAllTypesProto3_NestedEnum_BAR;
+         Nest.A := 7;
+         M.Optional_nested_message := TM.To_Holder (Nest);
+         M.Repeated_int32.Append (1);
+         M.Repeated_int32.Append (2);
+         M.Map_string_string.Include
+           (To_Unbounded_String ("k"), To_Unbounded_String ("v"));
+         M.Oneof_field :=
+           (Which        => TM.TestAllTypesProto3_Oneof_field_Oneof_uint32,
+            Oneof_uint32 => 9);
+         M.Optional_int32_wrapper :=
+           TM.To_Holder (Proto_WKT.Int32_Value'(Value => 5));
          return M;
       end Sample_Message;
 
-      M : constant Conformance_test.TestMessage := Sample_Message;
+      M : constant TM.TestAllTypesProto3 := Sample_Message;
+
+      --  Every construct in M survived a round-trip into D.
+      procedure Assert_Faithful (D : TM.TestAllTypesProto3; Ctx : String) is
+      begin
+         Assert (D.Optional_int32 = 42
+                 and then To_String (D.Optional_string) = "hi"
+                 and then D.Optional_nested_enum
+                          = TM.TestAllTypesProto3_NestedEnum_BAR
+                 and then not D.Optional_nested_message.Is_Empty
+                 and then D.Optional_nested_message.Element.A = 7
+                 and then Natural (D.Repeated_int32.Length) = 2
+                 and then D.Map_string_string.Element
+                            (To_Unbounded_String ("k")) = "v"
+                 and then D.Oneof_field.Which
+                          = TM.TestAllTypesProto3_Oneof_field_Oneof_uint32
+                 and then D.Oneof_field.Oneof_uint32 = 9
+                 and then not D.Optional_int32_wrapper.Is_Empty
+                 and then D.Optional_int32_wrapper.Element.Value = 5,
+                 Ctx);
+      end Assert_Faithful;
    begin
       --  protobuf in -> JSON out: the response JSON decodes back to M.
       declare
@@ -1574,25 +1609,14 @@ package body Protobuf_Tests is
          Req.Requested_output_format := Conformance.WireFormat_JSON;
          Req.Payload :=
            (Which            => Conformance.ConformanceRequest_Payload_Protobuf_payload,
-            Protobuf_payload =>
-              To_Unbounded_String (Conformance_test.Serialize (M)));
+            Protobuf_payload => To_Unbounded_String (TM.Serialize (M)));
          Resp := Conformance_Harness.Handle (Req);
          Assert (Resp.Result.Which
                  = Conformance.ConformanceResponse_Result_Json_payload,
                  "protobuf->JSON yields a json_payload result");
-         declare
-            D : constant Conformance_test.TestMessage :=
-              Conformance_test.From_JSON
-                (JSON.Parse (To_String (Resp.Result.Json_payload)));
-         begin
-            Assert (D.I32 = 42 and then To_String (D.S) = "hi"
-                    and then D.Color_F = Conformance_test.Color_C_RED
-                    and then Natural (D.Nums.Length) = 2
-                    and then D.Choice.Which = Conformance_test.TestMessage_Choice_Ci
-                    and then D.Choice.Ci = 9
-                    and then D.Counts.Element (To_Unbounded_String ("a")) = 5,
-                    "round-trip through the JSON output is faithful");
-         end;
+         Assert_Faithful
+           (TM.From_JSON (JSON.Parse (To_String (Resp.Result.Json_payload))),
+            "round-trip through the JSON output is faithful");
       end;
 
       --  JSON in -> protobuf out: the response bytes decode back to M.
@@ -1604,19 +1628,15 @@ package body Protobuf_Tests is
          Req.Requested_output_format := Conformance.WireFormat_PROTOBUF;
          Req.Payload :=
            (Which        => Conformance.ConformanceRequest_Payload_Json_payload,
-            Json_payload => To_Unbounded_String
-              (JSON.Serialize (Conformance_test.To_JSON (M))));
+            Json_payload =>
+              To_Unbounded_String (JSON.Serialize (TM.To_JSON (M))));
          Resp := Conformance_Harness.Handle (Req);
          Assert (Resp.Result.Which
                  = Conformance.ConformanceResponse_Result_Protobuf_payload,
                  "JSON->protobuf yields a protobuf_payload result");
-         declare
-            D : constant Conformance_test.TestMessage :=
-              Conformance_test.Parse_TestMessage
-                (To_String (Resp.Result.Protobuf_payload));
-         begin
-            Assert (D.I32 = 42 and then D.Choice.Ci = 9, "JSON->protobuf is faithful");
-         end;
+         Assert_Faithful
+           (TM.Parse_TestAllTypesProto3 (To_String (Resp.Result.Protobuf_payload)),
+            "JSON->protobuf is faithful");
       end;
 
       --  Unknown message type is skipped.

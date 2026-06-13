@@ -114,20 +114,37 @@ closes. `tests/proto/conformance.proto` is the real subset (matching wire field
 numbers); `Conformance_Harness.Handle` (unit-tested) parses the payload and
 re-serializes it in the requested format across protobuf and JSON.
 
-To drive Google's official suite, point its `conformance-test-runner` at
-`bin/conformance-runner`. The generator now supports the constructs
-`protobuf_test_messages.proto3.TestAllTypesProto3` is built from -- nested type
-definitions and proto3 `optional` (alongside maps, oneofs, enums, and the
-well-known types). The remaining step toward a certified end-to-end run is to
-generate `TestAllTypesProto3` itself and route the harness to it; the harness
-currently handles a self-contained `conformance_test.TestMessage` and `skips`
-other message types.
+The harness is routed to Google's canonical message
+`protobuf_test_messages.proto3.TestAllTypesProto3`, generated from
+`tests/proto/test_messages_proto3.proto`. To drive Google's official suite,
+point its `conformance-test-runner` at `bin/conformance-runner`; requests for
+other message types (proto2, editions) are `skipped`.
+
+**Coverage of `TestAllTypesProto3`.** `test_messages_proto3.proto` reproduces
+the upstream message's package, name, and canonical field numbers for every
+construct the generator and runtime model: all scalar types, nested/foreign
+messages and enums, recursion and corecursion, repeated and packed-repeated
+fields, the full range of map key/value shapes, a `oneof`, and the well-known
+types (wrappers, `Duration`, `Timestamp`, `FieldMask`, `Struct`, `Any`,
+`Value`). Deliberately omitted, so the testee answers correctly for what it
+declares rather than silently mangling the rest:
+
+- `google.protobuf.NullValue` fields (the `NullValue` enum is not yet modelled);
+- the explicit `[packed=false]` `unpacked_*` repeats (this generator always
+  packs repeated scalars, so it cannot reproduce the unpacked output);
+- the JSON field-name edge-case fields.
+
+Those cases stay on a conformance failure list until the corresponding features
+land; everything declared round-trips, in both directions, across binary and
+JSON (exercised by the `conformance harness` unit test and an end-to-end smoke
+through the actual `bin/conformance-runner`).
 
 ### Codegen roadmap (toward 100% proto3 + JSON)
 
-1. Wire up `TestAllTypesProto3` itself and route the conformance harness to it,
-   so the official suite runs end-to-end. (Nested types and proto3 `optional`:
-   done.) Also: well-known types as map values / oneof members.
+1. Close the remaining `TestAllTypesProto3` gaps for a fully certified run:
+   the `NullValue` well-known enum, explicit `[packed=false]` repeats, and the
+   JSON field-name edge cases. Also: well-known types as map values / oneof
+   members.
 
 ## Explicitly not implemented (yet)
 

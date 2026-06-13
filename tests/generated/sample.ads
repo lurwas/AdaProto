@@ -9,6 +9,8 @@ with Ada.Containers.Ordered_Maps;
 with Proto_WKT;
 package Sample is
 
+   use type Interfaces.Integer_32;
+
    subtype Color is Interfaces.Integer_32;
    Color_COLOR_UNSPECIFIED : constant Color := 0;
    Color_RED : constant Color := 1;

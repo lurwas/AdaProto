@@ -1036,6 +1036,10 @@ package body Proto_Compiler is
          end if;
          SL (Spec, "package " & Unit & " is");
          SL (Spec, "");
+         --  Make Interfaces.Integer_32 operators directly visible so negative
+         --  enum constants (e.g. NEG = -1) elaborate without a qualified "-".
+         SL (Spec, "   use type Interfaces.Integer_32;");
+         SL (Spec, "");
 
          --  Enums (open enums: int32-valued subtype + named constants).
          for E of Enums loop
