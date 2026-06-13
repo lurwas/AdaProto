@@ -298,7 +298,7 @@ package Protobuf_test_messages_Proto3 is
    end record;
 
    type TestAllTypesProto3_Oneof_field_Selector is
-     (TestAllTypesProto3_Oneof_field_Not_Set, TestAllTypesProto3_Oneof_field_Oneof_uint32, TestAllTypesProto3_Oneof_field_Oneof_nested_message, TestAllTypesProto3_Oneof_field_Oneof_string, TestAllTypesProto3_Oneof_field_Oneof_bytes, TestAllTypesProto3_Oneof_field_Oneof_bool, TestAllTypesProto3_Oneof_field_Oneof_uint64, TestAllTypesProto3_Oneof_field_Oneof_float, TestAllTypesProto3_Oneof_field_Oneof_double, TestAllTypesProto3_Oneof_field_Oneof_enum);
+     (TestAllTypesProto3_Oneof_field_Not_Set, TestAllTypesProto3_Oneof_field_Oneof_uint32, TestAllTypesProto3_Oneof_field_Oneof_nested_message, TestAllTypesProto3_Oneof_field_Oneof_string, TestAllTypesProto3_Oneof_field_Oneof_bytes, TestAllTypesProto3_Oneof_field_Oneof_bool, TestAllTypesProto3_Oneof_field_Oneof_uint64, TestAllTypesProto3_Oneof_field_Oneof_float, TestAllTypesProto3_Oneof_field_Oneof_double, TestAllTypesProto3_Oneof_field_Oneof_enum, TestAllTypesProto3_Oneof_field_Oneof_null_value);
    type TestAllTypesProto3_Oneof_field_Oneof (Which : TestAllTypesProto3_Oneof_field_Selector := TestAllTypesProto3_Oneof_field_Not_Set) is record
       case Which is
          when TestAllTypesProto3_Oneof_field_Not_Set => null;
@@ -311,6 +311,7 @@ package Protobuf_test_messages_Proto3 is
          when TestAllTypesProto3_Oneof_field_Oneof_float => Oneof_float : Interfaces.IEEE_Float_32;
          when TestAllTypesProto3_Oneof_field_Oneof_double => Oneof_double : Interfaces.IEEE_Float_64;
          when TestAllTypesProto3_Oneof_field_Oneof_enum => Oneof_enum : TestAllTypesProto3_NestedEnum;
+         when TestAllTypesProto3_Oneof_field_Oneof_null_value => Oneof_null_value : Interfaces.Integer_32;
       end case;
    end record;
    type TestAllTypesProto3 is record
@@ -411,6 +412,7 @@ package Protobuf_test_messages_Proto3 is
       Optional_struct : Struct_Holder;
       Optional_any : Any_Holder;
       Optional_value : Value_Holder;
+      Optional_null_value : Interfaces.Integer_32 := 0;
    end record;
 
    function Serialize (Message : ForeignMessage) return String;

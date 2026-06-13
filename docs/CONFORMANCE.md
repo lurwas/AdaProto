@@ -126,10 +126,10 @@ construct the generator and runtime model: all scalar types, nested/foreign
 messages and enums, recursion and corecursion, repeated and packed-repeated
 fields, the full range of map key/value shapes, a `oneof`, and the well-known
 types (wrappers, `Duration`, `Timestamp`, `FieldMask`, `Struct`, `Any`,
-`Value`). Deliberately omitted, so the testee answers correctly for what it
+`Value`, and `NullValue` -- a WKT enum that is int32 on the wire but JSON
+`null`). Deliberately omitted, so the testee answers correctly for what it
 declares rather than silently mangling the rest:
 
-- `google.protobuf.NullValue` fields (the `NullValue` enum is not yet modelled);
 - the explicit `[packed=false]` `unpacked_*` repeats (this generator always
   packs repeated scalars, so it cannot reproduce the unpacked output);
 - the JSON field-name edge-case fields.
@@ -142,9 +142,8 @@ through the actual `bin/conformance-runner`).
 ### Codegen roadmap (toward 100% proto3 + JSON)
 
 1. Close the remaining `TestAllTypesProto3` gaps for a fully certified run:
-   the `NullValue` well-known enum, explicit `[packed=false]` repeats, and the
-   JSON field-name edge cases. Also: well-known types as map values / oneof
-   members.
+   explicit `[packed=false]` repeats and the JSON field-name edge cases. Also:
+   well-known types as map values / oneof members.
 
 ## Explicitly not implemented (yet)
 

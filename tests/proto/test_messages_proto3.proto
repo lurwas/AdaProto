@@ -18,10 +18,9 @@ import "google/protobuf/wrappers.proto";
 //
 // Deliberately omitted (constructs the generator does not yet model, so that
 // the testee answers correctly for what it claims rather than silently mangling
-// the rest): google.protobuf.NullValue fields, the explicit [packed=false]
-// "unpacked_*" repeats (this generator always packs), and the JSON field-name
-// edge-case fields. Those conformance cases remain reported as failures until
-// the corresponding generator features land.
+// the rest): the explicit [packed=false] "unpacked_*" repeats (this generator
+// always packs) and the JSON field-name edge-case fields. Those conformance
+// cases remain reported as failures until the corresponding features land.
 
 enum ForeignEnum {
   FOREIGN_FOO = 0;
@@ -139,6 +138,7 @@ message TestAllTypesProto3 {
     float         oneof_float          = 117;
     double        oneof_double         = 118;
     NestedEnum    oneof_enum           = 119;
+    google.protobuf.NullValue oneof_null_value = 120;
   }
 
   // Well-known scalar wrapper types.
@@ -169,4 +169,5 @@ message TestAllTypesProto3 {
   google.protobuf.Struct    optional_struct     = 304;
   google.protobuf.Any       optional_any        = 305;
   google.protobuf.Value     optional_value      = 306;
+  google.protobuf.NullValue optional_null_value = 307;
 }
