@@ -20,6 +20,7 @@ package body Proto_Compiler is
       Name       : Unbounded_String;
       Number     : Positive := 1;
       Repeated   : Boolean := False;
+      Optional   : Boolean := False;  --  proto3 explicit-presence scalar field
       Oneof      : Unbounded_String;  --  empty unless this field is in a oneof
       Is_Map     : Boolean := False;
       Map_Key    : Unbounded_String;  --  proto key type when Is_Map
@@ -245,11 +246,15 @@ package body Proto_Compiler is
          end if;
       end Skip_Field_Options;
 
-      procedure Parse_Enum is
+      --  Qualify a type name with its enclosing scope (empty Prefix = top level).
+      function Qualify (Prefix, Name : String) return String is
+        (if Prefix = "" then Name else Prefix & "." & Name);
+
+      procedure Parse_Enum (Prefix : String) is
          E : Enum_Def;
       begin
          Adv;  -- 'enum'
-         E.Name := To_Unbounded_String (Expect_Ident);
+         E.Name := To_Unbounded_String (Qualify (Prefix, Expect_Ident));
          Expect_Symbol ("{");
          while not At_Symbol ("}") and then Cur.Kind /= T_EOF loop
             if At_Symbol (";") then
@@ -273,22 +278,23 @@ package body Proto_Compiler is
          Enums.Append (E);
       end Parse_Enum;
 
-      procedure Parse_Message is
-         M : Message_Def;
+      procedure Parse_Message (Prefix : String) is
+         M     : Message_Def;
+         FQ    : Unbounded_String;
       begin
          Adv;  -- 'message'
-         M.Name := To_Unbounded_String (Expect_Ident);
+         M.Name := To_Unbounded_String (Qualify (Prefix, Expect_Ident));
+         FQ := M.Name;
          Expect_Symbol ("{");
          while not At_Symbol ("}") and then Cur.Kind /= T_EOF loop
             if At_Symbol (";") then
                Adv;
             elsif At_Ident ("reserved") or else At_Ident ("option") then
                Skip_To_Semicolon;
-            elsif At_Ident ("optional") then
-               Err ("'optional' fields are not supported in this codegen phase");
-            elsif At_Ident ("message") or else At_Ident ("enum") then
-               Err ("nested '" & To_String (Cur.Text)
-                    & "' is not supported in this codegen phase");
+            elsif At_Ident ("message") then
+               Parse_Message (To_String (FQ));
+            elsif At_Ident ("enum") then
+               Parse_Enum (To_String (FQ));
             elsif At_Ident ("map") then
                Adv;  -- 'map'
                Expect_Symbol ("<");
@@ -343,6 +349,9 @@ package body Proto_Compiler is
                   if At_Ident ("repeated") then
                      F.Repeated := True;
                      Adv;
+                  elsif At_Ident ("optional") then
+                     F.Optional := True;
+                     Adv;
                   end if;
                   F.Proto_Type := Parse_Dotted;
                   F.Name := To_Unbounded_String (Expect_Ident);
@@ -380,9 +389,9 @@ package body Proto_Compiler is
             Adv;
             Skip_To_Semicolon;
          elsif At_Ident ("message") then
-            Parse_Message;
+            Parse_Message ("");
          elsif At_Ident ("enum") then
-            Parse_Enum;
+            Parse_Enum ("");
          elsif At_Symbol (";") then
             Adv;
          else
@@ -526,13 +535,33 @@ package body Proto_Compiler is
       return Ada.Strings.Fixed.Index (Reserved_Words, " " & Lower_Name & " ") > 0;
    end Is_Reserved;
 
-   function Ada_Id (Proto_Name : String) return String is
+   --  Map one proto identifier segment to a legal Ada identifier (capitalised,
+   --  reserved words suffixed "_F").
+   function Ada_Seg (Proto_Name : String) return String is
    begin
       if Is_Reserved (To_Lower (Proto_Name)) then
          return Cap (Proto_Name) & "_F";
       else
          return Cap (Proto_Name);
       end if;
+   end Ada_Seg;
+
+   --  Map a (possibly dotted) proto type name to an Ada identifier. A nested
+   --  type's fully-qualified name "Outer.Inner" flattens to "Outer_Inner",
+   --  each segment escaped independently. Simple names pass through unchanged.
+   function Ada_Id (Proto_Name : String) return String is
+      R     : Unbounded_String;
+      Start : Natural := Proto_Name'First;
+   begin
+      for I in Proto_Name'Range loop
+         if Proto_Name (I) = '.' then
+            Append (R, Ada_Seg (Proto_Name (Start .. I - 1)));
+            Append (R, '_');
+            Start := I + 1;
+         end if;
+      end loop;
+      Append (R, Ada_Seg (Proto_Name (Start .. Proto_Name'Last)));
+      return To_String (R);
    end Ada_Id;
 
    --  proto3 JSON field name: snake_case -> lowerCamelCase.
@@ -762,6 +791,98 @@ package body Proto_Compiler is
 
    begin
       Parse (Toks, Pkg, Msgs, Enums);
+
+      --  Resolve every field's type reference to the fully-qualified name of the
+      --  type it denotes, using proto's innermost-out scope search. Nested types
+      --  are flattened into Msgs/Enums under dotted FQ names ("Outer.Inner"); a
+      --  reference like "Inner" from within "Outer" must bind to "Outer.Inner"
+      --  here, so that code generation thereafter matches purely by FQ name.
+      declare
+         function Is_Declared (Name : String) return Boolean is
+         begin
+            for M of Msgs loop
+               if To_String (M.Name) = Name then
+                  return True;
+               end if;
+            end loop;
+            for E of Enums loop
+               if To_String (E.Name) = Name then
+                  return True;
+               end if;
+            end loop;
+            return False;
+         end Is_Declared;
+
+         --  The FQ declared type a reference binds to within Scope, or "" if it
+         --  is not a user-declared type (scalar / google.protobuf.* / unknown).
+         function Resolve_Ref (Ref, Scope : String) return String is
+            S : Unbounded_String := To_Unbounded_String (Scope);
+         begin
+            loop
+               declare
+                  Cand : constant String :=
+                    (if Length (S) = 0 then Ref
+                     else To_String (S) & "." & Ref);
+               begin
+                  if Is_Declared (Cand) then
+                     return Cand;
+                  end if;
+               end;
+               exit when Length (S) = 0;
+               --  Ascend to the enclosing scope (strip the last dotted segment).
+               declare
+                  Cur_S : constant String := To_String (S);
+                  Dot   : Natural := 0;
+               begin
+                  for I in Cur_S'Range loop
+                     if Cur_S (I) = '.' then
+                        Dot := I;
+                     end if;
+                  end loop;
+                  S := To_Unbounded_String
+                         (if Dot = 0 then "" else Cur_S (Cur_S'First .. Dot - 1));
+               end;
+            end loop;
+            return "";
+         end Resolve_Ref;
+      begin
+         for MI in Msgs.First_Index .. Msgs.Last_Index loop
+            declare
+               M     : Message_Def := Msgs (MI);
+               Scope : constant String := To_String (M.Name);
+            begin
+               for FI in M.Fields.First_Index .. M.Fields.Last_Index loop
+                  declare
+                     F : Field_Def := M.Fields (FI);
+                  begin
+                     if F.Is_Map then
+                        declare
+                           R : constant String :=
+                             Resolve_Ref (To_String (F.Map_Value), Scope);
+                        begin
+                           if R /= "" then
+                              F.Map_Value := To_Unbounded_String (R);
+                              M.Fields.Replace_Element (FI, F);
+                           end if;
+                        end;
+                     else
+                        declare
+                           R : constant String :=
+                             Resolve_Ref (To_String (F.Proto_Type), Scope);
+                        begin
+                           if R /= "" then
+                              F.Proto_Type := To_Unbounded_String (R);
+                              M.Fields.Replace_Element (FI, F);
+                           end if;
+                        end;
+                     end if;
+                  end;
+               end loop;
+               Msgs.Replace_Element (MI, M);
+            end;
+         end loop;
+      end;
+
       for E of Enums loop
          Enum_Names.Append (E.Name);
       end loop;
@@ -1144,6 +1265,10 @@ package body Proto_Compiler is
                         else
                            SL (Spec, "      " & C & " : " & To_String (T.Ada_Type)
                                      & " := " & To_String (T.Default) & ";");
+                           if F.Optional then
+                              SL (Spec, "      " & C
+                                        & "_Has : Boolean := False;");
+                           end if;
                         end if;
                      end;
                   end if;
@@ -1359,34 +1484,35 @@ package body Proto_Compiler is
                         SL (Body_Text, "      end if;");
                      end if;
                   else
-                     case T.Category is
-                        when Cat_Int =>
-                           SL (Body_Text, "      if Message." & C & " /= 0 then");
-                           SL (Body_Text, "         Protobuf.Add_" & To_String (T.Suffix)
-                                          & " (Buffer," & N & ", Message." & C & ");");
-                           SL (Body_Text, "      end if;");
-                        when Cat_Float =>
-                           SL (Body_Text, "      if Message." & C & " /= 0.0 then");
-                           SL (Body_Text, "         Protobuf.Add_" & To_String (T.Suffix)
-                                          & " (Buffer," & N & ", Message." & C & ");");
-                           SL (Body_Text, "      end if;");
-                        when Cat_Bool =>
-                           SL (Body_Text, "      if Message." & C & " then");
-                           SL (Body_Text, "         Protobuf.Add_" & To_String (T.Suffix)
-                                          & " (Buffer," & N & ", Message." & C & ");");
-                           SL (Body_Text, "      end if;");
-                        when Cat_Str =>
-                           SL (Body_Text, "      if Length (Message." & C & ") > 0 then");
-                           SL (Body_Text, "         Protobuf.Add_" & To_String (T.Suffix)
-                                          & " (Buffer," & N & ", To_String (Message."
-                                          & C & "));");
-                           SL (Body_Text, "      end if;");
-                        when Cat_Message =>
-                           SL (Body_Text, "      if not Message." & C & ".Is_Empty then");
-                           SL (Body_Text, "         Protobuf.Add_Message (Buffer," & N
-                                          & ", Serialize (Message." & C & ".Element));");
-                           SL (Body_Text, "      end if;");
-                     end case;
+                     declare
+                        Acc : constant String := "Message." & C;
+                        --  proto3 `optional` scalars are emitted by presence
+                        --  (even at the default value); others by non-default.
+                        Guard : constant String :=
+                          (if F.Optional and then T.Category /= Cat_Message then
+                              Acc & "_Has"
+                           else (case T.Category is
+                                    when Cat_Int     => Acc & " /= 0",
+                                    when Cat_Float   => Acc & " /= 0.0",
+                                    when Cat_Bool    => Acc,
+                                    when Cat_Str     => "Length (" & Acc & ") > 0",
+                                    when Cat_Message => "not " & Acc & ".Is_Empty"));
+                        Add_Stmt : constant String :=
+                          (case T.Category is
+                              when Cat_Str =>
+                                "Protobuf.Add_" & To_String (T.Suffix) & " (Buffer,"
+                                & N & ", To_String (" & Acc & "))",
+                              when Cat_Message =>
+                                "Protobuf.Add_Message (Buffer," & N
+                                & ", Serialize (" & Acc & ".Element))",
+                              when others =>
+                                "Protobuf.Add_" & To_String (T.Suffix) & " (Buffer,"
+                                & N & ", " & Acc & ")");
+                     begin
+                        SL (Body_Text, "      if " & Guard & " then");
+                        SL (Body_Text, "         " & Add_Stmt & ";");
+                        SL (Body_Text, "      end if;");
+                     end;
                   end if;
                end Emit_Encode;
 
@@ -1460,6 +1586,9 @@ package body Proto_Compiler is
                   else
                      SL (Body_Text, "               Result." & C & " := Protobuf.As_"
                                     & To_String (T.Suffix) & " (Item);");
+                  end if;
+                  if F.Optional and then T.Category /= Cat_Message then
+                     SL (Body_Text, "               Result." & C & "_Has := True;");
                   end if;
                end Emit_Decode;
 
@@ -1668,12 +1797,14 @@ package body Proto_Compiler is
                   else
                      declare
                         Guard : constant String :=
-                          (case T.Category is
-                              when Cat_Int     => "Message." & C & " /= 0",
-                              when Cat_Float   => "Message." & C & " /= 0.0",
-                              when Cat_Bool    => "Message." & C,
-                              when Cat_Str     => "Length (Message." & C & ") > 0",
-                              when Cat_Message => "not Message." & C & ".Is_Empty");
+                          (if F.Optional and then T.Category /= Cat_Message then
+                              "Message." & C & "_Has"
+                           else (case T.Category is
+                                    when Cat_Int     => "Message." & C & " /= 0",
+                                    when Cat_Float   => "Message." & C & " /= 0.0",
+                                    when Cat_Bool    => "Message." & C,
+                                    when Cat_Str  => "Length (Message." & C & ") > 0",
+                                    when Cat_Message => "not Message." & C & ".Is_Empty"));
                         Acc : constant String :=
                           (if T.Category = Cat_Message
                            then "Message." & C & ".Element"
@@ -1842,6 +1973,9 @@ package body Proto_Compiler is
                      SL (Body_Text, "         if JSON.Kind (FV) /= JSON.JSON_Null then");
                      SL (Body_Text, "            Result." & C & " := "
                                     & Stored_From_JSON (P, "FV") & ";");
+                     if F.Optional and then T.Category /= Cat_Message then
+                        SL (Body_Text, "            Result." & C & "_Has := True;");
+                     end if;
                      SL (Body_Text, "         end if;");
                   end if;
                   SL (Body_Text, "      end;");

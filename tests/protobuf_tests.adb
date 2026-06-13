@@ -2020,6 +2020,156 @@ package body Protobuf_Tests is
       end;
    end Test_Generated_From_JSON;
 
+   --  Nested type definitions: messages/enums declared inside a message, with
+   --  corecursion (a nested message referring back to its enclosing type) and a
+   --  nested message used as a map value. The generator flattens these to
+   --  top-level Ada types (Nest, Nest_Item, Nest_Kind) -- this proves the
+   --  flattened names, scope resolution, and holders all hang together.
+   procedure Test_Generated_Nested_Types is
+      use Ada.Strings.Unbounded;
+   begin
+      --  Binary round-trip: a Nest whose head Item points back at a Nest
+      --  (corecursion), with a repeated Item, a nested-enum field, and a
+      --  nested message as a map value.
+      declare
+         N      : Sample.Nest;
+         Head   : Sample.Nest_Item;
+         Inner  : Sample.Nest;       --  what Head.Parent corecursively holds
+         Child  : Sample.Nest_Item;
+      begin
+         Inner.Kind := Sample.Nest_Kind_KIND_LEAF;
+
+         Head.A := 5;
+         Head.Kind := Sample.Nest_Kind_KIND_NODE;
+         Head.Parent := Sample.To_Holder (Inner);   --  corecursive reference
+
+         Child.A := 7;
+
+         N.Head := Sample.To_Holder (Head);
+         N.Items.Append (Sample.To_Holder (Child));
+         N.Kind := Sample.Nest_Kind_KIND_NODE;
+         N.By_name.Include (To_Unbounded_String ("k"), Sample.To_Holder (Child));
+
+         declare
+            D : constant Sample.Nest := Sample.Parse_Nest (Sample.Serialize (N));
+         begin
+            Assert (D.Kind = Sample.Nest_Kind_KIND_NODE, "nest-level nested enum");
+            Assert (not D.Head.Is_Empty and then D.Head.Element.A = 5,
+                    "singular nested message round-trips");
+            Assert (D.Head.Element.Kind = Sample.Nest_Kind_KIND_NODE,
+                    "nested enum inside a nested message");
+            Assert (not D.Head.Element.Parent.Is_Empty
+                    and then D.Head.Element.Parent.Element.Kind
+                             = Sample.Nest_Kind_KIND_LEAF,
+                    "corecursive nested message (Item -> Nest) round-trips");
+            Assert (Natural (D.Items.Length) = 1
+                    and then Sample.Element (D.Items (1)).A = 7,
+                    "repeated nested message round-trips");
+            Assert (D.By_name.Element (To_Unbounded_String ("k")).Element.A = 7,
+                    "nested message as a map value round-trips");
+         end;
+      end;
+
+      --  JSON: nested enum serialises by name; nested message nests as an object.
+      declare
+         N    : Sample.Nest;
+         Head : Sample.Nest_Item;
+         J    : JSON.JSON_Value;
+         R    : Sample.Nest;
+      begin
+         Head.A := 9;
+         Head.Kind := Sample.Nest_Kind_KIND_LEAF;
+         N.Head := Sample.To_Holder (Head);
+         N.Kind := Sample.Nest_Kind_KIND_NODE;
+
+         J := JSON.Parse (JSON.Serialize (Sample.To_JSON (N)));
+         Assert (JSON.As_String (JSON.Get (J, "kind")) = "KIND_NODE",
+                 "nested enum -> JSON name");
+         Assert (JSON.As_Number (JSON.Get (JSON.Get (J, "head"), "a")) = "9",
+                 "nested message -> nested JSON object");
+         Assert (JSON.As_String (JSON.Get (JSON.Get (J, "head"), "kind"))
+                 = "KIND_LEAF",
+                 "nested enum inside nested message -> JSON name");
+
+         R := Sample.From_JSON (J);
+         Assert (R.Kind = Sample.Nest_Kind_KIND_NODE
+                 and then R.Head.Element.A = 9
+                 and then R.Head.Element.Kind = Sample.Nest_Kind_KIND_LEAF,
+                 "nested types round-trip through JSON");
+      end;
+   end Test_Generated_Nested_Types;
+
+   --  proto3 `optional`: explicit-presence scalars. The presence flag, not the
+   --  value, decides emission — so `maybe = 0` set explicitly is still wired
+   --  out, while a `plain` (no-presence) 0 is omitted.
+   procedure Test_Generated_Optional is
+      use Ada.Strings.Unbounded;
+   begin
+      --  Binary: an explicitly-set default-valued optional IS emitted; an
+      --  unset optional is omitted; presence survives a round-trip.
+      declare
+         O : Sample.Opt;
+      begin
+         Assert (Sample.Serialize (O) = "",
+                 "an all-default Opt with no presence set serializes to nothing");
+
+         O.Maybe := 0;
+         O.Maybe_Has := True;
+         declare
+            R : constant Sample.Opt := Sample.Parse_Opt (Sample.Serialize (O));
+         begin
+            Assert (R.Maybe_Has, "optional int32 set to 0 round-trips as present");
+            Assert (R.Maybe = 0, "its value is the default 0");
+            Assert (not R.Note_Has, "an untouched optional stays absent");
+         end;
+      end;
+
+      --  A non-default optional and a set optional string survive the round-trip.
+      declare
+         O : Sample.Opt;
+         R : Sample.Opt;
+      begin
+         O.Maybe := 7;
+         O.Maybe_Has := True;
+         O.Note := To_Unbounded_String ("hi");
+         O.Note_Has := True;
+         R := Sample.Parse_Opt (Sample.Serialize (O));
+         Assert (R.Maybe_Has and then R.Maybe = 7, "non-default optional round-trips");
+         Assert (R.Note_Has and then To_String (R.Note) = "hi",
+                 "optional string round-trips as present");
+      end;
+
+      --  A no-presence (implicit) field at its default is still omitted.
+      declare
+         O : Sample.Opt;
+      begin
+         O.Plain := 0;
+         Assert (Sample.Serialize (O) = "",
+                 "implicit-presence field at default 0 is omitted");
+      end;
+
+      --  JSON: presence governs the key. `maybe = 0` (present) appears as the
+      --  number 0; an absent optional has no key; round-trip preserves presence.
+      declare
+         O : Sample.Opt;
+         J : JSON.JSON_Value;
+         R : Sample.Opt;
+      begin
+         O.Maybe := 0;
+         O.Maybe_Has := True;
+         J := JSON.Parse (JSON.Serialize (Sample.To_JSON (O)));
+         Assert (JSON.Has (J, "maybe"), "present optional 0 emits its JSON key");
+         Assert (JSON.As_Number (JSON.Get (J, "maybe")) = "0",
+                 "present optional 0 -> JSON number 0");
+         Assert (not JSON.Has (J, "note"), "absent optional omits its JSON key");
+
+         R := Sample.From_JSON (J);
+         Assert (R.Maybe_Has and then R.Maybe = 0,
+                 "JSON-decoded present optional 0 is present");
+         Assert (not R.Note_Has, "JSON-decoded absent optional stays absent");
+      end;
+   end Test_Generated_Optional;
+
    --  Phase 2: the JSON DOM library (writer + recursive-descent parser).
    procedure Test_JSON_Library is
       use type JSON.Value_Kind;
@@ -2284,6 +2434,8 @@ package body Protobuf_Tests is
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("json library", Test_JSON_Library'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated to_json", Test_Generated_To_JSON'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated from_json", Test_Generated_From_JSON'Access));
+         AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated optional presence", Test_Generated_Optional'Access));
+         AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated nested type definitions", Test_Generated_Nested_Types'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated utf8 validation", Test_Generated_UTF8_Validation'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("wkt wrappers and empty", Test_WKT_Wrappers'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("wkt duration and timestamp", Test_WKT_Duration_Timestamp'Access));
