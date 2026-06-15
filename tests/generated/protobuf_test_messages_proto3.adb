@@ -1103,6 +1103,48 @@ package body Protobuf_test_messages_Proto3 is
             Protobuf.Add_Packed_Int32 (Buffer, 88, Tmp);
          end;
       end if;
+      for I in Message.Unpacked_int32.First_Index .. Message.Unpacked_int32.Last_Index loop
+         Protobuf.Add_Int32 (Buffer, 89, Message.Unpacked_int32 (I));
+      end loop;
+      for I in Message.Unpacked_int64.First_Index .. Message.Unpacked_int64.Last_Index loop
+         Protobuf.Add_Int64 (Buffer, 90, Message.Unpacked_int64 (I));
+      end loop;
+      for I in Message.Unpacked_uint32.First_Index .. Message.Unpacked_uint32.Last_Index loop
+         Protobuf.Add_UInt32 (Buffer, 91, Message.Unpacked_uint32 (I));
+      end loop;
+      for I in Message.Unpacked_uint64.First_Index .. Message.Unpacked_uint64.Last_Index loop
+         Protobuf.Add_UInt64 (Buffer, 92, Message.Unpacked_uint64 (I));
+      end loop;
+      for I in Message.Unpacked_sint32.First_Index .. Message.Unpacked_sint32.Last_Index loop
+         Protobuf.Add_SInt32 (Buffer, 93, Message.Unpacked_sint32 (I));
+      end loop;
+      for I in Message.Unpacked_sint64.First_Index .. Message.Unpacked_sint64.Last_Index loop
+         Protobuf.Add_SInt64 (Buffer, 94, Message.Unpacked_sint64 (I));
+      end loop;
+      for I in Message.Unpacked_fixed32.First_Index .. Message.Unpacked_fixed32.Last_Index loop
+         Protobuf.Add_Fixed32 (Buffer, 95, Message.Unpacked_fixed32 (I));
+      end loop;
+      for I in Message.Unpacked_fixed64.First_Index .. Message.Unpacked_fixed64.Last_Index loop
+         Protobuf.Add_Fixed64 (Buffer, 96, Message.Unpacked_fixed64 (I));
+      end loop;
+      for I in Message.Unpacked_sfixed32.First_Index .. Message.Unpacked_sfixed32.Last_Index loop
+         Protobuf.Add_SFixed32 (Buffer, 97, Message.Unpacked_sfixed32 (I));
+      end loop;
+      for I in Message.Unpacked_sfixed64.First_Index .. Message.Unpacked_sfixed64.Last_Index loop
+         Protobuf.Add_SFixed64 (Buffer, 98, Message.Unpacked_sfixed64 (I));
+      end loop;
+      for I in Message.Unpacked_float.First_Index .. Message.Unpacked_float.Last_Index loop
+         Protobuf.Add_Float (Buffer, 99, Message.Unpacked_float (I));
+      end loop;
+      for I in Message.Unpacked_double.First_Index .. Message.Unpacked_double.Last_Index loop
+         Protobuf.Add_Double (Buffer, 100, Message.Unpacked_double (I));
+      end loop;
+      for I in Message.Unpacked_bool.First_Index .. Message.Unpacked_bool.Last_Index loop
+         Protobuf.Add_Bool (Buffer, 101, Message.Unpacked_bool (I));
+      end loop;
+      for I in Message.Unpacked_nested_enum.First_Index .. Message.Unpacked_nested_enum.Last_Index loop
+         Protobuf.Add_Int32 (Buffer, 102, Message.Unpacked_nested_enum (I));
+      end loop;
       case Message.Oneof_field.Which is
          when TestAllTypesProto3_Oneof_field_Not_Set => null;
          when TestAllTypesProto3_Oneof_field_Oneof_uint32 =>
@@ -1853,6 +1895,146 @@ package body Protobuf_test_messages_Proto3 is
                else
                   Result.Packed_nested_enum.Append (Protobuf.As_Int32 (Item));
                end if;
+            when 89 =>
+               if Item.Kind = Protobuf.Length_Delimited_Wire then
+                  declare
+                     A : constant Protobuf.Int32_Array := Protobuf.Decode_Packed_Int32 (Protobuf.As_Bytes (Item));
+                  begin
+                     for V of A loop Result.Unpacked_int32.Append (V); end loop;
+                  end;
+               else
+                  Result.Unpacked_int32.Append (Protobuf.As_Int32 (Item));
+               end if;
+            when 90 =>
+               if Item.Kind = Protobuf.Length_Delimited_Wire then
+                  declare
+                     A : constant Protobuf.Int64_Array := Protobuf.Decode_Packed_Int64 (Protobuf.As_Bytes (Item));
+                  begin
+                     for V of A loop Result.Unpacked_int64.Append (V); end loop;
+                  end;
+               else
+                  Result.Unpacked_int64.Append (Protobuf.As_Int64 (Item));
+               end if;
+            when 91 =>
+               if Item.Kind = Protobuf.Length_Delimited_Wire then
+                  declare
+                     A : constant Protobuf.UInt32_Array := Protobuf.Decode_Packed_UInt32 (Protobuf.As_Bytes (Item));
+                  begin
+                     for V of A loop Result.Unpacked_uint32.Append (V); end loop;
+                  end;
+               else
+                  Result.Unpacked_uint32.Append (Protobuf.As_UInt32 (Item));
+               end if;
+            when 92 =>
+               if Item.Kind = Protobuf.Length_Delimited_Wire then
+                  declare
+                     A : constant Protobuf.UInt64_Array := Protobuf.Decode_Packed_UInt64 (Protobuf.As_Bytes (Item));
+                  begin
+                     for V of A loop Result.Unpacked_uint64.Append (V); end loop;
+                  end;
+               else
+                  Result.Unpacked_uint64.Append (Protobuf.As_UInt64 (Item));
+               end if;
+            when 93 =>
+               if Item.Kind = Protobuf.Length_Delimited_Wire then
+                  declare
+                     A : constant Protobuf.Int32_Array := Protobuf.Decode_Packed_SInt32 (Protobuf.As_Bytes (Item));
+                  begin
+                     for V of A loop Result.Unpacked_sint32.Append (V); end loop;
+                  end;
+               else
+                  Result.Unpacked_sint32.Append (Protobuf.As_SInt32 (Item));
+               end if;
+            when 94 =>
+               if Item.Kind = Protobuf.Length_Delimited_Wire then
+                  declare
+                     A : constant Protobuf.Int64_Array := Protobuf.Decode_Packed_SInt64 (Protobuf.As_Bytes (Item));
+                  begin
+                     for V of A loop Result.Unpacked_sint64.Append (V); end loop;
+                  end;
+               else
+                  Result.Unpacked_sint64.Append (Protobuf.As_SInt64 (Item));
+               end if;
+            when 95 =>
+               if Item.Kind = Protobuf.Length_Delimited_Wire then
+                  declare
+                     A : constant Protobuf.Fixed32_Array := Protobuf.Decode_Packed_Fixed32 (Protobuf.As_Bytes (Item));
+                  begin
+                     for V of A loop Result.Unpacked_fixed32.Append (V); end loop;
+                  end;
+               else
+                  Result.Unpacked_fixed32.Append (Protobuf.As_Fixed32 (Item));
+               end if;
+            when 96 =>
+               if Item.Kind = Protobuf.Length_Delimited_Wire then
+                  declare
+                     A : constant Protobuf.Fixed64_Array := Protobuf.Decode_Packed_Fixed64 (Protobuf.As_Bytes (Item));
+                  begin
+                     for V of A loop Result.Unpacked_fixed64.Append (V); end loop;
+                  end;
+               else
+                  Result.Unpacked_fixed64.Append (Protobuf.As_Fixed64 (Item));
+               end if;
+            when 97 =>
+               if Item.Kind = Protobuf.Length_Delimited_Wire then
+                  declare
+                     A : constant Protobuf.SFixed32_Array := Protobuf.Decode_Packed_SFixed32 (Protobuf.As_Bytes (Item));
+                  begin
+                     for V of A loop Result.Unpacked_sfixed32.Append (V); end loop;
+                  end;
+               else
+                  Result.Unpacked_sfixed32.Append (Protobuf.As_SFixed32 (Item));
+               end if;
+            when 98 =>
+               if Item.Kind = Protobuf.Length_Delimited_Wire then
+                  declare
+                     A : constant Protobuf.SFixed64_Array := Protobuf.Decode_Packed_SFixed64 (Protobuf.As_Bytes (Item));
+                  begin
+                     for V of A loop Result.Unpacked_sfixed64.Append (V); end loop;
+                  end;
+               else
+                  Result.Unpacked_sfixed64.Append (Protobuf.As_SFixed64 (Item));
+               end if;
+            when 99 =>
+               if Item.Kind = Protobuf.Length_Delimited_Wire then
+                  declare
+                     A : constant Protobuf.Float_Array := Protobuf.Decode_Packed_Float (Protobuf.As_Bytes (Item));
+                  begin
+                     for V of A loop Result.Unpacked_float.Append (V); end loop;
+                  end;
+               else
+                  Result.Unpacked_float.Append (Protobuf.As_Float (Item));
+               end if;
+            when 100 =>
+               if Item.Kind = Protobuf.Length_Delimited_Wire then
+                  declare
+                     A : constant Protobuf.Double_Array := Protobuf.Decode_Packed_Double (Protobuf.As_Bytes (Item));
+                  begin
+                     for V of A loop Result.Unpacked_double.Append (V); end loop;
+                  end;
+               else
+                  Result.Unpacked_double.Append (Protobuf.As_Double (Item));
+               end if;
+            when 101 =>
+               if Item.Kind = Protobuf.Length_Delimited_Wire then
+                  declare
+                     A : constant Protobuf.Bool_Array := Protobuf.Decode_Packed_Bool (Protobuf.As_Bytes (Item));
+                  begin
+                     for V of A loop Result.Unpacked_bool.Append (V); end loop;
+                  end;
+               else
+                  Result.Unpacked_bool.Append (Protobuf.As_Bool (Item));
+               end if;
+            when 102 =>
+               if Item.Kind = Protobuf.Length_Delimited_Wire then
+                  declare
+                     A : constant Protobuf.Int32_Array := Protobuf.Decode_Packed_Int32 (Protobuf.As_Bytes (Item));
+                  begin
+                     for V of A loop Result.Unpacked_nested_enum.Append (V); end loop;
+                  end;
+               else
+                  Result.Unpacked_nested_enum.Append (Protobuf.As_Int32 (Item));
+               end if;
             when 111 =>
                Result.Oneof_field := (Which => TestAllTypesProto3_Oneof_field_Oneof_uint32, Oneof_uint32 => Protobuf.As_UInt32 (Item));
             when 112 =>
@@ -2510,6 +2692,146 @@ package body Protobuf_test_messages_Proto3 is
                JSON.Append (Arr, TestAllTypesProto3_NestedEnum_To_JSON (Message.Packed_nested_enum.Element (I)));
             end loop;
             JSON.Insert (Obj, "packedNestedEnum", Arr);
+         end;
+      end if;
+      if not Message.Unpacked_int32.Is_Empty then
+         declare
+            Arr : JSON.JSON_Value := JSON.Empty_Array;
+         begin
+            for I in Message.Unpacked_int32.First_Index .. Message.Unpacked_int32.Last_Index loop
+               JSON.Append (Arr, JSON.Number (Proto_JSON.Image (Interfaces.Integer_64 (Message.Unpacked_int32.Element (I)))));
+            end loop;
+            JSON.Insert (Obj, "unpackedInt32", Arr);
+         end;
+      end if;
+      if not Message.Unpacked_int64.Is_Empty then
+         declare
+            Arr : JSON.JSON_Value := JSON.Empty_Array;
+         begin
+            for I in Message.Unpacked_int64.First_Index .. Message.Unpacked_int64.Last_Index loop
+               JSON.Append (Arr, JSON.To_Value (Proto_JSON.Image (Message.Unpacked_int64.Element (I))));
+            end loop;
+            JSON.Insert (Obj, "unpackedInt64", Arr);
+         end;
+      end if;
+      if not Message.Unpacked_uint32.Is_Empty then
+         declare
+            Arr : JSON.JSON_Value := JSON.Empty_Array;
+         begin
+            for I in Message.Unpacked_uint32.First_Index .. Message.Unpacked_uint32.Last_Index loop
+               JSON.Append (Arr, JSON.Number (Proto_JSON.Image (Interfaces.Unsigned_64 (Message.Unpacked_uint32.Element (I)))));
+            end loop;
+            JSON.Insert (Obj, "unpackedUint32", Arr);
+         end;
+      end if;
+      if not Message.Unpacked_uint64.Is_Empty then
+         declare
+            Arr : JSON.JSON_Value := JSON.Empty_Array;
+         begin
+            for I in Message.Unpacked_uint64.First_Index .. Message.Unpacked_uint64.Last_Index loop
+               JSON.Append (Arr, JSON.To_Value (Proto_JSON.Image (Message.Unpacked_uint64.Element (I))));
+            end loop;
+            JSON.Insert (Obj, "unpackedUint64", Arr);
+         end;
+      end if;
+      if not Message.Unpacked_sint32.Is_Empty then
+         declare
+            Arr : JSON.JSON_Value := JSON.Empty_Array;
+         begin
+            for I in Message.Unpacked_sint32.First_Index .. Message.Unpacked_sint32.Last_Index loop
+               JSON.Append (Arr, JSON.Number (Proto_JSON.Image (Interfaces.Integer_64 (Message.Unpacked_sint32.Element (I)))));
+            end loop;
+            JSON.Insert (Obj, "unpackedSint32", Arr);
+         end;
+      end if;
+      if not Message.Unpacked_sint64.Is_Empty then
+         declare
+            Arr : JSON.JSON_Value := JSON.Empty_Array;
+         begin
+            for I in Message.Unpacked_sint64.First_Index .. Message.Unpacked_sint64.Last_Index loop
+               JSON.Append (Arr, JSON.To_Value (Proto_JSON.Image (Message.Unpacked_sint64.Element (I))));
+            end loop;
+            JSON.Insert (Obj, "unpackedSint64", Arr);
+         end;
+      end if;
+      if not Message.Unpacked_fixed32.Is_Empty then
+         declare
+            Arr : JSON.JSON_Value := JSON.Empty_Array;
+         begin
+            for I in Message.Unpacked_fixed32.First_Index .. Message.Unpacked_fixed32.Last_Index loop
+               JSON.Append (Arr, JSON.Number (Proto_JSON.Image (Interfaces.Unsigned_64 (Message.Unpacked_fixed32.Element (I)))));
+            end loop;
+            JSON.Insert (Obj, "unpackedFixed32", Arr);
+         end;
+      end if;
+      if not Message.Unpacked_fixed64.Is_Empty then
+         declare
+            Arr : JSON.JSON_Value := JSON.Empty_Array;
+         begin
+            for I in Message.Unpacked_fixed64.First_Index .. Message.Unpacked_fixed64.Last_Index loop
+               JSON.Append (Arr, JSON.To_Value (Proto_JSON.Image (Message.Unpacked_fixed64.Element (I))));
+            end loop;
+            JSON.Insert (Obj, "unpackedFixed64", Arr);
+         end;
+      end if;
+      if not Message.Unpacked_sfixed32.Is_Empty then
+         declare
+            Arr : JSON.JSON_Value := JSON.Empty_Array;
+         begin
+            for I in Message.Unpacked_sfixed32.First_Index .. Message.Unpacked_sfixed32.Last_Index loop
+               JSON.Append (Arr, JSON.Number (Proto_JSON.Image (Interfaces.Integer_64 (Message.Unpacked_sfixed32.Element (I)))));
+            end loop;
+            JSON.Insert (Obj, "unpackedSfixed32", Arr);
+         end;
+      end if;
+      if not Message.Unpacked_sfixed64.Is_Empty then
+         declare
+            Arr : JSON.JSON_Value := JSON.Empty_Array;
+         begin
+            for I in Message.Unpacked_sfixed64.First_Index .. Message.Unpacked_sfixed64.Last_Index loop
+               JSON.Append (Arr, JSON.To_Value (Proto_JSON.Image (Message.Unpacked_sfixed64.Element (I))));
+            end loop;
+            JSON.Insert (Obj, "unpackedSfixed64", Arr);
+         end;
+      end if;
+      if not Message.Unpacked_float.Is_Empty then
+         declare
+            Arr : JSON.JSON_Value := JSON.Empty_Array;
+         begin
+            for I in Message.Unpacked_float.First_Index .. Message.Unpacked_float.Last_Index loop
+               JSON.Append (Arr, Proto_JSON.Float_To_JSON (Message.Unpacked_float.Element (I)));
+            end loop;
+            JSON.Insert (Obj, "unpackedFloat", Arr);
+         end;
+      end if;
+      if not Message.Unpacked_double.Is_Empty then
+         declare
+            Arr : JSON.JSON_Value := JSON.Empty_Array;
+         begin
+            for I in Message.Unpacked_double.First_Index .. Message.Unpacked_double.Last_Index loop
+               JSON.Append (Arr, Proto_JSON.Double_To_JSON (Message.Unpacked_double.Element (I)));
+            end loop;
+            JSON.Insert (Obj, "unpackedDouble", Arr);
+         end;
+      end if;
+      if not Message.Unpacked_bool.Is_Empty then
+         declare
+            Arr : JSON.JSON_Value := JSON.Empty_Array;
+         begin
+            for I in Message.Unpacked_bool.First_Index .. Message.Unpacked_bool.Last_Index loop
+               JSON.Append (Arr, JSON.To_Value (Message.Unpacked_bool.Element (I)));
+            end loop;
+            JSON.Insert (Obj, "unpackedBool", Arr);
+         end;
+      end if;
+      if not Message.Unpacked_nested_enum.Is_Empty then
+         declare
+            Arr : JSON.JSON_Value := JSON.Empty_Array;
+         begin
+            for I in Message.Unpacked_nested_enum.First_Index .. Message.Unpacked_nested_enum.Last_Index loop
+               JSON.Append (Arr, TestAllTypesProto3_NestedEnum_To_JSON (Message.Unpacked_nested_enum.Element (I)));
+            end loop;
+            JSON.Insert (Obj, "unpackedNestedEnum", Arr);
          end;
       end if;
       case Message.Oneof_field.Which is
@@ -3441,6 +3763,146 @@ package body Protobuf_test_messages_Proto3 is
          if JSON.Kind (FV) = JSON.JSON_Array then
             for I in 1 .. JSON.Length (FV) loop
                Result.Packed_nested_enum.Append (TestAllTypesProto3_NestedEnum_From_JSON (JSON.Element (FV, I)));
+            end loop;
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "unpackedInt32");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "unpacked_int32"); end if;
+         if JSON.Kind (FV) = JSON.JSON_Array then
+            for I in 1 .. JSON.Length (FV) loop
+               Result.Unpacked_int32.Append (Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (JSON.Element (FV, I)))));
+            end loop;
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "unpackedInt64");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "unpacked_int64"); end if;
+         if JSON.Kind (FV) = JSON.JSON_Array then
+            for I in 1 .. JSON.Length (FV) loop
+               Result.Unpacked_int64.Append (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (JSON.Element (FV, I))));
+            end loop;
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "unpackedUint32");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "unpacked_uint32"); end if;
+         if JSON.Kind (FV) = JSON.JSON_Array then
+            for I in 1 .. JSON.Length (FV) loop
+               Result.Unpacked_uint32.Append (Interfaces.Unsigned_32 (Proto_JSON.To_UInt64 (Proto_JSON.Scalar_Text (JSON.Element (FV, I)))));
+            end loop;
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "unpackedUint64");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "unpacked_uint64"); end if;
+         if JSON.Kind (FV) = JSON.JSON_Array then
+            for I in 1 .. JSON.Length (FV) loop
+               Result.Unpacked_uint64.Append (Proto_JSON.To_UInt64 (Proto_JSON.Scalar_Text (JSON.Element (FV, I))));
+            end loop;
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "unpackedSint32");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "unpacked_sint32"); end if;
+         if JSON.Kind (FV) = JSON.JSON_Array then
+            for I in 1 .. JSON.Length (FV) loop
+               Result.Unpacked_sint32.Append (Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (JSON.Element (FV, I)))));
+            end loop;
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "unpackedSint64");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "unpacked_sint64"); end if;
+         if JSON.Kind (FV) = JSON.JSON_Array then
+            for I in 1 .. JSON.Length (FV) loop
+               Result.Unpacked_sint64.Append (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (JSON.Element (FV, I))));
+            end loop;
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "unpackedFixed32");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "unpacked_fixed32"); end if;
+         if JSON.Kind (FV) = JSON.JSON_Array then
+            for I in 1 .. JSON.Length (FV) loop
+               Result.Unpacked_fixed32.Append (Interfaces.Unsigned_32 (Proto_JSON.To_UInt64 (Proto_JSON.Scalar_Text (JSON.Element (FV, I)))));
+            end loop;
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "unpackedFixed64");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "unpacked_fixed64"); end if;
+         if JSON.Kind (FV) = JSON.JSON_Array then
+            for I in 1 .. JSON.Length (FV) loop
+               Result.Unpacked_fixed64.Append (Proto_JSON.To_UInt64 (Proto_JSON.Scalar_Text (JSON.Element (FV, I))));
+            end loop;
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "unpackedSfixed32");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "unpacked_sfixed32"); end if;
+         if JSON.Kind (FV) = JSON.JSON_Array then
+            for I in 1 .. JSON.Length (FV) loop
+               Result.Unpacked_sfixed32.Append (Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (JSON.Element (FV, I)))));
+            end loop;
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "unpackedSfixed64");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "unpacked_sfixed64"); end if;
+         if JSON.Kind (FV) = JSON.JSON_Array then
+            for I in 1 .. JSON.Length (FV) loop
+               Result.Unpacked_sfixed64.Append (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (JSON.Element (FV, I))));
+            end loop;
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "unpackedFloat");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "unpacked_float"); end if;
+         if JSON.Kind (FV) = JSON.JSON_Array then
+            for I in 1 .. JSON.Length (FV) loop
+               Result.Unpacked_float.Append (Proto_JSON.To_Float (Proto_JSON.Scalar_Text (JSON.Element (FV, I))));
+            end loop;
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "unpackedDouble");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "unpacked_double"); end if;
+         if JSON.Kind (FV) = JSON.JSON_Array then
+            for I in 1 .. JSON.Length (FV) loop
+               Result.Unpacked_double.Append (Proto_JSON.To_Double (Proto_JSON.Scalar_Text (JSON.Element (FV, I))));
+            end loop;
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "unpackedBool");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "unpacked_bool"); end if;
+         if JSON.Kind (FV) = JSON.JSON_Array then
+            for I in 1 .. JSON.Length (FV) loop
+               Result.Unpacked_bool.Append (JSON.As_Boolean (JSON.Element (FV, I)));
+            end loop;
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "unpackedNestedEnum");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "unpacked_nested_enum"); end if;
+         if JSON.Kind (FV) = JSON.JSON_Array then
+            for I in 1 .. JSON.Length (FV) loop
+               Result.Unpacked_nested_enum.Append (TestAllTypesProto3_NestedEnum_From_JSON (JSON.Element (FV, I)));
             end loop;
          end if;
       end;

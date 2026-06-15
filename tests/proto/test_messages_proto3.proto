@@ -13,14 +13,14 @@ import "google/protobuf/wrappers.proto";
 // protobuf_test_messages.proto3.TestAllTypesProto3 -- same package, message
 // name, and canonical field numbers, covering every construct this generator
 // and runtime support: all scalar types, nested/foreign messages and enums,
-// recursion and corecursion, repeated and packed-repeated fields, maps over the
-// full range of key/value shapes, a oneof, and the well-known types.
+// recursion and corecursion, repeated, packed-repeated, and explicitly
+// unpacked ([packed=false]) fields, maps over the full range of key/value
+// shapes, a oneof, and the well-known types.
 //
 // Deliberately omitted (constructs the generator does not yet model, so that
 // the testee answers correctly for what it claims rather than silently mangling
-// the rest): the explicit [packed=false] "unpacked_*" repeats (this generator
-// always packs) and the JSON field-name edge-case fields. Those conformance
-// cases remain reported as failures until the corresponding features land.
+// the rest): the JSON field-name edge-case fields. Those conformance cases
+// remain reported as failures until the corresponding features land.
 
 enum ForeignEnum {
   FOREIGN_FOO = 0;
@@ -126,6 +126,23 @@ message TestAllTypesProto3 {
   repeated double     packed_double      = 86;
   repeated bool       packed_bool        = 87;
   repeated NestedEnum packed_nested_enum = 88;
+
+  // Explicitly unpacked repeated scalars ([packed=false]): one tag+value per
+  // element on the wire. Canonical upstream field numbers 89-104.
+  repeated int32      unpacked_int32        = 89  [packed = false];
+  repeated int64      unpacked_int64        = 90  [packed = false];
+  repeated uint32     unpacked_uint32       = 91  [packed = false];
+  repeated uint64     unpacked_uint64       = 92  [packed = false];
+  repeated sint32     unpacked_sint32       = 93  [packed = false];
+  repeated sint64     unpacked_sint64       = 94  [packed = false];
+  repeated fixed32    unpacked_fixed32      = 95  [packed = false];
+  repeated fixed64    unpacked_fixed64      = 96  [packed = false];
+  repeated sfixed32   unpacked_sfixed32     = 97  [packed = false];
+  repeated sfixed64   unpacked_sfixed64     = 98  [packed = false];
+  repeated float      unpacked_float        = 99  [packed = false];
+  repeated double     unpacked_double       = 100 [packed = false];
+  repeated bool       unpacked_bool         = 101 [packed = false];
+  repeated NestedEnum unpacked_nested_enum  = 102 [packed = false];
 
   // Oneof.
   oneof oneof_field {

@@ -25,6 +25,8 @@ package body Proto_Compiler is
       Is_Map     : Boolean := False;
       Map_Key    : Unbounded_String;  --  proto key type when Is_Map
       Map_Value  : Unbounded_String;  --  proto value type when Is_Map
+      Packed_Set : Boolean := False;  --  True if an explicit [packed=...] was given
+      Packed     : Boolean := True;   --  the [packed=...] value (meaningful when set)
    end record;
 
    package Field_Vectors is new Ada.Containers.Vectors (Positive, Field_Def);
@@ -246,6 +248,28 @@ package body Proto_Compiler is
          end if;
       end Skip_Field_Options;
 
+      --  Like Skip_Field_Options, but records an explicit [packed=true|false]
+      --  into F (other options are skipped). Used for ordinary field decls,
+      --  where the packed wire layout of a repeated scalar can be overridden.
+      procedure Parse_Field_Options (F : in out Field_Def) is
+      begin
+         if At_Symbol ("[") then
+            while not At_Symbol ("]") and then Cur.Kind /= T_EOF loop
+               if At_Ident ("packed") then
+                  Adv;
+                  if At_Symbol ("=") then
+                     Adv;
+                     F.Packed_Set := True;
+                     F.Packed := At_Ident ("true");
+                  end if;
+               else
+                  Adv;
+               end if;
+            end loop;
+            Expect_Symbol ("]");
+         end if;
+      end Parse_Field_Options;
+
       --  Qualify a type name with its enclosing scope (empty Prefix = top level).
       function Qualify (Prefix, Name : String) return String is
         (if Prefix = "" then Name else Prefix & "." & Name);
@@ -357,7 +381,7 @@ package body Proto_Compiler is
                   F.Name := To_Unbounded_String (Expect_Ident);
                   Expect_Symbol ("=");
                   F.Number := Positive (Parse_Int);
-                  Skip_Field_Options;
+                  Parse_Field_Options (F);
                   Expect_Symbol (";");
                   M.Fields.Append (F);
                end;
@@ -1484,6 +1508,14 @@ package body Proto_Compiler is
                         SL (Body_Text, "         Protobuf.Add_" & To_String (T.Suffix)
                                        & " (Buffer," & N & ", To_String (Message."
                                        & C & " (I)));");
+                        SL (Body_Text, "      end loop;");
+                     elsif F.Packed_Set and then not F.Packed then
+                        --  explicit [packed=false]: one tag+value per element.
+                        SL (Body_Text, "      for I in Message." & C
+                                       & ".First_Index .. Message." & C
+                                       & ".Last_Index loop");
+                        SL (Body_Text, "         Protobuf.Add_" & To_String (T.Suffix)
+                                       & " (Buffer," & N & ", Message." & C & " (I));");
                         SL (Body_Text, "      end loop;");
                      else
                         --  packed repeated scalar.

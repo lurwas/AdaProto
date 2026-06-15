@@ -30,8 +30,9 @@ Supported:
 - Singular scalar fields: `int32/64`, `uint32/64`, `sint32/64`, `fixed32/64`,
   `sfixed32/64`, `float`, `double`, `bool`, `string`, `bytes`.
 - `enum` fields (open enums: int32-valued subtype + named constants).
-- `repeated` scalar/enum fields (packed encode; both packed and unpacked
-  decode accepted) and `repeated string`/`bytes`.
+- `repeated` scalar/enum fields (packed encode by default; explicit
+  `[packed=false]` encodes unpacked -- one tag+value entry per element; both
+  packed and unpacked decode accepted) and `repeated string`/`bytes`.
 - `message` fields, including recursive and mutually-recursive ones. Each
   message gets a generated memory-safe controlled holder (an access type
   wrapped in a `Controlled` record that deep-copies on assignment and frees on
@@ -123,15 +124,13 @@ other message types (proto2, editions) are `skipped`.
 **Coverage of `TestAllTypesProto3`.** `test_messages_proto3.proto` reproduces
 the upstream message's package, name, and canonical field numbers for every
 construct the generator and runtime model: all scalar types, nested/foreign
-messages and enums, recursion and corecursion, repeated and packed-repeated
-fields, the full range of map key/value shapes, a `oneof`, and the well-known
-types (wrappers, `Duration`, `Timestamp`, `FieldMask`, `Struct`, `Any`,
-`Value`, and `NullValue` -- a WKT enum that is int32 on the wire but JSON
-`null`). Deliberately omitted, so the testee answers correctly for what it
-declares rather than silently mangling the rest:
+messages and enums, recursion and corecursion, repeated, packed-repeated, and
+explicitly unpacked (`[packed=false]`) fields, the full range of map key/value
+shapes, a `oneof`, and the well-known types (wrappers, `Duration`, `Timestamp`,
+`FieldMask`, `Struct`, `Any`, `Value`, and `NullValue` -- a WKT enum that is
+int32 on the wire but JSON `null`). Deliberately omitted, so the testee answers
+correctly for what it declares rather than silently mangling the rest:
 
-- the explicit `[packed=false]` `unpacked_*` repeats (this generator always
-  packs repeated scalars, so it cannot reproduce the unpacked output);
 - the JSON field-name edge-case fields.
 
 Those cases stay on a conformance failure list until the corresponding features
@@ -142,8 +141,8 @@ through the actual `bin/conformance-runner`).
 ### Codegen roadmap (toward 100% proto3 + JSON)
 
 1. Close the remaining `TestAllTypesProto3` gaps for a fully certified run:
-   explicit `[packed=false]` repeats and the JSON field-name edge cases. Also:
-   well-known types as map values / oneof members.
+   the JSON field-name edge cases. Also: well-known types as map values /
+   oneof members.
 
 ## Explicitly not implemented (yet)
 

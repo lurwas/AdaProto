@@ -1189,6 +1189,55 @@ package body Protobuf_Tests is
       end;
    end Test_Generated_Enums_And_Repeated;
 
+   --  Explicit [packed=false] repeated scalars must encode UNPACKED: one
+   --  tag+value entry per element rather than a single packed length-delimited
+   --  block -- and still round-trip. This closes the last wire-format gap for
+   --  Google's TestAllTypesProto3 (its unpacked_* fields).
+   procedure Test_Generated_Unpacked_Repeated is
+      package TM renames Protobuf_test_messages_Proto3;
+      use type TM.TestAllTypesProto3_NestedEnum;
+      M         : TM.TestAllTypesProto3;
+      Reference : Protobuf.Message_Buffer;
+   begin
+      M.Unpacked_int32.Append (1);
+      M.Unpacked_int32.Append (2);
+      M.Unpacked_int32.Append (-3);
+      M.Unpacked_sint32.Append (-1);
+      M.Unpacked_sint32.Append (1);
+      M.Unpacked_nested_enum.Append (TM.TestAllTypesProto3_NestedEnum_BAR);
+
+      --  Hand-written reference: each element is its own field entry, NOT a
+      --  packed block (fields 89 = unpacked_int32, 93 = unpacked_sint32,
+      --  102 = unpacked_nested_enum).
+      Protobuf.Add_Int32  (Reference, 89, 1);
+      Protobuf.Add_Int32  (Reference, 89, 2);
+      Protobuf.Add_Int32  (Reference, 89, -3);
+      Protobuf.Add_SInt32 (Reference, 93, -1);
+      Protobuf.Add_SInt32 (Reference, 93, 1);
+      Protobuf.Add_Int32  (Reference, 102, TM.TestAllTypesProto3_NestedEnum_BAR);
+      Assert (TM.Serialize (M) = Protobuf.To_String (Reference),
+              "[packed=false] repeated encodes one field entry per element");
+
+      --  Round-trip back through the generated parser.
+      declare
+         D : constant TM.TestAllTypesProto3 :=
+           TM.Parse_TestAllTypesProto3 (TM.Serialize (M));
+      begin
+         Assert (Natural (D.Unpacked_int32.Length) = 3
+                 and then D.Unpacked_int32 (1) = 1
+                 and then D.Unpacked_int32 (3) = -3,
+                 "unpacked int32 round-trips");
+         Assert (Natural (D.Unpacked_sint32.Length) = 2
+                 and then D.Unpacked_sint32 (1) = -1
+                 and then D.Unpacked_sint32 (2) = 1,
+                 "unpacked sint32 round-trips");
+         Assert (Natural (D.Unpacked_nested_enum.Length) = 1
+                 and then D.Unpacked_nested_enum (1)
+                          = TM.TestAllTypesProto3_NestedEnum_BAR,
+                 "unpacked enum round-trips");
+      end;
+   end Test_Generated_Unpacked_Repeated;
+
    --  Phase 1c: nested (non-recursive) message fields via Indefinite_Holders
    --  (singular, with presence) and Vectors (repeated). Proves topological
    --  ordering, delegated encode/decode, and message-field presence semantics.
@@ -2496,6 +2545,7 @@ package body Protobuf_Tests is
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("serialization buffer growth and reuse", Test_Serialization_Buffer_Growth_And_Reuse'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated types roundtrip", Test_Generated_Types_Roundtrip'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated enums and repeated", Test_Generated_Enums_And_Repeated'Access));
+         AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated unpacked repeated", Test_Generated_Unpacked_Repeated'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated nested messages", Test_Generated_Nested_Messages'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated oneof", Test_Generated_Oneof'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated maps", Test_Generated_Maps'Access));
