@@ -1039,12 +1039,15 @@ package body Proto_Compiler is
                      Key : constant String := To_String (KT.Ada_Type)
                                               & "|" & To_String (VT.Ada_Type);
                   begin
-                     if VT.Is_WKT then
-                        raise Compile_Error
-                          with "a well-known type as a map value is not yet "
-                               & "supported in this codegen phase";
-                     elsif VT.Category = Cat_Message then
+                     if VT.Category = Cat_Message then
+                        --  Message- or WKT-valued map: the value is stored as a
+                        --  controlled holder (same shape for both). A WKT used
+                        --  only here still needs its holder + Proto_WKT import.
                         Add_Once (Map_Msg, Key);
+                        if VT.Is_WKT then
+                           Has_WKT := True;
+                           Add_Once (Wkt_Hold, To_String (VT.Ada_Type));
+                        end if;
                      else
                         Add_Once (Map_Top, Key);
                      end if;

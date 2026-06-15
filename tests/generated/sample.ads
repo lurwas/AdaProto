@@ -219,6 +219,12 @@ package Sample is
    use type Inner_Holder;
    package Integer_32_Inner_Maps is new Ada.Containers.Ordered_Maps (Interfaces.Integer_32, Inner_Holder);
    use type Ada.Strings.Unbounded.Unbounded_String;
+   use type Int32_Value_Holder;
+   package Unbounded_String_Int32_Value_Maps is new Ada.Containers.Ordered_Maps (Ada.Strings.Unbounded.Unbounded_String, Int32_Value_Holder);
+   use type Interfaces.Integer_32;
+   use type Timestamp_Holder;
+   package Integer_32_Timestamp_Maps is new Ada.Containers.Ordered_Maps (Interfaces.Integer_32, Timestamp_Holder);
+   use type Ada.Strings.Unbounded.Unbounded_String;
    use type Nest_Item_Holder;
    package Unbounded_String_Nest_Item_Maps is new Ada.Containers.Ordered_Maps (Ada.Strings.Unbounded.Unbounded_String, Nest_Item_Holder);
 
@@ -271,6 +277,8 @@ package Sample is
    type Maps is record
       Counts : Unbounded_String_Integer_32_Maps.Map;
       Items : Integer_32_Inner_Maps.Map;
+      Wrapped : Unbounded_String_Int32_Value_Maps.Map;
+      Stamps : Integer_32_Timestamp_Maps.Map;
    end record;
 
    type Nest_Item is record
@@ -295,13 +303,14 @@ package Sample is
    end record;
 
    type Choice_Pick_Selector is
-     (Choice_Pick_Not_Set, Choice_Pick_Count, Choice_Pick_Text, Choice_Pick_Inner);
+     (Choice_Pick_Not_Set, Choice_Pick_Count, Choice_Pick_Text, Choice_Pick_Inner, Choice_Pick_Wrap);
    type Choice_Pick_Oneof (Which : Choice_Pick_Selector := Choice_Pick_Not_Set) is record
       case Which is
          when Choice_Pick_Not_Set => null;
          when Choice_Pick_Count => Count : Interfaces.Integer_32;
          when Choice_Pick_Text => Text : Ada.Strings.Unbounded.Unbounded_String;
          when Choice_Pick_Inner => Inner_F : Inner_Holder;
+         when Choice_Pick_Wrap => Wrap : Int32_Value_Holder;
       end case;
    end record;
    type Choice is record

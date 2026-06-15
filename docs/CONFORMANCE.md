@@ -107,8 +107,10 @@ A runtime library of `google.protobuf.*` types with their binary wire
 `Proto_WKT.X` -- the generator emits a controlled holder over the external WKT
 type (presence), routes binary encode/decode through `Proto_WKT.Serialize` /
 `Proto_WKT.Parse_X`, and JSON through `Proto_WKT.To_JSON`/`From_JSON` (so the
-special forms apply). Supported for singular and repeated WKT fields; a WKT as
-a map value is rejected with a clear error (a follow-up).
+special forms apply). Supported for singular, repeated, `oneof`-member, and
+map-value WKT fields. As a `oneof` member or a `map` value the WKT is stored in
+the same controlled holder used for message values, so encode/decode and the
+special JSON forms apply uniformly.
 
 ### Conformance runner (`bin/conformance-runner`)
 
@@ -140,11 +142,35 @@ Every construct the message declares round-trips, in both directions, across
 binary and JSON (exercised by the `conformance harness` unit test and an
 end-to-end smoke through the actual `bin/conformance-runner`).
 
+### Authoritative cross-check (`tools/run_conformance_crosscheck.sh`)
+
+Google's official `conformance-test-runner` is a large C++/Bazel program that is
+not buildable in every environment. `tools/conformance_crosscheck.py` reproduces
+what it does -- driving the testee over the real conformance wire protocol
+(4-byte LE length + `ConformanceRequest`/`ConformanceResponse`) -- using
+Google's **reference Python protobuf implementation** as the oracle. For a
+battery of authoritatively-built `TestAllTypesProto3` messages (scalars, fixed/
+float, nested message+enum, repeated/packed/unpacked, maps, oneofs, the
+well-known types, `Struct`, and the JSON field-name edge cases) it exercises all
+four directions and compares the Ada runner's output to the oracle:
+
+    protobuf payload -> protobuf output      JSON payload -> protobuf output
+    protobuf payload -> JSON output          JSON payload -> JSON output
+
+All 52 cases (13 messages x pb/json x in/out) pass. Run it with `protoc` and the
+Python `protobuf` package available:
+
+```bash
+gprbuild -P protobuf_ada.gpr
+tools/run_conformance_crosscheck.sh   # honours $PROTOC / $PY_PROTOBUF overrides
+```
+
 ### Codegen roadmap (toward 100% proto3 + JSON)
 
-1. Remaining for a fully certified run against Google's upstream suite:
-   well-known types as map values / oneof members, and triage of any
-   residual cases surfaced by the official `conformance-test-runner`.
+1. Run Google's official C++ `conformance-test-runner` against
+   `bin/conformance-runner` (the cross-check above already validates the same
+   directions against the reference Python implementation) and triage any
+   residual cases its much larger corpus surfaces.
 
 ## Explicitly not implemented (yet)
 

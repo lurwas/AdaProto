@@ -1408,6 +1408,34 @@ package body Protobuf_Tests is
          end;
       end;
 
+      --  Well-known-type member (a wrapper): stored as a holder, serialized via
+      --  Proto_WKT, and JSON-mapped to its bare wrapped value.
+      declare
+         C : Sample.Choice;
+         J : JSON.JSON_Value;
+      begin
+         C.Pick := (Which => Sample.Choice_Pick_Wrap,
+                    Wrap  => Sample.To_Holder
+                               (Proto_WKT.Int32_Value'(Value => 11)));
+         declare
+            D : constant Sample.Choice := Sample.Parse_Choice (Sample.Serialize (C));
+         begin
+            Assert (D.Pick.Which = Sample.Choice_Pick_Wrap
+                    and then D.Pick.Wrap.Element.Value = 11,
+                    "oneof WKT member round-trips on the wire");
+         end;
+         J := JSON.Parse (JSON.Serialize (Sample.To_JSON (C)));
+         Assert (JSON.As_Number (JSON.Get (J, "wrap")) = "11",
+                 "oneof WKT member -> bare JSON wrapper value");
+         declare
+            D : constant Sample.Choice := Sample.From_JSON (J);
+         begin
+            Assert (D.Pick.Which = Sample.Choice_Pick_Wrap
+                    and then D.Pick.Wrap.Element.Value = 11,
+                    "oneof WKT member round-trips through JSON");
+         end;
+      end;
+
       --  A oneof member set to its default value is still serialized.
       declare
          C : Sample.Choice;
@@ -1449,6 +1477,12 @@ package body Protobuf_Tests is
       I2.X := 20;
       M.Items.Include (5, Sample.To_Holder (I1));
       M.Items.Include (6, Sample.To_Holder (I2));
+      --  Well-known-type values: stored as holders, (de)serialized and
+      --  JSON-mapped through Proto_WKT (bare wrapper value, RFC 3339 timestamp).
+      M.Wrapped.Include (To_Unbounded_String ("k"),
+                         Sample.To_Holder (Proto_WKT.Int32_Value'(Value => 7)));
+      M.Stamps.Include (9, Sample.To_Holder
+                             (Proto_WKT.Timestamp'(Seconds => 100, Nanos => 0)));
 
       declare
          D : constant Sample.Maps := Sample.Parse_Maps (Sample.Serialize (M));
@@ -1463,6 +1497,29 @@ package body Protobuf_Tests is
                  and then To_String (D.Items.Element (5).Element.Label) = "ten"
                  and then D.Items.Element (6).Element.X = 20,
                  "int32->message map round-trips");
+         Assert (Natural (D.Wrapped.Length) = 1
+                 and then D.Wrapped.Element (To_Unbounded_String ("k")).Element.Value = 7,
+                 "string->Int32Value (WKT) map round-trips on the wire");
+         Assert (Natural (D.Stamps.Length) = 1
+                 and then D.Stamps.Element (9).Element.Seconds = 100,
+                 "int32->Timestamp (WKT) map round-trips on the wire");
+      end;
+
+      --  WKT map values map to their special JSON forms (wrapper -> bare value,
+      --  Timestamp -> RFC 3339 string), and parse back.
+      declare
+         J : constant JSON.JSON_Value :=
+           JSON.Parse (JSON.Serialize (Sample.To_JSON (M)));
+         D : constant Sample.Maps := Sample.From_JSON (J);
+      begin
+         Assert (JSON.As_Number (JSON.Get (JSON.Get (J, "wrapped"), "k")) = "7",
+                 "WKT wrapper map value -> bare JSON number");
+         Assert (JSON.As_String (JSON.Get (JSON.Get (J, "stamps"), "9"))
+                 = "1970-01-01T00:01:40Z",
+                 "WKT Timestamp map value -> RFC 3339 string");
+         Assert (D.Wrapped.Element (To_Unbounded_String ("k")).Element.Value = 7
+                 and then D.Stamps.Element (9).Element.Seconds = 100,
+                 "WKT-valued maps round-trip through JSON");
       end;
 
       declare

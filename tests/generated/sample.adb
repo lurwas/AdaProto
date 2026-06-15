@@ -1025,6 +1025,32 @@ package body Sample is
             Protobuf.Add_Message (Buffer, 2, Protobuf.To_String (Entry_Buf));
          end;
       end loop;
+      for Cur in Message.Wrapped.Iterate loop
+         declare
+            Entry_Buf : Protobuf.Message_Buffer;
+            K : constant Ada.Strings.Unbounded.Unbounded_String := Unbounded_String_Int32_Value_Maps.Key (Cur);
+            V : constant Int32_Value_Holder := Unbounded_String_Int32_Value_Maps.Element (Cur);
+         begin
+            if Length (K) > 0 then
+               Protobuf.Add_String (Entry_Buf, 1, To_String (K));
+            end if;
+            Protobuf.Add_Message (Entry_Buf, 2, Serialize (V.Element));
+            Protobuf.Add_Message (Buffer, 3, Protobuf.To_String (Entry_Buf));
+         end;
+      end loop;
+      for Cur in Message.Stamps.Iterate loop
+         declare
+            Entry_Buf : Protobuf.Message_Buffer;
+            K : constant Interfaces.Integer_32 := Integer_32_Timestamp_Maps.Key (Cur);
+            V : constant Timestamp_Holder := Integer_32_Timestamp_Maps.Element (Cur);
+         begin
+            if K /= 0 then
+               Protobuf.Add_Int32 (Entry_Buf, 1, K);
+            end if;
+            Protobuf.Add_Message (Entry_Buf, 2, Serialize (V.Element));
+            Protobuf.Add_Message (Buffer, 4, Protobuf.To_String (Entry_Buf));
+         end;
+      end loop;
       return Protobuf.To_String (Buffer);
    end Serialize;
 
@@ -1067,6 +1093,38 @@ package body Sample is
                   end loop;
                   Result.Items.Include (K, V);
                end;
+            when 3 =>
+               declare
+                  Ent : constant Protobuf.Parsed_Field_Vectors.Vector :=
+                    Protobuf.Parse_From_String (Protobuf.As_Message_Bytes (Item));
+                  K : Ada.Strings.Unbounded.Unbounded_String := Ada.Strings.Unbounded.Null_Unbounded_String;
+                  V : Int32_Value_Holder;
+               begin
+                  for E of Ent loop
+                     case E.Number is
+                        when 1 => K := To_Unbounded_String (Proto_JSON.Checked_UTF8 (Protobuf.As_String (E)));
+                        when 2 => V := To_Holder (Parse_Int32_Value (Protobuf.As_Message_Bytes (E)));
+                        when others => null;
+                     end case;
+                  end loop;
+                  Result.Wrapped.Include (K, V);
+               end;
+            when 4 =>
+               declare
+                  Ent : constant Protobuf.Parsed_Field_Vectors.Vector :=
+                    Protobuf.Parse_From_String (Protobuf.As_Message_Bytes (Item));
+                  K : Interfaces.Integer_32 := 0;
+                  V : Timestamp_Holder;
+               begin
+                  for E of Ent loop
+                     case E.Number is
+                        when 1 => K := Protobuf.As_Int32 (E);
+                        when 2 => V := To_Holder (Parse_Timestamp (Protobuf.As_Message_Bytes (E)));
+                        when others => null;
+                     end case;
+                  end loop;
+                  Result.Stamps.Include (K, V);
+               end;
             when others => null;
          end case;
       end loop;
@@ -1094,6 +1152,26 @@ package body Sample is
                JSON.Insert (M2, Proto_JSON.Image (Interfaces.Integer_64 (Integer_32_Inner_Maps.Key (Cur))), To_JSON (Element (Integer_32_Inner_Maps.Element (Cur))));
             end loop;
             JSON.Insert (Obj, "items", M2);
+         end;
+      end if;
+      if not Message.Wrapped.Is_Empty then
+         declare
+            M2 : JSON.JSON_Value := JSON.Empty_Object;
+         begin
+            for Cur in Message.Wrapped.Iterate loop
+               JSON.Insert (M2, To_String (Unbounded_String_Int32_Value_Maps.Key (Cur)), To_JSON (Element (Unbounded_String_Int32_Value_Maps.Element (Cur))));
+            end loop;
+            JSON.Insert (Obj, "wrapped", M2);
+         end;
+      end if;
+      if not Message.Stamps.Is_Empty then
+         declare
+            M2 : JSON.JSON_Value := JSON.Empty_Object;
+         begin
+            for Cur in Message.Stamps.Iterate loop
+               JSON.Insert (M2, Proto_JSON.Image (Interfaces.Integer_64 (Integer_32_Timestamp_Maps.Key (Cur))), To_JSON (Element (Integer_32_Timestamp_Maps.Element (Cur))));
+            end loop;
+            JSON.Insert (Obj, "stamps", M2);
          end;
       end if;
       return Obj;
@@ -1126,6 +1204,34 @@ package body Sample is
                   VV : constant JSON.JSON_Value := JSON.Get (FV, Kstr);
                begin
                   Result.Items.Include (Interfaces.Integer_32 (Proto_JSON.To_Int64 (Kstr)), To_Holder (Inner'(From_JSON (VV))));
+               end;
+            end loop;
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "wrapped");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Object then
+            for I in 1 .. JSON.Length (FV) loop
+               declare
+                  Kstr : constant String := JSON.Key (FV, I);
+                  VV : constant JSON.JSON_Value := JSON.Get (FV, Kstr);
+               begin
+                  Result.Wrapped.Include (To_Unbounded_String (Kstr), To_Holder (Proto_WKT.Int32_Value'(From_JSON (VV))));
+               end;
+            end loop;
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "stamps");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Object then
+            for I in 1 .. JSON.Length (FV) loop
+               declare
+                  Kstr : constant String := JSON.Key (FV, I);
+                  VV : constant JSON.JSON_Value := JSON.Get (FV, Kstr);
+               begin
+                  Result.Stamps.Include (Interfaces.Integer_32 (Proto_JSON.To_Int64 (Kstr)), To_Holder (Proto_WKT.Timestamp'(From_JSON (VV))));
                end;
             end loop;
          end if;
@@ -1442,6 +1548,8 @@ package body Sample is
             Protobuf.Add_String (Buffer, 3, To_String (Message.Pick.Text));
          when Choice_Pick_Inner =>
             Protobuf.Add_Message (Buffer, 4, Serialize (Message.Pick.Inner_F.Element));
+         when Choice_Pick_Wrap =>
+            Protobuf.Add_Message (Buffer, 6, Serialize (Message.Pick.Wrap.Element));
       end case;
       if Message.After then
          Protobuf.Add_Bool (Buffer, 5, Message.After);
@@ -1464,6 +1572,8 @@ package body Sample is
                Result.Pick := (Which => Choice_Pick_Text, Text => To_Unbounded_String (Proto_JSON.Checked_UTF8 (Protobuf.As_String (Item))));
             when 4 =>
                Result.Pick := (Which => Choice_Pick_Inner, Inner_F => To_Holder (Parse_Inner (Protobuf.As_Message_Bytes (Item))));
+            when 6 =>
+               Result.Pick := (Which => Choice_Pick_Wrap, Wrap => To_Holder (Parse_Int32_Value (Protobuf.As_Message_Bytes (Item))));
             when 5 =>
                Result.After := Protobuf.As_Bool (Item);
             when others => null;
@@ -1483,6 +1593,7 @@ package body Sample is
          when Choice_Pick_Count => JSON.Insert (Obj, "count", JSON.Number (Proto_JSON.Image (Interfaces.Integer_64 (Message.Pick.Count))));
          when Choice_Pick_Text => JSON.Insert (Obj, "text", JSON.To_Value (To_String (Message.Pick.Text)));
          when Choice_Pick_Inner => JSON.Insert (Obj, "inner", To_JSON (Message.Pick.Inner_F.Element));
+         when Choice_Pick_Wrap => JSON.Insert (Obj, "wrap", To_JSON (Message.Pick.Wrap.Element));
       end case;
       if Message.After then
          JSON.Insert (Obj, "after", JSON.To_Value (Message.After));
@@ -1519,6 +1630,13 @@ package body Sample is
       begin
          if JSON.Kind (FV) /= JSON.JSON_Null then
             Result.Pick := (Which => Choice_Pick_Inner, Inner_F => To_Holder (Inner'(From_JSON (FV))));
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "wrap");
+      begin
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.Pick := (Which => Choice_Pick_Wrap, Wrap => To_Holder (Proto_WKT.Int32_Value'(From_JSON (FV))));
          end if;
       end;
       declare
