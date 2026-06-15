@@ -45,6 +45,10 @@ Supported:
 - proto3 default omission (default-valued scalars are not written).
 - Ada reserved-word field names are escaped (e.g. `delta` -> `Delta_F`), and
   field names that collide with their own type (`color : Color`) are escaped.
+- Field names that are not legal Ada identifiers -- leading, trailing, or
+  doubled underscores (the proto3 JSON field-name edge cases, e.g.
+  `_field_name3`, `field__name4_`) -- are legalized for the internal Ada type
+  only; the wire field number and the emitted JSON name are unaffected.
 
 Each message also gets `To_JSON`/`From_JSON` (proto3 <-> JSON), via the `JSON`
 DOM and the `Proto_JSON` runtime helpers:
@@ -126,23 +130,21 @@ the upstream message's package, name, and canonical field numbers for every
 construct the generator and runtime model: all scalar types, nested/foreign
 messages and enums, recursion and corecursion, repeated, packed-repeated, and
 explicitly unpacked (`[packed=false]`) fields, the full range of map key/value
-shapes, a `oneof`, and the well-known types (wrappers, `Duration`, `Timestamp`,
-`FieldMask`, `Struct`, `Any`, `Value`, and `NullValue` -- a WKT enum that is
-int32 on the wire but JSON `null`). Deliberately omitted, so the testee answers
-correctly for what it declares rather than silently mangling the rest:
+shapes, a `oneof`, the JSON field-name edge cases (canonical `ToJsonName`
+derivation, incl. leading/trailing/doubled underscores), and the well-known
+types (wrappers, `Duration`, `Timestamp`, `FieldMask`, `Struct`, `Any`,
+`Value`, and `NullValue` -- a WKT enum that is int32 on the wire but JSON
+`null`).
 
-- the JSON field-name edge-case fields.
-
-Those cases stay on a conformance failure list until the corresponding features
-land; everything declared round-trips, in both directions, across binary and
-JSON (exercised by the `conformance harness` unit test and an end-to-end smoke
-through the actual `bin/conformance-runner`).
+Every construct the message declares round-trips, in both directions, across
+binary and JSON (exercised by the `conformance harness` unit test and an
+end-to-end smoke through the actual `bin/conformance-runner`).
 
 ### Codegen roadmap (toward 100% proto3 + JSON)
 
-1. Close the remaining `TestAllTypesProto3` gaps for a fully certified run:
-   the JSON field-name edge cases. Also: well-known types as map values /
-   oneof members.
+1. Remaining for a fully certified run against Google's upstream suite:
+   well-known types as map values / oneof members, and triage of any
+   residual cases surfaced by the official `conformance-test-runner`.
 
 ## Explicitly not implemented (yet)
 

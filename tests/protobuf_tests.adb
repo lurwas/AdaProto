@@ -1238,6 +1238,55 @@ package body Protobuf_Tests is
       end;
    end Test_Generated_Unpacked_Repeated;
 
+   --  proto3 JSON field-name edge cases. A field's JSON name is derived by the
+   --  canonical ToJsonName algorithm: drop underscores, capitalize the char
+   --  after each underscore (a LEADING underscore therefore capitalizes the
+   --  first letter). To_JSON emits that name; From_JSON accepts both it and the
+   --  raw proto field name. The internal Ada identifiers are legalized
+   --  (leading/trailing/doubled underscores removed) without touching the wire
+   --  or JSON contract.
+   procedure Test_Generated_JSON_Field_Names is
+      package TM renames Protobuf_test_messages_Proto3;
+      M : TM.TestAllTypesProto3;
+      J : JSON.JSON_Value;
+   begin
+      M.Field_name2   := 2;    --  field_name2    -> "fieldName2"
+      M.Field_name3   := 3;    --  _field_name3   -> "FieldName3" (leading "_")
+      M.Field_name4   := 4;    --  field__name4_  -> "fieldName4"
+      M.Field_0_name6 := 6;    --  field_0_name6  -> "field0Name6"
+      M.Field_name17  := 17;   --  field_name17__ -> "fieldName17"
+
+      J := JSON.Parse (JSON.Serialize (TM.To_JSON (M)));
+      Assert (JSON.Has (J, "fieldName2"),  "field_name2 emits fieldName2");
+      Assert (JSON.Has (J, "FieldName3"),  "_field_name3 emits FieldName3");
+      Assert (JSON.Has (J, "fieldName4"),  "field__name4_ emits fieldName4");
+      Assert (JSON.Has (J, "field0Name6"), "field_0_name6 emits field0Name6");
+      Assert (JSON.Has (J, "fieldName17"), "field_name17__ emits fieldName17");
+
+      --  Parse back from the canonical JSON names.
+      declare
+         R : constant TM.TestAllTypesProto3 := TM.From_JSON (J);
+      begin
+         Assert (R.Field_name2 = 2 and then R.Field_name3 = 3
+                 and then R.Field_name4 = 4 and then R.Field_0_name6 = 6
+                 and then R.Field_name17 = 17,
+                 "edge-case fields round-trip through canonical JSON names");
+      end;
+
+      --  From_JSON must ALSO accept the raw proto field names.
+      declare
+         Raw : constant String :=
+           "{""field_name2"":2,""_field_name3"":3,""field__name4_"":4,"
+           & """field_0_name6"":6,""field_name17__"":17}";
+         R : constant TM.TestAllTypesProto3 := TM.From_JSON (JSON.Parse (Raw));
+      begin
+         Assert (R.Field_name2 = 2 and then R.Field_name3 = 3
+                 and then R.Field_name4 = 4 and then R.Field_0_name6 = 6
+                 and then R.Field_name17 = 17,
+                 "From_JSON also accepts the raw proto field names");
+      end;
+   end Test_Generated_JSON_Field_Names;
+
    --  Phase 1c: nested (non-recursive) message fields via Indefinite_Holders
    --  (singular, with presence) and Vectors (repeated). Proves topological
    --  ordering, delegated encode/decode, and message-field presence semantics.
@@ -2546,6 +2595,7 @@ package body Protobuf_Tests is
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated types roundtrip", Test_Generated_Types_Roundtrip'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated enums and repeated", Test_Generated_Enums_And_Repeated'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated unpacked repeated", Test_Generated_Unpacked_Repeated'Access));
+         AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated json field names", Test_Generated_JSON_Field_Names'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated nested messages", Test_Generated_Nested_Messages'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated oneof", Test_Generated_Oneof'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated maps", Test_Generated_Maps'Access));

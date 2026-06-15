@@ -1243,6 +1243,60 @@ package body Protobuf_test_messages_Proto3 is
       if Message.Optional_null_value /= 0 then
          Protobuf.Add_Int32 (Buffer, 307, Message.Optional_null_value);
       end if;
+      if Message.Fieldname1 /= 0 then
+         Protobuf.Add_Int32 (Buffer, 401, Message.Fieldname1);
+      end if;
+      if Message.Field_name2 /= 0 then
+         Protobuf.Add_Int32 (Buffer, 402, Message.Field_name2);
+      end if;
+      if Message.Field_name3 /= 0 then
+         Protobuf.Add_Int32 (Buffer, 403, Message.Field_name3);
+      end if;
+      if Message.Field_name4 /= 0 then
+         Protobuf.Add_Int32 (Buffer, 404, Message.Field_name4);
+      end if;
+      if Message.Field0name5 /= 0 then
+         Protobuf.Add_Int32 (Buffer, 405, Message.Field0name5);
+      end if;
+      if Message.Field_0_name6 /= 0 then
+         Protobuf.Add_Int32 (Buffer, 406, Message.Field_0_name6);
+      end if;
+      if Message.FieldName7 /= 0 then
+         Protobuf.Add_Int32 (Buffer, 407, Message.FieldName7);
+      end if;
+      if Message.FieldName8 /= 0 then
+         Protobuf.Add_Int32 (Buffer, 408, Message.FieldName8);
+      end if;
+      if Message.Field_Name9 /= 0 then
+         Protobuf.Add_Int32 (Buffer, 409, Message.Field_Name9);
+      end if;
+      if Message.Field_Name10 /= 0 then
+         Protobuf.Add_Int32 (Buffer, 410, Message.Field_Name10);
+      end if;
+      if Message.FIELD_NAME11 /= 0 then
+         Protobuf.Add_Int32 (Buffer, 411, Message.FIELD_NAME11);
+      end if;
+      if Message.FIELD_name12 /= 0 then
+         Protobuf.Add_Int32 (Buffer, 412, Message.FIELD_name12);
+      end if;
+      if Message.Field_name13 /= 0 then
+         Protobuf.Add_Int32 (Buffer, 413, Message.Field_name13);
+      end if;
+      if Message.Field_name14 /= 0 then
+         Protobuf.Add_Int32 (Buffer, 414, Message.Field_name14);
+      end if;
+      if Message.Field_name15 /= 0 then
+         Protobuf.Add_Int32 (Buffer, 415, Message.Field_name15);
+      end if;
+      if Message.Field_Name16 /= 0 then
+         Protobuf.Add_Int32 (Buffer, 416, Message.Field_Name16);
+      end if;
+      if Message.Field_name17 /= 0 then
+         Protobuf.Add_Int32 (Buffer, 417, Message.Field_name17);
+      end if;
+      if Message.Field_name18 /= 0 then
+         Protobuf.Add_Int32 (Buffer, 418, Message.Field_name18);
+      end if;
       return Protobuf.To_String (Buffer);
    end Serialize;
 
@@ -2105,6 +2159,42 @@ package body Protobuf_test_messages_Proto3 is
                Result.Optional_value := To_Holder (Proto_WKT.Parse_Value (Protobuf.As_Message_Bytes (Item)));
             when 307 =>
                Result.Optional_null_value := Protobuf.As_Int32 (Item);
+            when 401 =>
+               Result.Fieldname1 := Protobuf.As_Int32 (Item);
+            when 402 =>
+               Result.Field_name2 := Protobuf.As_Int32 (Item);
+            when 403 =>
+               Result.Field_name3 := Protobuf.As_Int32 (Item);
+            when 404 =>
+               Result.Field_name4 := Protobuf.As_Int32 (Item);
+            when 405 =>
+               Result.Field0name5 := Protobuf.As_Int32 (Item);
+            when 406 =>
+               Result.Field_0_name6 := Protobuf.As_Int32 (Item);
+            when 407 =>
+               Result.FieldName7 := Protobuf.As_Int32 (Item);
+            when 408 =>
+               Result.FieldName8 := Protobuf.As_Int32 (Item);
+            when 409 =>
+               Result.Field_Name9 := Protobuf.As_Int32 (Item);
+            when 410 =>
+               Result.Field_Name10 := Protobuf.As_Int32 (Item);
+            when 411 =>
+               Result.FIELD_NAME11 := Protobuf.As_Int32 (Item);
+            when 412 =>
+               Result.FIELD_name12 := Protobuf.As_Int32 (Item);
+            when 413 =>
+               Result.Field_name13 := Protobuf.As_Int32 (Item);
+            when 414 =>
+               Result.Field_name14 := Protobuf.As_Int32 (Item);
+            when 415 =>
+               Result.Field_name15 := Protobuf.As_Int32 (Item);
+            when 416 =>
+               Result.Field_Name16 := Protobuf.As_Int32 (Item);
+            when 417 =>
+               Result.Field_name17 := Protobuf.As_Int32 (Item);
+            when 418 =>
+               Result.Field_name18 := Protobuf.As_Int32 (Item);
             when others => null;
          end case;
       end loop;
@@ -2984,6 +3074,60 @@ package body Protobuf_test_messages_Proto3 is
       end if;
       if Message.Optional_null_value /= 0 then
          JSON.Insert (Obj, "optionalNullValue", JSON.Null_Value);
+      end if;
+      if Message.Fieldname1 /= 0 then
+         JSON.Insert (Obj, "fieldname1", JSON.Number (Proto_JSON.Image (Interfaces.Integer_64 (Message.Fieldname1))));
+      end if;
+      if Message.Field_name2 /= 0 then
+         JSON.Insert (Obj, "fieldName2", JSON.Number (Proto_JSON.Image (Interfaces.Integer_64 (Message.Field_name2))));
+      end if;
+      if Message.Field_name3 /= 0 then
+         JSON.Insert (Obj, "FieldName3", JSON.Number (Proto_JSON.Image (Interfaces.Integer_64 (Message.Field_name3))));
+      end if;
+      if Message.Field_name4 /= 0 then
+         JSON.Insert (Obj, "fieldName4", JSON.Number (Proto_JSON.Image (Interfaces.Integer_64 (Message.Field_name4))));
+      end if;
+      if Message.Field0name5 /= 0 then
+         JSON.Insert (Obj, "field0name5", JSON.Number (Proto_JSON.Image (Interfaces.Integer_64 (Message.Field0name5))));
+      end if;
+      if Message.Field_0_name6 /= 0 then
+         JSON.Insert (Obj, "field0Name6", JSON.Number (Proto_JSON.Image (Interfaces.Integer_64 (Message.Field_0_name6))));
+      end if;
+      if Message.FieldName7 /= 0 then
+         JSON.Insert (Obj, "fieldName7", JSON.Number (Proto_JSON.Image (Interfaces.Integer_64 (Message.FieldName7))));
+      end if;
+      if Message.FieldName8 /= 0 then
+         JSON.Insert (Obj, "FieldName8", JSON.Number (Proto_JSON.Image (Interfaces.Integer_64 (Message.FieldName8))));
+      end if;
+      if Message.Field_Name9 /= 0 then
+         JSON.Insert (Obj, "fieldName9", JSON.Number (Proto_JSON.Image (Interfaces.Integer_64 (Message.Field_Name9))));
+      end if;
+      if Message.Field_Name10 /= 0 then
+         JSON.Insert (Obj, "FieldName10", JSON.Number (Proto_JSON.Image (Interfaces.Integer_64 (Message.Field_Name10))));
+      end if;
+      if Message.FIELD_NAME11 /= 0 then
+         JSON.Insert (Obj, "FIELDNAME11", JSON.Number (Proto_JSON.Image (Interfaces.Integer_64 (Message.FIELD_NAME11))));
+      end if;
+      if Message.FIELD_name12 /= 0 then
+         JSON.Insert (Obj, "FIELDName12", JSON.Number (Proto_JSON.Image (Interfaces.Integer_64 (Message.FIELD_name12))));
+      end if;
+      if Message.Field_name13 /= 0 then
+         JSON.Insert (Obj, "FieldName13", JSON.Number (Proto_JSON.Image (Interfaces.Integer_64 (Message.Field_name13))));
+      end if;
+      if Message.Field_name14 /= 0 then
+         JSON.Insert (Obj, "FieldName14", JSON.Number (Proto_JSON.Image (Interfaces.Integer_64 (Message.Field_name14))));
+      end if;
+      if Message.Field_name15 /= 0 then
+         JSON.Insert (Obj, "fieldName15", JSON.Number (Proto_JSON.Image (Interfaces.Integer_64 (Message.Field_name15))));
+      end if;
+      if Message.Field_Name16 /= 0 then
+         JSON.Insert (Obj, "fieldName16", JSON.Number (Proto_JSON.Image (Interfaces.Integer_64 (Message.Field_Name16))));
+      end if;
+      if Message.Field_name17 /= 0 then
+         JSON.Insert (Obj, "fieldName17", JSON.Number (Proto_JSON.Image (Interfaces.Integer_64 (Message.Field_name17))));
+      end if;
+      if Message.Field_name18 /= 0 then
+         JSON.Insert (Obj, "FieldName18", JSON.Number (Proto_JSON.Image (Interfaces.Integer_64 (Message.Field_name18))));
       end if;
       return Obj;
    end To_JSON;
@@ -4198,6 +4342,146 @@ package body Protobuf_test_messages_Proto3 is
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "optional_null_value"); end if;
          if JSON.Kind (FV) /= JSON.JSON_Null then
             Result.Optional_null_value := Interfaces.Integer_32'(0);
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "fieldname1");
+      begin
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.Fieldname1 := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "fieldName2");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "field_name2"); end if;
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.Field_name2 := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "FieldName3");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "_field_name3"); end if;
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.Field_name3 := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "fieldName4");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "field__name4_"); end if;
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.Field_name4 := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "field0name5");
+      begin
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.Field0name5 := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "field0Name6");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "field_0_name6"); end if;
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.Field_0_name6 := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "fieldName7");
+      begin
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.FieldName7 := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "FieldName8");
+      begin
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.FieldName8 := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "fieldName9");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "field_Name9"); end if;
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.Field_Name9 := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "FieldName10");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "Field_Name10"); end if;
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.Field_Name10 := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "FIELDNAME11");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "FIELD_NAME11"); end if;
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.FIELD_NAME11 := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "FIELDName12");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "FIELD_name12"); end if;
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.FIELD_name12 := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "FieldName13");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "__field_name13"); end if;
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.Field_name13 := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "FieldName14");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "__Field_name14"); end if;
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.Field_name14 := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "fieldName15");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "field__name15"); end if;
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.Field_name15 := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "fieldName16");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "field__Name16"); end if;
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.Field_Name16 := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "fieldName17");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "field_name17__"); end if;
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.Field_name17 := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "FieldName18");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "Field_name18__"); end if;
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.Field_name18 := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
          end if;
       end;
       return Result;

@@ -427,6 +427,24 @@ package Protobuf_test_messages_Proto3 is
       Optional_any : Any_Holder;
       Optional_value : Value_Holder;
       Optional_null_value : Interfaces.Integer_32 := 0;
+      Fieldname1 : Interfaces.Integer_32 := 0;
+      Field_name2 : Interfaces.Integer_32 := 0;
+      Field_name3 : Interfaces.Integer_32 := 0;
+      Field_name4 : Interfaces.Integer_32 := 0;
+      Field0name5 : Interfaces.Integer_32 := 0;
+      Field_0_name6 : Interfaces.Integer_32 := 0;
+      FieldName7 : Interfaces.Integer_32 := 0;
+      FieldName8 : Interfaces.Integer_32 := 0;
+      Field_Name9 : Interfaces.Integer_32 := 0;
+      Field_Name10 : Interfaces.Integer_32 := 0;
+      FIELD_NAME11 : Interfaces.Integer_32 := 0;
+      FIELD_name12 : Interfaces.Integer_32 := 0;
+      Field_name13 : Interfaces.Integer_32 := 0;
+      Field_name14 : Interfaces.Integer_32 := 0;
+      Field_name15 : Interfaces.Integer_32 := 0;
+      Field_Name16 : Interfaces.Integer_32 := 0;
+      Field_name17 : Interfaces.Integer_32 := 0;
+      Field_name18 : Interfaces.Integer_32 := 0;
    end record;
 
    function Serialize (Message : ForeignMessage) return String;

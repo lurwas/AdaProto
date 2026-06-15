@@ -561,15 +561,45 @@ package body Proto_Compiler is
       return Ada.Strings.Fixed.Index (Reserved_Words, " " & Lower_Name & " ") > 0;
    end Is_Reserved;
 
-   --  Map one proto identifier segment to a legal Ada identifier (capitalised,
-   --  reserved words suffixed "_F").
+   --  Map one proto identifier segment to a legal Ada identifier. proto field
+   --  names may carry leading, trailing, or doubled underscores (the proto3
+   --  JSON field-name edge cases, e.g. "_field_name3", "field__name4_") which
+   --  are illegal in Ada, so those are stripped/collapsed here. The capitalised
+   --  result has reserved words suffixed "_F". NOTE: this affects only the
+   --  internal Ada identifier; the wire field number and the emitted JSON name
+   --  (Json_Name) are independent, so JSON round-tripping is unaffected.
    function Ada_Seg (Proto_Name : String) return String is
+      R               : Unbounded_String;
+      Prev_Underscore : Boolean := True;  --  start True to drop leading "_"
    begin
-      if Is_Reserved (To_Lower (Proto_Name)) then
-         return Cap (Proto_Name) & "_F";
-      else
-         return Cap (Proto_Name);
+      for C of Proto_Name loop
+         if C = '_' then
+            --  Emit at most one underscore per run, never a leading one.
+            if not Prev_Underscore then
+               Append (R, '_');
+               Prev_Underscore := True;
+            end if;
+         else
+            Append (R, C);
+            Prev_Underscore := False;
+         end if;
+      end loop;
+      --  Drop a trailing underscore left by the loop.
+      if Length (R) > 0 and then Element (R, Length (R)) = '_' then
+         Delete (R, Length (R), Length (R));
       end if;
+      declare
+         Core : constant String :=
+           (if Length (R) = 0 then "Field"
+            elsif Is_Digit (Element (R, 1)) then "F_" & To_String (R)
+            else Cap (To_String (R)));
+      begin
+         if Is_Reserved (To_Lower (Core)) then
+            return Core & "_F";
+         else
+            return Core;
+         end if;
+      end;
    end Ada_Seg;
 
    --  Map a (possibly dotted) proto type name to an Ada identifier. A nested
