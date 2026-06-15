@@ -1189,6 +1189,104 @@ package body Protobuf_Tests is
       end;
    end Test_Generated_Enums_And_Repeated;
 
+   --  Explicit [packed=false] repeated scalars must encode UNPACKED: one
+   --  tag+value entry per element rather than a single packed length-delimited
+   --  block -- and still round-trip. This closes the last wire-format gap for
+   --  Google's TestAllTypesProto3 (its unpacked_* fields).
+   procedure Test_Generated_Unpacked_Repeated is
+      package TM renames Protobuf_test_messages_Proto3;
+      use type TM.TestAllTypesProto3_NestedEnum;
+      M         : TM.TestAllTypesProto3;
+      Reference : Protobuf.Message_Buffer;
+   begin
+      M.Unpacked_int32.Append (1);
+      M.Unpacked_int32.Append (2);
+      M.Unpacked_int32.Append (-3);
+      M.Unpacked_sint32.Append (-1);
+      M.Unpacked_sint32.Append (1);
+      M.Unpacked_nested_enum.Append (TM.TestAllTypesProto3_NestedEnum_BAR);
+
+      --  Hand-written reference: each element is its own field entry, NOT a
+      --  packed block (fields 89 = unpacked_int32, 93 = unpacked_sint32,
+      --  102 = unpacked_nested_enum).
+      Protobuf.Add_Int32  (Reference, 89, 1);
+      Protobuf.Add_Int32  (Reference, 89, 2);
+      Protobuf.Add_Int32  (Reference, 89, -3);
+      Protobuf.Add_SInt32 (Reference, 93, -1);
+      Protobuf.Add_SInt32 (Reference, 93, 1);
+      Protobuf.Add_Int32  (Reference, 102, TM.TestAllTypesProto3_NestedEnum_BAR);
+      Assert (TM.Serialize (M) = Protobuf.To_String (Reference),
+              "[packed=false] repeated encodes one field entry per element");
+
+      --  Round-trip back through the generated parser.
+      declare
+         D : constant TM.TestAllTypesProto3 :=
+           TM.Parse_TestAllTypesProto3 (TM.Serialize (M));
+      begin
+         Assert (Natural (D.Unpacked_int32.Length) = 3
+                 and then D.Unpacked_int32 (1) = 1
+                 and then D.Unpacked_int32 (3) = -3,
+                 "unpacked int32 round-trips");
+         Assert (Natural (D.Unpacked_sint32.Length) = 2
+                 and then D.Unpacked_sint32 (1) = -1
+                 and then D.Unpacked_sint32 (2) = 1,
+                 "unpacked sint32 round-trips");
+         Assert (Natural (D.Unpacked_nested_enum.Length) = 1
+                 and then D.Unpacked_nested_enum (1)
+                          = TM.TestAllTypesProto3_NestedEnum_BAR,
+                 "unpacked enum round-trips");
+      end;
+   end Test_Generated_Unpacked_Repeated;
+
+   --  proto3 JSON field-name edge cases. A field's JSON name is derived by the
+   --  canonical ToJsonName algorithm: drop underscores, capitalize the char
+   --  after each underscore (a LEADING underscore therefore capitalizes the
+   --  first letter). To_JSON emits that name; From_JSON accepts both it and the
+   --  raw proto field name. The internal Ada identifiers are legalized
+   --  (leading/trailing/doubled underscores removed) without touching the wire
+   --  or JSON contract.
+   procedure Test_Generated_JSON_Field_Names is
+      package TM renames Protobuf_test_messages_Proto3;
+      M : TM.TestAllTypesProto3;
+      J : JSON.JSON_Value;
+   begin
+      M.Field_name2   := 2;    --  field_name2    -> "fieldName2"
+      M.Field_name3   := 3;    --  _field_name3   -> "FieldName3" (leading "_")
+      M.Field_name4   := 4;    --  field__name4_  -> "fieldName4"
+      M.Field_0_name6 := 6;    --  field_0_name6  -> "field0Name6"
+      M.Field_name17  := 17;   --  field_name17__ -> "fieldName17"
+
+      J := JSON.Parse (JSON.Serialize (TM.To_JSON (M)));
+      Assert (JSON.Has (J, "fieldName2"),  "field_name2 emits fieldName2");
+      Assert (JSON.Has (J, "FieldName3"),  "_field_name3 emits FieldName3");
+      Assert (JSON.Has (J, "fieldName4"),  "field__name4_ emits fieldName4");
+      Assert (JSON.Has (J, "field0Name6"), "field_0_name6 emits field0Name6");
+      Assert (JSON.Has (J, "fieldName17"), "field_name17__ emits fieldName17");
+
+      --  Parse back from the canonical JSON names.
+      declare
+         R : constant TM.TestAllTypesProto3 := TM.From_JSON (J);
+      begin
+         Assert (R.Field_name2 = 2 and then R.Field_name3 = 3
+                 and then R.Field_name4 = 4 and then R.Field_0_name6 = 6
+                 and then R.Field_name17 = 17,
+                 "edge-case fields round-trip through canonical JSON names");
+      end;
+
+      --  From_JSON must ALSO accept the raw proto field names.
+      declare
+         Raw : constant String :=
+           "{""field_name2"":2,""_field_name3"":3,""field__name4_"":4,"
+           & """field_0_name6"":6,""field_name17__"":17}";
+         R : constant TM.TestAllTypesProto3 := TM.From_JSON (JSON.Parse (Raw));
+      begin
+         Assert (R.Field_name2 = 2 and then R.Field_name3 = 3
+                 and then R.Field_name4 = 4 and then R.Field_0_name6 = 6
+                 and then R.Field_name17 = 17,
+                 "From_JSON also accepts the raw proto field names");
+      end;
+   end Test_Generated_JSON_Field_Names;
+
    --  Phase 1c: nested (non-recursive) message fields via Indefinite_Holders
    --  (singular, with presence) and Vectors (repeated). Proves topological
    --  ordering, delegated encode/decode, and message-field presence semantics.
@@ -1310,6 +1408,34 @@ package body Protobuf_Tests is
          end;
       end;
 
+      --  Well-known-type member (a wrapper): stored as a holder, serialized via
+      --  Proto_WKT, and JSON-mapped to its bare wrapped value.
+      declare
+         C : Sample.Choice;
+         J : JSON.JSON_Value;
+      begin
+         C.Pick := (Which => Sample.Choice_Pick_Wrap,
+                    Wrap  => Sample.To_Holder
+                               (Proto_WKT.Int32_Value'(Value => 11)));
+         declare
+            D : constant Sample.Choice := Sample.Parse_Choice (Sample.Serialize (C));
+         begin
+            Assert (D.Pick.Which = Sample.Choice_Pick_Wrap
+                    and then D.Pick.Wrap.Element.Value = 11,
+                    "oneof WKT member round-trips on the wire");
+         end;
+         J := JSON.Parse (JSON.Serialize (Sample.To_JSON (C)));
+         Assert (JSON.As_Number (JSON.Get (J, "wrap")) = "11",
+                 "oneof WKT member -> bare JSON wrapper value");
+         declare
+            D : constant Sample.Choice := Sample.From_JSON (J);
+         begin
+            Assert (D.Pick.Which = Sample.Choice_Pick_Wrap
+                    and then D.Pick.Wrap.Element.Value = 11,
+                    "oneof WKT member round-trips through JSON");
+         end;
+      end;
+
       --  A oneof member set to its default value is still serialized.
       declare
          C : Sample.Choice;
@@ -1351,6 +1477,12 @@ package body Protobuf_Tests is
       I2.X := 20;
       M.Items.Include (5, Sample.To_Holder (I1));
       M.Items.Include (6, Sample.To_Holder (I2));
+      --  Well-known-type values: stored as holders, (de)serialized and
+      --  JSON-mapped through Proto_WKT (bare wrapper value, RFC 3339 timestamp).
+      M.Wrapped.Include (To_Unbounded_String ("k"),
+                         Sample.To_Holder (Proto_WKT.Int32_Value'(Value => 7)));
+      M.Stamps.Include (9, Sample.To_Holder
+                             (Proto_WKT.Timestamp'(Seconds => 100, Nanos => 0)));
 
       declare
          D : constant Sample.Maps := Sample.Parse_Maps (Sample.Serialize (M));
@@ -1365,6 +1497,29 @@ package body Protobuf_Tests is
                  and then To_String (D.Items.Element (5).Element.Label) = "ten"
                  and then D.Items.Element (6).Element.X = 20,
                  "int32->message map round-trips");
+         Assert (Natural (D.Wrapped.Length) = 1
+                 and then D.Wrapped.Element (To_Unbounded_String ("k")).Element.Value = 7,
+                 "string->Int32Value (WKT) map round-trips on the wire");
+         Assert (Natural (D.Stamps.Length) = 1
+                 and then D.Stamps.Element (9).Element.Seconds = 100,
+                 "int32->Timestamp (WKT) map round-trips on the wire");
+      end;
+
+      --  WKT map values map to their special JSON forms (wrapper -> bare value,
+      --  Timestamp -> RFC 3339 string), and parse back.
+      declare
+         J : constant JSON.JSON_Value :=
+           JSON.Parse (JSON.Serialize (Sample.To_JSON (M)));
+         D : constant Sample.Maps := Sample.From_JSON (J);
+      begin
+         Assert (JSON.As_Number (JSON.Get (JSON.Get (J, "wrapped"), "k")) = "7",
+                 "WKT wrapper map value -> bare JSON number");
+         Assert (JSON.As_String (JSON.Get (JSON.Get (J, "stamps"), "9"))
+                 = "1970-01-01T00:01:40Z",
+                 "WKT Timestamp map value -> RFC 3339 string");
+         Assert (D.Wrapped.Element (To_Unbounded_String ("k")).Element.Value = 7
+                 and then D.Stamps.Element (9).Element.Seconds = 100,
+                 "WKT-valued maps round-trip through JSON");
       end;
 
       declare
@@ -2496,6 +2651,8 @@ package body Protobuf_Tests is
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("serialization buffer growth and reuse", Test_Serialization_Buffer_Growth_And_Reuse'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated types roundtrip", Test_Generated_Types_Roundtrip'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated enums and repeated", Test_Generated_Enums_And_Repeated'Access));
+         AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated unpacked repeated", Test_Generated_Unpacked_Repeated'Access));
+         AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated json field names", Test_Generated_JSON_Field_Names'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated nested messages", Test_Generated_Nested_Messages'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated oneof", Test_Generated_Oneof'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated maps", Test_Generated_Maps'Access));

@@ -30,8 +30,9 @@ Supported:
 - Singular scalar fields: `int32/64`, `uint32/64`, `sint32/64`, `fixed32/64`,
   `sfixed32/64`, `float`, `double`, `bool`, `string`, `bytes`.
 - `enum` fields (open enums: int32-valued subtype + named constants).
-- `repeated` scalar/enum fields (packed encode; both packed and unpacked
-  decode accepted) and `repeated string`/`bytes`.
+- `repeated` scalar/enum fields (packed encode by default; explicit
+  `[packed=false]` encodes unpacked -- one tag+value entry per element; both
+  packed and unpacked decode accepted) and `repeated string`/`bytes`.
 - `message` fields, including recursive and mutually-recursive ones. Each
   message gets a generated memory-safe controlled holder (an access type
   wrapped in a `Controlled` record that deep-copies on assignment and frees on
@@ -44,6 +45,10 @@ Supported:
 - proto3 default omission (default-valued scalars are not written).
 - Ada reserved-word field names are escaped (e.g. `delta` -> `Delta_F`), and
   field names that collide with their own type (`color : Color`) are escaped.
+- Field names that are not legal Ada identifiers -- leading, trailing, or
+  doubled underscores (the proto3 JSON field-name edge cases, e.g.
+  `_field_name3`, `field__name4_`) -- are legalized for the internal Ada type
+  only; the wire field number and the emitted JSON name are unaffected.
 
 Each message also gets `To_JSON`/`From_JSON` (proto3 <-> JSON), via the `JSON`
 DOM and the `Proto_JSON` runtime helpers:
@@ -102,8 +107,10 @@ A runtime library of `google.protobuf.*` types with their binary wire
 `Proto_WKT.X` -- the generator emits a controlled holder over the external WKT
 type (presence), routes binary encode/decode through `Proto_WKT.Serialize` /
 `Proto_WKT.Parse_X`, and JSON through `Proto_WKT.To_JSON`/`From_JSON` (so the
-special forms apply). Supported for singular and repeated WKT fields; a WKT as
-a map value is rejected with a clear error (a follow-up).
+special forms apply). Supported for singular, repeated, `oneof`-member, and
+map-value WKT fields. As a `oneof` member or a `map` value the WKT is stored in
+the same controlled holder used for message values, so encode/decode and the
+special JSON forms apply uniformly.
 
 ### Conformance runner (`bin/conformance-runner`)
 
@@ -123,27 +130,47 @@ other message types (proto2, editions) are `skipped`.
 **Coverage of `TestAllTypesProto3`.** `test_messages_proto3.proto` reproduces
 the upstream message's package, name, and canonical field numbers for every
 construct the generator and runtime model: all scalar types, nested/foreign
-messages and enums, recursion and corecursion, repeated and packed-repeated
-fields, the full range of map key/value shapes, a `oneof`, and the well-known
+messages and enums, recursion and corecursion, repeated, packed-repeated, and
+explicitly unpacked (`[packed=false]`) fields, the full range of map key/value
+shapes, a `oneof`, the JSON field-name edge cases (canonical `ToJsonName`
+derivation, incl. leading/trailing/doubled underscores), and the well-known
 types (wrappers, `Duration`, `Timestamp`, `FieldMask`, `Struct`, `Any`,
 `Value`, and `NullValue` -- a WKT enum that is int32 on the wire but JSON
-`null`). Deliberately omitted, so the testee answers correctly for what it
-declares rather than silently mangling the rest:
+`null`).
 
-- the explicit `[packed=false]` `unpacked_*` repeats (this generator always
-  packs repeated scalars, so it cannot reproduce the unpacked output);
-- the JSON field-name edge-case fields.
+Every construct the message declares round-trips, in both directions, across
+binary and JSON (exercised by the `conformance harness` unit test and an
+end-to-end smoke through the actual `bin/conformance-runner`).
 
-Those cases stay on a conformance failure list until the corresponding features
-land; everything declared round-trips, in both directions, across binary and
-JSON (exercised by the `conformance harness` unit test and an end-to-end smoke
-through the actual `bin/conformance-runner`).
+### Authoritative cross-check (`tools/run_conformance_crosscheck.sh`)
+
+Google's official `conformance-test-runner` is a large C++/Bazel program that is
+not buildable in every environment. `tools/conformance_crosscheck.py` reproduces
+what it does -- driving the testee over the real conformance wire protocol
+(4-byte LE length + `ConformanceRequest`/`ConformanceResponse`) -- using
+Google's **reference Python protobuf implementation** as the oracle. For a
+battery of authoritatively-built `TestAllTypesProto3` messages (scalars, fixed/
+float, nested message+enum, repeated/packed/unpacked, maps, oneofs, the
+well-known types, `Struct`, and the JSON field-name edge cases) it exercises all
+four directions and compares the Ada runner's output to the oracle:
+
+    protobuf payload -> protobuf output      JSON payload -> protobuf output
+    protobuf payload -> JSON output          JSON payload -> JSON output
+
+All 52 cases (13 messages x pb/json x in/out) pass. Run it with `protoc` and the
+Python `protobuf` package available:
+
+```bash
+gprbuild -P protobuf_ada.gpr
+tools/run_conformance_crosscheck.sh   # honours $PROTOC / $PY_PROTOBUF overrides
+```
 
 ### Codegen roadmap (toward 100% proto3 + JSON)
 
-1. Close the remaining `TestAllTypesProto3` gaps for a fully certified run:
-   explicit `[packed=false]` repeats and the JSON field-name edge cases. Also:
-   well-known types as map values / oneof members.
+1. Run Google's official C++ `conformance-test-runner` against
+   `bin/conformance-runner` (the cross-check above already validates the same
+   directions against the reference Python implementation) and triage any
+   residual cases its much larger corpus surfaces.
 
 ## Explicitly not implemented (yet)
 

@@ -25,6 +25,8 @@ package body Proto_Compiler is
       Is_Map     : Boolean := False;
       Map_Key    : Unbounded_String;  --  proto key type when Is_Map
       Map_Value  : Unbounded_String;  --  proto value type when Is_Map
+      Packed_Set : Boolean := False;  --  True if an explicit [packed=...] was given
+      Packed     : Boolean := True;   --  the [packed=...] value (meaningful when set)
    end record;
 
    package Field_Vectors is new Ada.Containers.Vectors (Positive, Field_Def);
@@ -246,6 +248,28 @@ package body Proto_Compiler is
          end if;
       end Skip_Field_Options;
 
+      --  Like Skip_Field_Options, but records an explicit [packed=true|false]
+      --  into F (other options are skipped). Used for ordinary field decls,
+      --  where the packed wire layout of a repeated scalar can be overridden.
+      procedure Parse_Field_Options (F : in out Field_Def) is
+      begin
+         if At_Symbol ("[") then
+            while not At_Symbol ("]") and then Cur.Kind /= T_EOF loop
+               if At_Ident ("packed") then
+                  Adv;
+                  if At_Symbol ("=") then
+                     Adv;
+                     F.Packed_Set := True;
+                     F.Packed := At_Ident ("true");
+                  end if;
+               else
+                  Adv;
+               end if;
+            end loop;
+            Expect_Symbol ("]");
+         end if;
+      end Parse_Field_Options;
+
       --  Qualify a type name with its enclosing scope (empty Prefix = top level).
       function Qualify (Prefix, Name : String) return String is
         (if Prefix = "" then Name else Prefix & "." & Name);
@@ -357,7 +381,7 @@ package body Proto_Compiler is
                   F.Name := To_Unbounded_String (Expect_Ident);
                   Expect_Symbol ("=");
                   F.Number := Positive (Parse_Int);
-                  Skip_Field_Options;
+                  Parse_Field_Options (F);
                   Expect_Symbol (";");
                   M.Fields.Append (F);
                end;
@@ -537,15 +561,45 @@ package body Proto_Compiler is
       return Ada.Strings.Fixed.Index (Reserved_Words, " " & Lower_Name & " ") > 0;
    end Is_Reserved;
 
-   --  Map one proto identifier segment to a legal Ada identifier (capitalised,
-   --  reserved words suffixed "_F").
+   --  Map one proto identifier segment to a legal Ada identifier. proto field
+   --  names may carry leading, trailing, or doubled underscores (the proto3
+   --  JSON field-name edge cases, e.g. "_field_name3", "field__name4_") which
+   --  are illegal in Ada, so those are stripped/collapsed here. The capitalised
+   --  result has reserved words suffixed "_F". NOTE: this affects only the
+   --  internal Ada identifier; the wire field number and the emitted JSON name
+   --  (Json_Name) are independent, so JSON round-tripping is unaffected.
    function Ada_Seg (Proto_Name : String) return String is
+      R               : Unbounded_String;
+      Prev_Underscore : Boolean := True;  --  start True to drop leading "_"
    begin
-      if Is_Reserved (To_Lower (Proto_Name)) then
-         return Cap (Proto_Name) & "_F";
-      else
-         return Cap (Proto_Name);
+      for C of Proto_Name loop
+         if C = '_' then
+            --  Emit at most one underscore per run, never a leading one.
+            if not Prev_Underscore then
+               Append (R, '_');
+               Prev_Underscore := True;
+            end if;
+         else
+            Append (R, C);
+            Prev_Underscore := False;
+         end if;
+      end loop;
+      --  Drop a trailing underscore left by the loop.
+      if Length (R) > 0 and then Element (R, Length (R)) = '_' then
+         Delete (R, Length (R), Length (R));
       end if;
+      declare
+         Core : constant String :=
+           (if Length (R) = 0 then "Field"
+            elsif Is_Digit (Element (R, 1)) then "F_" & To_String (R)
+            else Cap (To_String (R)));
+      begin
+         if Is_Reserved (To_Lower (Core)) then
+            return Core & "_F";
+         else
+            return Core;
+         end if;
+      end;
    end Ada_Seg;
 
    --  Map a (possibly dotted) proto type name to an Ada identifier. A nested
@@ -985,12 +1039,15 @@ package body Proto_Compiler is
                      Key : constant String := To_String (KT.Ada_Type)
                                               & "|" & To_String (VT.Ada_Type);
                   begin
-                     if VT.Is_WKT then
-                        raise Compile_Error
-                          with "a well-known type as a map value is not yet "
-                               & "supported in this codegen phase";
-                     elsif VT.Category = Cat_Message then
+                     if VT.Category = Cat_Message then
+                        --  Message- or WKT-valued map: the value is stored as a
+                        --  controlled holder (same shape for both). A WKT used
+                        --  only here still needs its holder + Proto_WKT import.
                         Add_Once (Map_Msg, Key);
+                        if VT.Is_WKT then
+                           Has_WKT := True;
+                           Add_Once (Wkt_Hold, To_String (VT.Ada_Type));
+                        end if;
                      else
                         Add_Once (Map_Top, Key);
                      end if;
@@ -1484,6 +1541,14 @@ package body Proto_Compiler is
                         SL (Body_Text, "         Protobuf.Add_" & To_String (T.Suffix)
                                        & " (Buffer," & N & ", To_String (Message."
                                        & C & " (I)));");
+                        SL (Body_Text, "      end loop;");
+                     elsif F.Packed_Set and then not F.Packed then
+                        --  explicit [packed=false]: one tag+value per element.
+                        SL (Body_Text, "      for I in Message." & C
+                                       & ".First_Index .. Message." & C
+                                       & ".Last_Index loop");
+                        SL (Body_Text, "         Protobuf.Add_" & To_String (T.Suffix)
+                                       & " (Buffer," & N & ", Message." & C & " (I));");
                         SL (Body_Text, "      end loop;");
                      else
                         --  packed repeated scalar.

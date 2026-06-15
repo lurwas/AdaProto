@@ -13,14 +13,12 @@ import "google/protobuf/wrappers.proto";
 // protobuf_test_messages.proto3.TestAllTypesProto3 -- same package, message
 // name, and canonical field numbers, covering every construct this generator
 // and runtime support: all scalar types, nested/foreign messages and enums,
-// recursion and corecursion, repeated and packed-repeated fields, maps over the
-// full range of key/value shapes, a oneof, and the well-known types.
-//
-// Deliberately omitted (constructs the generator does not yet model, so that
-// the testee answers correctly for what it claims rather than silently mangling
-// the rest): the explicit [packed=false] "unpacked_*" repeats (this generator
-// always packs) and the JSON field-name edge-case fields. Those conformance
-// cases remain reported as failures until the corresponding features land.
+// recursion and corecursion, repeated, packed-repeated, and explicitly
+// unpacked ([packed=false]) fields, maps over the full range of key/value
+// shapes, a oneof, the JSON field-name edge cases (canonical ToJsonName
+// derivation, incl. leading/trailing/doubled underscores), and the well-known
+// types. Every construct it declares round-trips, in both directions, across
+// binary and proto3 JSON.
 
 enum ForeignEnum {
   FOREIGN_FOO = 0;
@@ -127,6 +125,23 @@ message TestAllTypesProto3 {
   repeated bool       packed_bool        = 87;
   repeated NestedEnum packed_nested_enum = 88;
 
+  // Explicitly unpacked repeated scalars ([packed=false]): one tag+value per
+  // element on the wire. Canonical upstream field numbers 89-104.
+  repeated int32      unpacked_int32        = 89  [packed = false];
+  repeated int64      unpacked_int64        = 90  [packed = false];
+  repeated uint32     unpacked_uint32       = 91  [packed = false];
+  repeated uint64     unpacked_uint64       = 92  [packed = false];
+  repeated sint32     unpacked_sint32       = 93  [packed = false];
+  repeated sint64     unpacked_sint64       = 94  [packed = false];
+  repeated fixed32    unpacked_fixed32      = 95  [packed = false];
+  repeated fixed64    unpacked_fixed64      = 96  [packed = false];
+  repeated sfixed32   unpacked_sfixed32     = 97  [packed = false];
+  repeated sfixed64   unpacked_sfixed64     = 98  [packed = false];
+  repeated float      unpacked_float        = 99  [packed = false];
+  repeated double     unpacked_double       = 100 [packed = false];
+  repeated bool       unpacked_bool         = 101 [packed = false];
+  repeated NestedEnum unpacked_nested_enum  = 102 [packed = false];
+
   // Oneof.
   oneof oneof_field {
     uint32        oneof_uint32         = 111;
@@ -170,4 +185,27 @@ message TestAllTypesProto3 {
   google.protobuf.Any       optional_any        = 305;
   google.protobuf.Value     optional_value      = 306;
   google.protobuf.NullValue optional_null_value = 307;
+
+  // JSON field-name edge cases: every field's proto3 JSON name is derived by
+  // the canonical ToJsonName algorithm (drop underscores, capitalize the char
+  // after each underscore). These exercise leading/trailing/doubled
+  // underscores and digits. Canonical upstream field numbers 401-418.
+  int32 fieldname1    = 401;
+  int32 field_name2   = 402;
+  int32 _field_name3  = 403;
+  int32 field__name4_ = 404;
+  int32 field0name5   = 405;
+  int32 field_0_name6 = 406;
+  int32 fieldName7    = 407;
+  int32 FieldName8    = 408;
+  int32 field_Name9   = 409;
+  int32 Field_Name10  = 410;
+  int32 FIELD_NAME11  = 411;
+  int32 FIELD_name12  = 412;
+  int32 __field_name13 = 413;
+  int32 __Field_name14 = 414;
+  int32 field__name15  = 415;
+  int32 field__Name16  = 416;
+  int32 field_name17__ = 417;
+  int32 Field_name18__ = 418;
 }

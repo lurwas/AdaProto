@@ -66,10 +66,14 @@ message Tree {
   repeated Tree children = 4;
 }
 
-// Phase 1c: maps with a scalar value and with a message value.
+// Phase 1c: maps with a scalar value and with a message value; plus maps whose
+// value is a well-known type (stored as a holder, like a message value, and
+// (de)serialized / JSON-mapped through Proto_WKT).
 message Maps {
   map<string, int32> counts = 1;
   map<int32, Inner>  items  = 2;
+  map<string, google.protobuf.Int32Value> wrapped = 3;
+  map<int32,  google.protobuf.Timestamp>  stamps  = 4;
 }
 
 // Nested type definitions: a message and an enum declared inside another
@@ -108,6 +112,7 @@ message Choice {
     int32  count = 2;
     string text  = 3;
     Inner  inner = 4;
+    google.protobuf.Int32Value wrap = 6;  // WKT as a oneof member
   }
   bool after = 5;
 }
