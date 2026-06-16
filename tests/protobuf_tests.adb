@@ -1406,6 +1406,64 @@ package body Protobuf_Tests is
       end;
    end Test_JSON_Number_Strictness;
 
+   --  Two proto3-JSON oneof/Value rules that the conformance suite pins but CI
+   --  would otherwise miss: a JSON object may not set two members of the same
+   --  oneof, and a google.protobuf.Value field set to JSON null is a *present*
+   --  Value(null), not an absent field.
+   procedure Test_Generated_JSON_Oneof_Dup_And_Value_Null is
+      package TM renames Protobuf_test_messages_Proto3;
+      use type TM.TestAllTypesProto3_Oneof_field_Selector;
+      Raised : Boolean := False;
+   begin
+      --  Duplicate members of one oneof in a single object are rejected.
+      begin
+         declare
+            R : constant TM.TestAllTypesProto3 :=
+              TM.From_JSON (JSON.Parse
+                ("{""oneofUint32"":1,""oneofString"":""x""}"));
+            pragma Unreferenced (R);
+         begin
+            null;
+         end;
+      exception
+         when Proto_JSON.Decode_Error => Raised := True;
+      end;
+      Assert (Raised, "duplicate oneof members in one JSON object are rejected");
+
+      --  A single oneof member still parses normally.
+      declare
+         R : constant TM.TestAllTypesProto3 :=
+           TM.From_JSON (JSON.Parse ("{""oneofUint32"":7}"));
+      begin
+         Assert (R.Oneof_field.Which
+                   = TM.TestAllTypesProto3_Oneof_field_Oneof_uint32
+                 and then R.Oneof_field.Oneof_uint32 = 7,
+                 "a single oneof member parses");
+      end;
+
+      --  Value set to JSON null is present and re-emits as null.
+      declare
+         R : constant TM.TestAllTypesProto3 :=
+           TM.From_JSON (JSON.Parse ("{""optionalValue"":null}"));
+         Out_JSON : constant String := JSON.Serialize (TM.To_JSON (R));
+      begin
+         Assert (not TM.Is_Empty (R.Optional_value),
+                 "Value field set to null is present, not absent");
+         Assert (Ada.Strings.Fixed.Index
+                   (Out_JSON, """optionalValue"":null") > 0,
+                 "Value(null) re-emits as optionalValue:null");
+      end;
+
+      --  An absent Value field stays absent -- no spurious null.
+      declare
+         R : constant TM.TestAllTypesProto3 :=
+           TM.From_JSON (JSON.Parse ("{}"));
+      begin
+         Assert (TM.Is_Empty (R.Optional_value),
+                 "an absent Value field stays absent");
+      end;
+   end Test_Generated_JSON_Oneof_Dup_And_Value_Null;
+
    --  Phase 1c: nested (non-recursive) message fields via Indefinite_Holders
    --  (singular, with presence) and Vectors (repeated). Proves topological
    --  ordering, delegated encode/decode, and message-field presence semantics.
@@ -2773,6 +2831,7 @@ package body Protobuf_Tests is
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated unpacked repeated", Test_Generated_Unpacked_Repeated'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated json field names", Test_Generated_JSON_Field_Names'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("json number strictness", Test_JSON_Number_Strictness'Access));
+         AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("json oneof dup and value null", Test_Generated_JSON_Oneof_Dup_And_Value_Null'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated nested messages", Test_Generated_Nested_Messages'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated oneof", Test_Generated_Oneof'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated maps", Test_Generated_Maps'Access));

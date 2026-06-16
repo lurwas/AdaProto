@@ -143,6 +143,17 @@ package body Conformance is
          raise Proto_JSON.Decode_Error with "expected a JSON object";
       end if;
       declare
+         N : Natural := 0;
+      begin
+         if JSON.Kind (JSON.Get (V, "protobufPayload")) /= JSON.JSON_Null or else JSON.Kind (JSON.Get (V, "protobuf_payload")) /= JSON.JSON_Null then N := N + 1; end if;
+         if JSON.Kind (JSON.Get (V, "jsonPayload")) /= JSON.JSON_Null or else JSON.Kind (JSON.Get (V, "json_payload")) /= JSON.JSON_Null then N := N + 1; end if;
+         if JSON.Kind (JSON.Get (V, "jspbPayload")) /= JSON.JSON_Null or else JSON.Kind (JSON.Get (V, "jspb_payload")) /= JSON.JSON_Null then N := N + 1; end if;
+         if JSON.Kind (JSON.Get (V, "textPayload")) /= JSON.JSON_Null or else JSON.Kind (JSON.Get (V, "text_payload")) /= JSON.JSON_Null then N := N + 1; end if;
+         if N > 1 then
+            raise Proto_JSON.Decode_Error with "multiple members set for oneof 'payload'";
+         end if;
+      end;
+      declare
          FV : JSON.JSON_Value := JSON.Get (V, "protobufPayload");
       begin
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "protobuf_payload"); end if;
@@ -265,6 +276,20 @@ package body Conformance is
       if JSON.Kind (V) /= JSON.JSON_Object then
          raise Proto_JSON.Decode_Error with "expected a JSON object";
       end if;
+      declare
+         N : Natural := 0;
+      begin
+         if JSON.Kind (JSON.Get (V, "parseError")) /= JSON.JSON_Null or else JSON.Kind (JSON.Get (V, "parse_error")) /= JSON.JSON_Null then N := N + 1; end if;
+         if JSON.Kind (JSON.Get (V, "serializeError")) /= JSON.JSON_Null or else JSON.Kind (JSON.Get (V, "serialize_error")) /= JSON.JSON_Null then N := N + 1; end if;
+         if JSON.Kind (JSON.Get (V, "runtimeError")) /= JSON.JSON_Null or else JSON.Kind (JSON.Get (V, "runtime_error")) /= JSON.JSON_Null then N := N + 1; end if;
+         if JSON.Kind (JSON.Get (V, "protobufPayload")) /= JSON.JSON_Null or else JSON.Kind (JSON.Get (V, "protobuf_payload")) /= JSON.JSON_Null then N := N + 1; end if;
+         if JSON.Kind (JSON.Get (V, "jsonPayload")) /= JSON.JSON_Null or else JSON.Kind (JSON.Get (V, "json_payload")) /= JSON.JSON_Null then N := N + 1; end if;
+         if JSON.Kind (JSON.Get (V, "skipped")) /= JSON.JSON_Null then N := N + 1; end if;
+         if JSON.Kind (JSON.Get (V, "textPayload")) /= JSON.JSON_Null or else JSON.Kind (JSON.Get (V, "text_payload")) /= JSON.JSON_Null then N := N + 1; end if;
+         if N > 1 then
+            raise Proto_JSON.Decode_Error with "multiple members set for oneof 'result'";
+         end if;
+      end;
       declare
          FV : JSON.JSON_Value := JSON.Get (V, "parseError");
       begin

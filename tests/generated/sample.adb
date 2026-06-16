@@ -1641,6 +1641,17 @@ package body Sample is
          raise Proto_JSON.Decode_Error with "expected a JSON object";
       end if;
       declare
+         N : Natural := 0;
+      begin
+         if JSON.Kind (JSON.Get (V, "count")) /= JSON.JSON_Null then N := N + 1; end if;
+         if JSON.Kind (JSON.Get (V, "text")) /= JSON.JSON_Null then N := N + 1; end if;
+         if JSON.Kind (JSON.Get (V, "inner")) /= JSON.JSON_Null then N := N + 1; end if;
+         if JSON.Kind (JSON.Get (V, "wrap")) /= JSON.JSON_Null then N := N + 1; end if;
+         if N > 1 then
+            raise Proto_JSON.Decode_Error with "multiple members set for oneof 'pick'";
+         end if;
+      end;
+      declare
          FV : JSON.JSON_Value := JSON.Get (V, "before");
       begin
          if JSON.Kind (FV) /= JSON.JSON_Null then
