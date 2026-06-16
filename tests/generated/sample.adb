@@ -385,6 +385,9 @@ package body Sample is
    function From_JSON (V : JSON.JSON_Value) return Box is
       Result : Box;
    begin
+      if JSON.Kind (V) /= JSON.JSON_Object then
+         raise Proto_JSON.Decode_Error with "expected a JSON object";
+      end if;
       declare
          FV : JSON.JSON_Value := JSON.Get (V, "count");
       begin
@@ -494,18 +497,21 @@ package body Sample is
    function From_JSON (V : JSON.JSON_Value) return Person is
       Result : Person;
    begin
+      if JSON.Kind (V) /= JSON.JSON_Object then
+         raise Proto_JSON.Decode_Error with "expected a JSON object";
+      end if;
       declare
          FV : JSON.JSON_Value := JSON.Get (V, "id");
       begin
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Id := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+            Result.Id := Proto_JSON.To_Int32 (Proto_JSON.Scalar_Text (FV));
          end if;
       end;
       declare
          FV : JSON.JSON_Value := JSON.Get (V, "name");
       begin
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Name := To_Unbounded_String (Proto_JSON.Checked_UTF8 (JSON.As_String (FV)));
+            Result.Name := To_Unbounded_String (Proto_JSON.Checked_UTF8 (Proto_JSON.Checked_String (FV)));
          end if;
       end;
       declare
@@ -533,7 +539,7 @@ package body Sample is
          FV : JSON.JSON_Value := JSON.Get (V, "blob");
       begin
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Blob := To_Unbounded_String (Proto_JSON.From_Base64 (JSON.As_String (FV)));
+            Result.Blob := To_Unbounded_String (Proto_JSON.From_Base64 (Proto_JSON.Checked_String (FV)));
          end if;
       end;
       return Result;
@@ -583,18 +589,21 @@ package body Sample is
    function From_JSON (V : JSON.JSON_Value) return Pair is
       Result : Pair;
    begin
+      if JSON.Kind (V) /= JSON.JSON_Object then
+         raise Proto_JSON.Decode_Error with "expected a JSON object";
+      end if;
       declare
          FV : JSON.JSON_Value := JSON.Get (V, "first");
       begin
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.First := Interfaces.Unsigned_32 (Proto_JSON.To_UInt64 (Proto_JSON.Scalar_Text (FV)));
+            Result.First := Proto_JSON.To_UInt32 (Proto_JSON.Scalar_Text (FV));
          end if;
       end;
       declare
          FV : JSON.JSON_Value := JSON.Get (V, "second");
       begin
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Second := Interfaces.Unsigned_32 (Proto_JSON.To_UInt64 (Proto_JSON.Scalar_Text (FV)));
+            Result.Second := Proto_JSON.To_UInt32 (Proto_JSON.Scalar_Text (FV));
          end if;
       end;
       return Result;
@@ -711,12 +720,15 @@ package body Sample is
    function From_JSON (V : JSON.JSON_Value) return Bag is
       Result : Bag;
    begin
+      if JSON.Kind (V) /= JSON.JSON_Object then
+         raise Proto_JSON.Decode_Error with "expected a JSON object";
+      end if;
       declare
          FV : JSON.JSON_Value := JSON.Get (V, "numbers");
       begin
          if JSON.Kind (FV) = JSON.JSON_Array then
             for I in 1 .. JSON.Length (FV) loop
-               Result.Numbers.Append (Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (JSON.Element (FV, I)))));
+               Result.Numbers.Append (Proto_JSON.To_Int32 (Proto_JSON.Scalar_Text (JSON.Element (FV, I))));
             end loop;
          end if;
       end;
@@ -725,7 +737,7 @@ package body Sample is
       begin
          if JSON.Kind (FV) = JSON.JSON_Array then
             for I in 1 .. JSON.Length (FV) loop
-               Result.Tags.Append (To_Unbounded_String (Proto_JSON.Checked_UTF8 (JSON.As_String (JSON.Element (FV, I)))));
+               Result.Tags.Append (To_Unbounded_String (Proto_JSON.Checked_UTF8 (Proto_JSON.Checked_String (JSON.Element (FV, I)))));
             end loop;
          end if;
       end;
@@ -807,6 +819,9 @@ package body Sample is
    function From_JSON (V : JSON.JSON_Value) return Outer is
       Result : Outer;
    begin
+      if JSON.Kind (V) /= JSON.JSON_Object then
+         raise Proto_JSON.Decode_Error with "expected a JSON object";
+      end if;
       declare
          FV : JSON.JSON_Value := JSON.Get (V, "one");
       begin
@@ -827,7 +842,7 @@ package body Sample is
          FV : JSON.JSON_Value := JSON.Get (V, "note");
       begin
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Note := To_Unbounded_String (Proto_JSON.Checked_UTF8 (JSON.As_String (FV)));
+            Result.Note := To_Unbounded_String (Proto_JSON.Checked_UTF8 (Proto_JSON.Checked_String (FV)));
          end if;
       end;
       return Result;
@@ -877,18 +892,21 @@ package body Sample is
    function From_JSON (V : JSON.JSON_Value) return Inner is
       Result : Inner;
    begin
+      if JSON.Kind (V) /= JSON.JSON_Object then
+         raise Proto_JSON.Decode_Error with "expected a JSON object";
+      end if;
       declare
          FV : JSON.JSON_Value := JSON.Get (V, "x");
       begin
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.X := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+            Result.X := Proto_JSON.To_Int32 (Proto_JSON.Scalar_Text (FV));
          end if;
       end;
       declare
          FV : JSON.JSON_Value := JSON.Get (V, "label");
       begin
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Label := To_Unbounded_String (Proto_JSON.Checked_UTF8 (JSON.As_String (FV)));
+            Result.Label := To_Unbounded_String (Proto_JSON.Checked_UTF8 (Proto_JSON.Checked_String (FV)));
          end if;
       end;
       return Result;
@@ -961,11 +979,14 @@ package body Sample is
    function From_JSON (V : JSON.JSON_Value) return Tree is
       Result : Tree;
    begin
+      if JSON.Kind (V) /= JSON.JSON_Object then
+         raise Proto_JSON.Decode_Error with "expected a JSON object";
+      end if;
       declare
          FV : JSON.JSON_Value := JSON.Get (V, "value");
       begin
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Value := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+            Result.Value := Proto_JSON.To_Int32 (Proto_JSON.Scalar_Text (FV));
          end if;
       end;
       declare
@@ -1180,6 +1201,9 @@ package body Sample is
    function From_JSON (V : JSON.JSON_Value) return Maps is
       Result : Maps;
    begin
+      if JSON.Kind (V) /= JSON.JSON_Object then
+         raise Proto_JSON.Decode_Error with "expected a JSON object";
+      end if;
       declare
          FV : JSON.JSON_Value := JSON.Get (V, "counts");
       begin
@@ -1189,7 +1213,7 @@ package body Sample is
                   Kstr : constant String := JSON.Key (FV, I);
                   VV : constant JSON.JSON_Value := JSON.Get (FV, Kstr);
                begin
-                  Result.Counts.Include (To_Unbounded_String (Kstr), Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (VV))));
+                  Result.Counts.Include (To_Unbounded_String (Kstr), Proto_JSON.To_Int32 (Proto_JSON.Scalar_Text (VV)));
                end;
             end loop;
          end if;
@@ -1291,11 +1315,14 @@ package body Sample is
    function From_JSON (V : JSON.JSON_Value) return Nest_Item is
       Result : Nest_Item;
    begin
+      if JSON.Kind (V) /= JSON.JSON_Object then
+         raise Proto_JSON.Decode_Error with "expected a JSON object";
+      end if;
       declare
          FV : JSON.JSON_Value := JSON.Get (V, "a");
       begin
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.A := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+            Result.A := Proto_JSON.To_Int32 (Proto_JSON.Scalar_Text (FV));
          end if;
       end;
       declare
@@ -1413,6 +1440,9 @@ package body Sample is
    function From_JSON (V : JSON.JSON_Value) return Nest is
       Result : Nest;
    begin
+      if JSON.Kind (V) /= JSON.JSON_Object then
+         raise Proto_JSON.Decode_Error with "expected a JSON object";
+      end if;
       declare
          FV : JSON.JSON_Value := JSON.Get (V, "head");
       begin
@@ -1508,11 +1538,14 @@ package body Sample is
    function From_JSON (V : JSON.JSON_Value) return Opt is
       Result : Opt;
    begin
+      if JSON.Kind (V) /= JSON.JSON_Object then
+         raise Proto_JSON.Decode_Error with "expected a JSON object";
+      end if;
       declare
          FV : JSON.JSON_Value := JSON.Get (V, "maybe");
       begin
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Maybe := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+            Result.Maybe := Proto_JSON.To_Int32 (Proto_JSON.Scalar_Text (FV));
             Result.Maybe_Has := True;
          end if;
       end;
@@ -1520,7 +1553,7 @@ package body Sample is
          FV : JSON.JSON_Value := JSON.Get (V, "note");
       begin
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Note := To_Unbounded_String (Proto_JSON.Checked_UTF8 (JSON.As_String (FV)));
+            Result.Note := To_Unbounded_String (Proto_JSON.Checked_UTF8 (Proto_JSON.Checked_String (FV)));
             Result.Note_Has := True;
          end if;
       end;
@@ -1528,7 +1561,7 @@ package body Sample is
          FV : JSON.JSON_Value := JSON.Get (V, "plain");
       begin
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Plain := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+            Result.Plain := Proto_JSON.To_Int32 (Proto_JSON.Scalar_Text (FV));
          end if;
       end;
       return Result;
@@ -1604,25 +1637,28 @@ package body Sample is
    function From_JSON (V : JSON.JSON_Value) return Choice is
       Result : Choice;
    begin
+      if JSON.Kind (V) /= JSON.JSON_Object then
+         raise Proto_JSON.Decode_Error with "expected a JSON object";
+      end if;
       declare
          FV : JSON.JSON_Value := JSON.Get (V, "before");
       begin
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Before := To_Unbounded_String (Proto_JSON.Checked_UTF8 (JSON.As_String (FV)));
+            Result.Before := To_Unbounded_String (Proto_JSON.Checked_UTF8 (Proto_JSON.Checked_String (FV)));
          end if;
       end;
       declare
          FV : JSON.JSON_Value := JSON.Get (V, "count");
       begin
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Pick := (Which => Choice_Pick_Count, Count => Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV))));
+            Result.Pick := (Which => Choice_Pick_Count, Count => Proto_JSON.To_Int32 (Proto_JSON.Scalar_Text (FV)));
          end if;
       end;
       declare
          FV : JSON.JSON_Value := JSON.Get (V, "text");
       begin
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Pick := (Which => Choice_Pick_Text, Text => To_Unbounded_String (Proto_JSON.Checked_UTF8 (JSON.As_String (FV))));
+            Result.Pick := (Which => Choice_Pick_Text, Text => To_Unbounded_String (Proto_JSON.Checked_UTF8 (Proto_JSON.Checked_String (FV))));
          end if;
       end;
       declare

@@ -1986,11 +1986,11 @@ package body Proto_Compiler is
                      when Cat_Int =>
                         if S = "Int32" or else S = "SInt32" or else S = "SFixed32"
                         then
-                           return "Interfaces.Integer_32 (Proto_JSON.To_Int64 "
-                                  & "(Proto_JSON.Scalar_Text (" & FV & ")))";
+                           return "Proto_JSON.To_Int32 "
+                                  & "(Proto_JSON.Scalar_Text (" & FV & "))";
                         elsif S = "UInt32" or else S = "Fixed32" then
-                           return "Interfaces.Unsigned_32 (Proto_JSON.To_UInt64 "
-                                  & "(Proto_JSON.Scalar_Text (" & FV & ")))";
+                           return "Proto_JSON.To_UInt32 "
+                                  & "(Proto_JSON.Scalar_Text (" & FV & "))";
                         elsif S = "UInt64" or else S = "Fixed64" then
                            return "Proto_JSON.To_UInt64 (Proto_JSON.Scalar_Text ("
                                   & FV & "))";
@@ -2007,9 +2007,10 @@ package body Proto_Compiler is
                      when Cat_Str =>
                         if S = "Bytes" then
                            return "To_Unbounded_String (Proto_JSON.From_Base64 "
-                                  & "(JSON.As_String (" & FV & ")))";
+                                  & "(Proto_JSON.Checked_String (" & FV & ")))";
                         else
-                           return Str_Decode (S, "JSON.As_String (" & FV & ")");
+                           return Str_Decode
+                                    (S, "Proto_JSON.Checked_String (" & FV & ")");
                         end if;
                      when Cat_Message =>
                         return Msg_Type_Mark (T) & "'(From_JSON (" & FV & "))";
@@ -2206,6 +2207,13 @@ package body Proto_Compiler is
                               & TName & " is");
                SL (Body_Text, "      Result : " & TName & ";");
                SL (Body_Text, "   begin");
+               --  proto3 JSON: a message must be a JSON object (this also
+               --  rejects a top-level null and a wrong-typed array element when
+               --  a message is expected).
+               SL (Body_Text, "      if JSON.Kind (V) /= JSON.JSON_Object then");
+               SL (Body_Text, "         raise Proto_JSON.Decode_Error with "
+                              & """expected a JSON object"";");
+               SL (Body_Text, "      end if;");
                for F of M.Fields loop
                   if F.Is_Map then
                      Emit_Map_From_JSON (F);

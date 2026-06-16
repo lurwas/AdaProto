@@ -298,6 +298,22 @@ package body Protobuf_test_messages_Proto3 is
    function Element (H : Value_Holder) return Proto_WKT.Value is (H.Ptr.all);
    function Is_Empty (H : Value_Holder) return Boolean is (H.Ptr = null);
 
+   procedure Free_List_Value is new Ada.Unchecked_Deallocation (Proto_WKT.List_Value, List_Value_Access);
+   overriding procedure Adjust (H : in out List_Value_Holder) is
+   begin
+      if H.Ptr /= null then H.Ptr := new Proto_WKT.List_Value'(H.Ptr.all); end if;
+   end Adjust;
+   overriding procedure Finalize (H : in out List_Value_Holder) is
+   begin
+      Free_List_Value (H.Ptr);
+   end Finalize;
+   function To_Holder (Value : Proto_WKT.List_Value) return List_Value_Holder is
+   begin
+      return H : List_Value_Holder do H.Ptr := new Proto_WKT.List_Value'(Value); end return;
+   end To_Holder;
+   function Element (H : List_Value_Holder) return Proto_WKT.List_Value is (H.Ptr.all);
+   function Is_Empty (H : List_Value_Holder) return Boolean is (H.Ptr = null);
+
    function ForeignEnum_To_JSON (V : ForeignEnum) return JSON.JSON_Value is
    begin
       case V is
@@ -386,11 +402,14 @@ package body Protobuf_test_messages_Proto3 is
    function From_JSON (V : JSON.JSON_Value) return ForeignMessage is
       Result : ForeignMessage;
    begin
+      if JSON.Kind (V) /= JSON.JSON_Object then
+         raise Proto_JSON.Decode_Error with "expected a JSON object";
+      end if;
       declare
          FV : JSON.JSON_Value := JSON.Get (V, "c");
       begin
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.C := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+            Result.C := Proto_JSON.To_Int32 (Proto_JSON.Scalar_Text (FV));
          end if;
       end;
       return Result;
@@ -440,11 +459,14 @@ package body Protobuf_test_messages_Proto3 is
    function From_JSON (V : JSON.JSON_Value) return TestAllTypesProto3_NestedMessage is
       Result : TestAllTypesProto3_NestedMessage;
    begin
+      if JSON.Kind (V) /= JSON.JSON_Object then
+         raise Proto_JSON.Decode_Error with "expected a JSON object";
+      end if;
       declare
          FV : JSON.JSON_Value := JSON.Get (V, "a");
       begin
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.A := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+            Result.A := Proto_JSON.To_Int32 (Proto_JSON.Scalar_Text (FV));
          end if;
       end;
       declare
@@ -516,6 +538,12 @@ package body Protobuf_test_messages_Proto3 is
       end if;
       if Message.Optional_foreign_enum /= 0 then
          Protobuf.Add_Int32 (Buffer, 22, Message.Optional_foreign_enum);
+      end if;
+      if Length (Message.Optional_string_piece) > 0 then
+         Protobuf.Add_String (Buffer, 24, To_String (Message.Optional_string_piece));
+      end if;
+      if Length (Message.Optional_cord) > 0 then
+         Protobuf.Add_String (Buffer, 25, To_String (Message.Optional_cord));
       end if;
       if not Message.Recursive_message.Is_Empty then
          Protobuf.Add_Message (Buffer, 27, Serialize (Message.Recursive_message.Element));
@@ -682,6 +710,12 @@ package body Protobuf_test_messages_Proto3 is
             Protobuf.Add_Packed_Int32 (Buffer, 52, Tmp);
          end;
       end if;
+      for I in Message.Repeated_string_piece.First_Index .. Message.Repeated_string_piece.Last_Index loop
+         Protobuf.Add_String (Buffer, 54, To_String (Message.Repeated_string_piece (I)));
+      end loop;
+      for I in Message.Repeated_cord.First_Index .. Message.Repeated_cord.Last_Index loop
+         Protobuf.Add_String (Buffer, 55, To_String (Message.Repeated_cord (I)));
+      end loop;
       for Cur in Message.Map_int32_int32.Iterate loop
          declare
             Entry_Buf : Protobuf.Message_Buffer;
@@ -1243,6 +1277,27 @@ package body Protobuf_test_messages_Proto3 is
       if Message.Optional_null_value /= 0 then
          Protobuf.Add_Int32 (Buffer, 307, Message.Optional_null_value);
       end if;
+      for I in Message.Repeated_duration.First_Index .. Message.Repeated_duration.Last_Index loop
+         Protobuf.Add_Message (Buffer, 311, Serialize (Element (Message.Repeated_duration (I))));
+      end loop;
+      for I in Message.Repeated_timestamp.First_Index .. Message.Repeated_timestamp.Last_Index loop
+         Protobuf.Add_Message (Buffer, 312, Serialize (Element (Message.Repeated_timestamp (I))));
+      end loop;
+      for I in Message.Repeated_fieldmask.First_Index .. Message.Repeated_fieldmask.Last_Index loop
+         Protobuf.Add_Message (Buffer, 313, Serialize (Element (Message.Repeated_fieldmask (I))));
+      end loop;
+      for I in Message.Repeated_any.First_Index .. Message.Repeated_any.Last_Index loop
+         Protobuf.Add_Message (Buffer, 315, Serialize (Element (Message.Repeated_any (I))));
+      end loop;
+      for I in Message.Repeated_value.First_Index .. Message.Repeated_value.Last_Index loop
+         Protobuf.Add_Message (Buffer, 316, Serialize (Element (Message.Repeated_value (I))));
+      end loop;
+      for I in Message.Repeated_list_value.First_Index .. Message.Repeated_list_value.Last_Index loop
+         Protobuf.Add_Message (Buffer, 317, Serialize (Element (Message.Repeated_list_value (I))));
+      end loop;
+      for I in Message.Repeated_struct.First_Index .. Message.Repeated_struct.Last_Index loop
+         Protobuf.Add_Message (Buffer, 324, Serialize (Element (Message.Repeated_struct (I))));
+      end loop;
       if Message.Fieldname1 /= 0 then
          Protobuf.Add_Int32 (Buffer, 401, Message.Fieldname1);
       end if;
@@ -1345,6 +1400,10 @@ package body Protobuf_test_messages_Proto3 is
                Result.Optional_nested_enum := Protobuf.As_Int32 (Item);
             when 22 =>
                Result.Optional_foreign_enum := Protobuf.As_Int32 (Item);
+            when 24 =>
+               Result.Optional_string_piece := To_Unbounded_String (Proto_JSON.Checked_UTF8 (Protobuf.As_String (Item)));
+            when 25 =>
+               Result.Optional_cord := To_Unbounded_String (Proto_JSON.Checked_UTF8 (Protobuf.As_String (Item)));
             when 27 =>
                Result.Recursive_message := To_Holder (Parse_TestAllTypesProto3 (Protobuf.As_Message_Bytes (Item)));
             when 31 =>
@@ -1505,6 +1564,10 @@ package body Protobuf_test_messages_Proto3 is
                else
                   Result.Repeated_foreign_enum.Append (Protobuf.As_Int32 (Item));
                end if;
+            when 54 =>
+               Result.Repeated_string_piece.Append (To_Unbounded_String (Proto_JSON.Checked_UTF8 (Protobuf.As_String (Item))));
+            when 55 =>
+               Result.Repeated_cord.Append (To_Unbounded_String (Proto_JSON.Checked_UTF8 (Protobuf.As_String (Item))));
             when 56 =>
                declare
                   Ent : constant Protobuf.Parsed_Field_Vectors.Vector :=
@@ -2159,6 +2222,20 @@ package body Protobuf_test_messages_Proto3 is
                Result.Optional_value := To_Holder (Proto_WKT.Parse_Value (Protobuf.As_Message_Bytes (Item)));
             when 307 =>
                Result.Optional_null_value := Protobuf.As_Int32 (Item);
+            when 311 =>
+               Result.Repeated_duration.Append (To_Holder (Proto_WKT.Parse_Duration (Protobuf.As_Message_Bytes (Item))));
+            when 312 =>
+               Result.Repeated_timestamp.Append (To_Holder (Proto_WKT.Parse_Timestamp (Protobuf.As_Message_Bytes (Item))));
+            when 313 =>
+               Result.Repeated_fieldmask.Append (To_Holder (Proto_WKT.Parse_Field_Mask (Protobuf.As_Message_Bytes (Item))));
+            when 315 =>
+               Result.Repeated_any.Append (To_Holder (Proto_WKT.Parse_Any (Protobuf.As_Message_Bytes (Item))));
+            when 316 =>
+               Result.Repeated_value.Append (To_Holder (Proto_WKT.Parse_Value (Protobuf.As_Message_Bytes (Item))));
+            when 317 =>
+               Result.Repeated_list_value.Append (To_Holder (Proto_WKT.Parse_List_Value (Protobuf.As_Message_Bytes (Item))));
+            when 324 =>
+               Result.Repeated_struct.Append (To_Holder (Proto_WKT.Parse_Struct (Protobuf.As_Message_Bytes (Item))));
             when 401 =>
                Result.Fieldname1 := Protobuf.As_Int32 (Item);
             when 402 =>
@@ -2260,6 +2337,12 @@ package body Protobuf_test_messages_Proto3 is
       end if;
       if Message.Optional_foreign_enum /= 0 then
          JSON.Insert (Obj, "optionalForeignEnum", ForeignEnum_To_JSON (Message.Optional_foreign_enum));
+      end if;
+      if Length (Message.Optional_string_piece) > 0 then
+         JSON.Insert (Obj, "optionalStringPiece", JSON.To_Value (To_String (Message.Optional_string_piece)));
+      end if;
+      if Length (Message.Optional_cord) > 0 then
+         JSON.Insert (Obj, "optionalCord", JSON.To_Value (To_String (Message.Optional_cord)));
       end if;
       if not Message.Recursive_message.Is_Empty then
          JSON.Insert (Obj, "recursiveMessage", To_JSON (Message.Recursive_message.Element));
@@ -2452,6 +2535,26 @@ package body Protobuf_test_messages_Proto3 is
                JSON.Append (Arr, ForeignEnum_To_JSON (Message.Repeated_foreign_enum.Element (I)));
             end loop;
             JSON.Insert (Obj, "repeatedForeignEnum", Arr);
+         end;
+      end if;
+      if not Message.Repeated_string_piece.Is_Empty then
+         declare
+            Arr : JSON.JSON_Value := JSON.Empty_Array;
+         begin
+            for I in Message.Repeated_string_piece.First_Index .. Message.Repeated_string_piece.Last_Index loop
+               JSON.Append (Arr, JSON.To_Value (To_String (Message.Repeated_string_piece.Element (I))));
+            end loop;
+            JSON.Insert (Obj, "repeatedStringPiece", Arr);
+         end;
+      end if;
+      if not Message.Repeated_cord.Is_Empty then
+         declare
+            Arr : JSON.JSON_Value := JSON.Empty_Array;
+         begin
+            for I in Message.Repeated_cord.First_Index .. Message.Repeated_cord.Last_Index loop
+               JSON.Append (Arr, JSON.To_Value (To_String (Message.Repeated_cord.Element (I))));
+            end loop;
+            JSON.Insert (Obj, "repeatedCord", Arr);
          end;
       end if;
       if not Message.Map_int32_int32.Is_Empty then
@@ -3075,6 +3178,76 @@ package body Protobuf_test_messages_Proto3 is
       if Message.Optional_null_value /= 0 then
          JSON.Insert (Obj, "optionalNullValue", JSON.Null_Value);
       end if;
+      if not Message.Repeated_duration.Is_Empty then
+         declare
+            Arr : JSON.JSON_Value := JSON.Empty_Array;
+         begin
+            for I in Message.Repeated_duration.First_Index .. Message.Repeated_duration.Last_Index loop
+               JSON.Append (Arr, To_JSON (Element (Message.Repeated_duration (I))));
+            end loop;
+            JSON.Insert (Obj, "repeatedDuration", Arr);
+         end;
+      end if;
+      if not Message.Repeated_timestamp.Is_Empty then
+         declare
+            Arr : JSON.JSON_Value := JSON.Empty_Array;
+         begin
+            for I in Message.Repeated_timestamp.First_Index .. Message.Repeated_timestamp.Last_Index loop
+               JSON.Append (Arr, To_JSON (Element (Message.Repeated_timestamp (I))));
+            end loop;
+            JSON.Insert (Obj, "repeatedTimestamp", Arr);
+         end;
+      end if;
+      if not Message.Repeated_fieldmask.Is_Empty then
+         declare
+            Arr : JSON.JSON_Value := JSON.Empty_Array;
+         begin
+            for I in Message.Repeated_fieldmask.First_Index .. Message.Repeated_fieldmask.Last_Index loop
+               JSON.Append (Arr, To_JSON (Element (Message.Repeated_fieldmask (I))));
+            end loop;
+            JSON.Insert (Obj, "repeatedFieldmask", Arr);
+         end;
+      end if;
+      if not Message.Repeated_any.Is_Empty then
+         declare
+            Arr : JSON.JSON_Value := JSON.Empty_Array;
+         begin
+            for I in Message.Repeated_any.First_Index .. Message.Repeated_any.Last_Index loop
+               JSON.Append (Arr, To_JSON (Element (Message.Repeated_any (I))));
+            end loop;
+            JSON.Insert (Obj, "repeatedAny", Arr);
+         end;
+      end if;
+      if not Message.Repeated_value.Is_Empty then
+         declare
+            Arr : JSON.JSON_Value := JSON.Empty_Array;
+         begin
+            for I in Message.Repeated_value.First_Index .. Message.Repeated_value.Last_Index loop
+               JSON.Append (Arr, To_JSON (Element (Message.Repeated_value (I))));
+            end loop;
+            JSON.Insert (Obj, "repeatedValue", Arr);
+         end;
+      end if;
+      if not Message.Repeated_list_value.Is_Empty then
+         declare
+            Arr : JSON.JSON_Value := JSON.Empty_Array;
+         begin
+            for I in Message.Repeated_list_value.First_Index .. Message.Repeated_list_value.Last_Index loop
+               JSON.Append (Arr, To_JSON (Element (Message.Repeated_list_value (I))));
+            end loop;
+            JSON.Insert (Obj, "repeatedListValue", Arr);
+         end;
+      end if;
+      if not Message.Repeated_struct.Is_Empty then
+         declare
+            Arr : JSON.JSON_Value := JSON.Empty_Array;
+         begin
+            for I in Message.Repeated_struct.First_Index .. Message.Repeated_struct.Last_Index loop
+               JSON.Append (Arr, To_JSON (Element (Message.Repeated_struct (I))));
+            end loop;
+            JSON.Insert (Obj, "repeatedStruct", Arr);
+         end;
+      end if;
       if Message.Fieldname1 /= 0 then
          JSON.Insert (Obj, "fieldname1", JSON.Number (Proto_JSON.Image (Interfaces.Integer_64 (Message.Fieldname1))));
       end if;
@@ -3135,12 +3308,15 @@ package body Protobuf_test_messages_Proto3 is
    function From_JSON (V : JSON.JSON_Value) return TestAllTypesProto3 is
       Result : TestAllTypesProto3;
    begin
+      if JSON.Kind (V) /= JSON.JSON_Object then
+         raise Proto_JSON.Decode_Error with "expected a JSON object";
+      end if;
       declare
          FV : JSON.JSON_Value := JSON.Get (V, "optionalInt32");
       begin
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "optional_int32"); end if;
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Optional_int32 := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+            Result.Optional_int32 := Proto_JSON.To_Int32 (Proto_JSON.Scalar_Text (FV));
          end if;
       end;
       declare
@@ -3156,7 +3332,7 @@ package body Protobuf_test_messages_Proto3 is
       begin
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "optional_uint32"); end if;
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Optional_uint32 := Interfaces.Unsigned_32 (Proto_JSON.To_UInt64 (Proto_JSON.Scalar_Text (FV)));
+            Result.Optional_uint32 := Proto_JSON.To_UInt32 (Proto_JSON.Scalar_Text (FV));
          end if;
       end;
       declare
@@ -3172,7 +3348,7 @@ package body Protobuf_test_messages_Proto3 is
       begin
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "optional_sint32"); end if;
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Optional_sint32 := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+            Result.Optional_sint32 := Proto_JSON.To_Int32 (Proto_JSON.Scalar_Text (FV));
          end if;
       end;
       declare
@@ -3188,7 +3364,7 @@ package body Protobuf_test_messages_Proto3 is
       begin
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "optional_fixed32"); end if;
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Optional_fixed32 := Interfaces.Unsigned_32 (Proto_JSON.To_UInt64 (Proto_JSON.Scalar_Text (FV)));
+            Result.Optional_fixed32 := Proto_JSON.To_UInt32 (Proto_JSON.Scalar_Text (FV));
          end if;
       end;
       declare
@@ -3204,7 +3380,7 @@ package body Protobuf_test_messages_Proto3 is
       begin
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "optional_sfixed32"); end if;
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Optional_sfixed32 := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+            Result.Optional_sfixed32 := Proto_JSON.To_Int32 (Proto_JSON.Scalar_Text (FV));
          end if;
       end;
       declare
@@ -3244,7 +3420,7 @@ package body Protobuf_test_messages_Proto3 is
       begin
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "optional_string"); end if;
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Optional_string := To_Unbounded_String (Proto_JSON.Checked_UTF8 (JSON.As_String (FV)));
+            Result.Optional_string := To_Unbounded_String (Proto_JSON.Checked_UTF8 (Proto_JSON.Checked_String (FV)));
          end if;
       end;
       declare
@@ -3252,7 +3428,7 @@ package body Protobuf_test_messages_Proto3 is
       begin
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "optional_bytes"); end if;
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Optional_bytes := To_Unbounded_String (Proto_JSON.From_Base64 (JSON.As_String (FV)));
+            Result.Optional_bytes := To_Unbounded_String (Proto_JSON.From_Base64 (Proto_JSON.Checked_String (FV)));
          end if;
       end;
       declare
@@ -3288,6 +3464,22 @@ package body Protobuf_test_messages_Proto3 is
          end if;
       end;
       declare
+         FV : JSON.JSON_Value := JSON.Get (V, "optionalStringPiece");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "optional_string_piece"); end if;
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.Optional_string_piece := To_Unbounded_String (Proto_JSON.Checked_UTF8 (Proto_JSON.Checked_String (FV)));
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "optionalCord");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "optional_cord"); end if;
+         if JSON.Kind (FV) /= JSON.JSON_Null then
+            Result.Optional_cord := To_Unbounded_String (Proto_JSON.Checked_UTF8 (Proto_JSON.Checked_String (FV)));
+         end if;
+      end;
+      declare
          FV : JSON.JSON_Value := JSON.Get (V, "recursiveMessage");
       begin
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "recursive_message"); end if;
@@ -3301,7 +3493,7 @@ package body Protobuf_test_messages_Proto3 is
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "repeated_int32"); end if;
          if JSON.Kind (FV) = JSON.JSON_Array then
             for I in 1 .. JSON.Length (FV) loop
-               Result.Repeated_int32.Append (Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (JSON.Element (FV, I)))));
+               Result.Repeated_int32.Append (Proto_JSON.To_Int32 (Proto_JSON.Scalar_Text (JSON.Element (FV, I))));
             end loop;
          end if;
       end;
@@ -3321,7 +3513,7 @@ package body Protobuf_test_messages_Proto3 is
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "repeated_uint32"); end if;
          if JSON.Kind (FV) = JSON.JSON_Array then
             for I in 1 .. JSON.Length (FV) loop
-               Result.Repeated_uint32.Append (Interfaces.Unsigned_32 (Proto_JSON.To_UInt64 (Proto_JSON.Scalar_Text (JSON.Element (FV, I)))));
+               Result.Repeated_uint32.Append (Proto_JSON.To_UInt32 (Proto_JSON.Scalar_Text (JSON.Element (FV, I))));
             end loop;
          end if;
       end;
@@ -3341,7 +3533,7 @@ package body Protobuf_test_messages_Proto3 is
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "repeated_sint32"); end if;
          if JSON.Kind (FV) = JSON.JSON_Array then
             for I in 1 .. JSON.Length (FV) loop
-               Result.Repeated_sint32.Append (Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (JSON.Element (FV, I)))));
+               Result.Repeated_sint32.Append (Proto_JSON.To_Int32 (Proto_JSON.Scalar_Text (JSON.Element (FV, I))));
             end loop;
          end if;
       end;
@@ -3361,7 +3553,7 @@ package body Protobuf_test_messages_Proto3 is
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "repeated_fixed32"); end if;
          if JSON.Kind (FV) = JSON.JSON_Array then
             for I in 1 .. JSON.Length (FV) loop
-               Result.Repeated_fixed32.Append (Interfaces.Unsigned_32 (Proto_JSON.To_UInt64 (Proto_JSON.Scalar_Text (JSON.Element (FV, I)))));
+               Result.Repeated_fixed32.Append (Proto_JSON.To_UInt32 (Proto_JSON.Scalar_Text (JSON.Element (FV, I))));
             end loop;
          end if;
       end;
@@ -3381,7 +3573,7 @@ package body Protobuf_test_messages_Proto3 is
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "repeated_sfixed32"); end if;
          if JSON.Kind (FV) = JSON.JSON_Array then
             for I in 1 .. JSON.Length (FV) loop
-               Result.Repeated_sfixed32.Append (Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (JSON.Element (FV, I)))));
+               Result.Repeated_sfixed32.Append (Proto_JSON.To_Int32 (Proto_JSON.Scalar_Text (JSON.Element (FV, I))));
             end loop;
          end if;
       end;
@@ -3431,7 +3623,7 @@ package body Protobuf_test_messages_Proto3 is
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "repeated_string"); end if;
          if JSON.Kind (FV) = JSON.JSON_Array then
             for I in 1 .. JSON.Length (FV) loop
-               Result.Repeated_string.Append (To_Unbounded_String (Proto_JSON.Checked_UTF8 (JSON.As_String (JSON.Element (FV, I)))));
+               Result.Repeated_string.Append (To_Unbounded_String (Proto_JSON.Checked_UTF8 (Proto_JSON.Checked_String (JSON.Element (FV, I)))));
             end loop;
          end if;
       end;
@@ -3441,7 +3633,7 @@ package body Protobuf_test_messages_Proto3 is
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "repeated_bytes"); end if;
          if JSON.Kind (FV) = JSON.JSON_Array then
             for I in 1 .. JSON.Length (FV) loop
-               Result.Repeated_bytes.Append (To_Unbounded_String (Proto_JSON.From_Base64 (JSON.As_String (JSON.Element (FV, I)))));
+               Result.Repeated_bytes.Append (To_Unbounded_String (Proto_JSON.From_Base64 (Proto_JSON.Checked_String (JSON.Element (FV, I)))));
             end loop;
          end if;
       end;
@@ -3486,6 +3678,26 @@ package body Protobuf_test_messages_Proto3 is
          end if;
       end;
       declare
+         FV : JSON.JSON_Value := JSON.Get (V, "repeatedStringPiece");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "repeated_string_piece"); end if;
+         if JSON.Kind (FV) = JSON.JSON_Array then
+            for I in 1 .. JSON.Length (FV) loop
+               Result.Repeated_string_piece.Append (To_Unbounded_String (Proto_JSON.Checked_UTF8 (Proto_JSON.Checked_String (JSON.Element (FV, I)))));
+            end loop;
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "repeatedCord");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "repeated_cord"); end if;
+         if JSON.Kind (FV) = JSON.JSON_Array then
+            for I in 1 .. JSON.Length (FV) loop
+               Result.Repeated_cord.Append (To_Unbounded_String (Proto_JSON.Checked_UTF8 (Proto_JSON.Checked_String (JSON.Element (FV, I)))));
+            end loop;
+         end if;
+      end;
+      declare
          FV : JSON.JSON_Value := JSON.Get (V, "mapInt32Int32");
       begin
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "map_int32_int32"); end if;
@@ -3495,7 +3707,7 @@ package body Protobuf_test_messages_Proto3 is
                   Kstr : constant String := JSON.Key (FV, I);
                   VV : constant JSON.JSON_Value := JSON.Get (FV, Kstr);
                begin
-                  Result.Map_int32_int32.Include (Interfaces.Integer_32 (Proto_JSON.To_Int64 (Kstr)), Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (VV))));
+                  Result.Map_int32_int32.Include (Interfaces.Integer_32 (Proto_JSON.To_Int64 (Kstr)), Proto_JSON.To_Int32 (Proto_JSON.Scalar_Text (VV)));
                end;
             end loop;
          end if;
@@ -3525,7 +3737,7 @@ package body Protobuf_test_messages_Proto3 is
                   Kstr : constant String := JSON.Key (FV, I);
                   VV : constant JSON.JSON_Value := JSON.Get (FV, Kstr);
                begin
-                  Result.Map_uint32_uint32.Include (Interfaces.Unsigned_32 (Proto_JSON.To_UInt64 (Kstr)), Interfaces.Unsigned_32 (Proto_JSON.To_UInt64 (Proto_JSON.Scalar_Text (VV))));
+                  Result.Map_uint32_uint32.Include (Interfaces.Unsigned_32 (Proto_JSON.To_UInt64 (Kstr)), Proto_JSON.To_UInt32 (Proto_JSON.Scalar_Text (VV)));
                end;
             end loop;
          end if;
@@ -3555,7 +3767,7 @@ package body Protobuf_test_messages_Proto3 is
                   Kstr : constant String := JSON.Key (FV, I);
                   VV : constant JSON.JSON_Value := JSON.Get (FV, Kstr);
                begin
-                  Result.Map_sint32_sint32.Include (Interfaces.Integer_32 (Proto_JSON.To_Int64 (Kstr)), Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (VV))));
+                  Result.Map_sint32_sint32.Include (Interfaces.Integer_32 (Proto_JSON.To_Int64 (Kstr)), Proto_JSON.To_Int32 (Proto_JSON.Scalar_Text (VV)));
                end;
             end loop;
          end if;
@@ -3585,7 +3797,7 @@ package body Protobuf_test_messages_Proto3 is
                   Kstr : constant String := JSON.Key (FV, I);
                   VV : constant JSON.JSON_Value := JSON.Get (FV, Kstr);
                begin
-                  Result.Map_fixed32_fixed32.Include (Interfaces.Unsigned_32 (Proto_JSON.To_UInt64 (Kstr)), Interfaces.Unsigned_32 (Proto_JSON.To_UInt64 (Proto_JSON.Scalar_Text (VV))));
+                  Result.Map_fixed32_fixed32.Include (Interfaces.Unsigned_32 (Proto_JSON.To_UInt64 (Kstr)), Proto_JSON.To_UInt32 (Proto_JSON.Scalar_Text (VV)));
                end;
             end loop;
          end if;
@@ -3615,7 +3827,7 @@ package body Protobuf_test_messages_Proto3 is
                   Kstr : constant String := JSON.Key (FV, I);
                   VV : constant JSON.JSON_Value := JSON.Get (FV, Kstr);
                begin
-                  Result.Map_sfixed32_sfixed32.Include (Interfaces.Integer_32 (Proto_JSON.To_Int64 (Kstr)), Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (VV))));
+                  Result.Map_sfixed32_sfixed32.Include (Interfaces.Integer_32 (Proto_JSON.To_Int64 (Kstr)), Proto_JSON.To_Int32 (Proto_JSON.Scalar_Text (VV)));
                end;
             end loop;
          end if;
@@ -3690,7 +3902,7 @@ package body Protobuf_test_messages_Proto3 is
                   Kstr : constant String := JSON.Key (FV, I);
                   VV : constant JSON.JSON_Value := JSON.Get (FV, Kstr);
                begin
-                  Result.Map_string_string.Include (To_Unbounded_String (Kstr), To_Unbounded_String (Proto_JSON.Checked_UTF8 (JSON.As_String (VV))));
+                  Result.Map_string_string.Include (To_Unbounded_String (Kstr), To_Unbounded_String (Proto_JSON.Checked_UTF8 (Proto_JSON.Checked_String (VV))));
                end;
             end loop;
          end if;
@@ -3705,7 +3917,7 @@ package body Protobuf_test_messages_Proto3 is
                   Kstr : constant String := JSON.Key (FV, I);
                   VV : constant JSON.JSON_Value := JSON.Get (FV, Kstr);
                begin
-                  Result.Map_string_bytes.Include (To_Unbounded_String (Kstr), To_Unbounded_String (Proto_JSON.From_Base64 (JSON.As_String (VV))));
+                  Result.Map_string_bytes.Include (To_Unbounded_String (Kstr), To_Unbounded_String (Proto_JSON.From_Base64 (Proto_JSON.Checked_String (VV))));
                end;
             end loop;
          end if;
@@ -3776,7 +3988,7 @@ package body Protobuf_test_messages_Proto3 is
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "packed_int32"); end if;
          if JSON.Kind (FV) = JSON.JSON_Array then
             for I in 1 .. JSON.Length (FV) loop
-               Result.Packed_int32.Append (Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (JSON.Element (FV, I)))));
+               Result.Packed_int32.Append (Proto_JSON.To_Int32 (Proto_JSON.Scalar_Text (JSON.Element (FV, I))));
             end loop;
          end if;
       end;
@@ -3796,7 +4008,7 @@ package body Protobuf_test_messages_Proto3 is
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "packed_uint32"); end if;
          if JSON.Kind (FV) = JSON.JSON_Array then
             for I in 1 .. JSON.Length (FV) loop
-               Result.Packed_uint32.Append (Interfaces.Unsigned_32 (Proto_JSON.To_UInt64 (Proto_JSON.Scalar_Text (JSON.Element (FV, I)))));
+               Result.Packed_uint32.Append (Proto_JSON.To_UInt32 (Proto_JSON.Scalar_Text (JSON.Element (FV, I))));
             end loop;
          end if;
       end;
@@ -3816,7 +4028,7 @@ package body Protobuf_test_messages_Proto3 is
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "packed_sint32"); end if;
          if JSON.Kind (FV) = JSON.JSON_Array then
             for I in 1 .. JSON.Length (FV) loop
-               Result.Packed_sint32.Append (Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (JSON.Element (FV, I)))));
+               Result.Packed_sint32.Append (Proto_JSON.To_Int32 (Proto_JSON.Scalar_Text (JSON.Element (FV, I))));
             end loop;
          end if;
       end;
@@ -3836,7 +4048,7 @@ package body Protobuf_test_messages_Proto3 is
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "packed_fixed32"); end if;
          if JSON.Kind (FV) = JSON.JSON_Array then
             for I in 1 .. JSON.Length (FV) loop
-               Result.Packed_fixed32.Append (Interfaces.Unsigned_32 (Proto_JSON.To_UInt64 (Proto_JSON.Scalar_Text (JSON.Element (FV, I)))));
+               Result.Packed_fixed32.Append (Proto_JSON.To_UInt32 (Proto_JSON.Scalar_Text (JSON.Element (FV, I))));
             end loop;
          end if;
       end;
@@ -3856,7 +4068,7 @@ package body Protobuf_test_messages_Proto3 is
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "packed_sfixed32"); end if;
          if JSON.Kind (FV) = JSON.JSON_Array then
             for I in 1 .. JSON.Length (FV) loop
-               Result.Packed_sfixed32.Append (Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (JSON.Element (FV, I)))));
+               Result.Packed_sfixed32.Append (Proto_JSON.To_Int32 (Proto_JSON.Scalar_Text (JSON.Element (FV, I))));
             end loop;
          end if;
       end;
@@ -3916,7 +4128,7 @@ package body Protobuf_test_messages_Proto3 is
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "unpacked_int32"); end if;
          if JSON.Kind (FV) = JSON.JSON_Array then
             for I in 1 .. JSON.Length (FV) loop
-               Result.Unpacked_int32.Append (Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (JSON.Element (FV, I)))));
+               Result.Unpacked_int32.Append (Proto_JSON.To_Int32 (Proto_JSON.Scalar_Text (JSON.Element (FV, I))));
             end loop;
          end if;
       end;
@@ -3936,7 +4148,7 @@ package body Protobuf_test_messages_Proto3 is
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "unpacked_uint32"); end if;
          if JSON.Kind (FV) = JSON.JSON_Array then
             for I in 1 .. JSON.Length (FV) loop
-               Result.Unpacked_uint32.Append (Interfaces.Unsigned_32 (Proto_JSON.To_UInt64 (Proto_JSON.Scalar_Text (JSON.Element (FV, I)))));
+               Result.Unpacked_uint32.Append (Proto_JSON.To_UInt32 (Proto_JSON.Scalar_Text (JSON.Element (FV, I))));
             end loop;
          end if;
       end;
@@ -3956,7 +4168,7 @@ package body Protobuf_test_messages_Proto3 is
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "unpacked_sint32"); end if;
          if JSON.Kind (FV) = JSON.JSON_Array then
             for I in 1 .. JSON.Length (FV) loop
-               Result.Unpacked_sint32.Append (Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (JSON.Element (FV, I)))));
+               Result.Unpacked_sint32.Append (Proto_JSON.To_Int32 (Proto_JSON.Scalar_Text (JSON.Element (FV, I))));
             end loop;
          end if;
       end;
@@ -3976,7 +4188,7 @@ package body Protobuf_test_messages_Proto3 is
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "unpacked_fixed32"); end if;
          if JSON.Kind (FV) = JSON.JSON_Array then
             for I in 1 .. JSON.Length (FV) loop
-               Result.Unpacked_fixed32.Append (Interfaces.Unsigned_32 (Proto_JSON.To_UInt64 (Proto_JSON.Scalar_Text (JSON.Element (FV, I)))));
+               Result.Unpacked_fixed32.Append (Proto_JSON.To_UInt32 (Proto_JSON.Scalar_Text (JSON.Element (FV, I))));
             end loop;
          end if;
       end;
@@ -3996,7 +4208,7 @@ package body Protobuf_test_messages_Proto3 is
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "unpacked_sfixed32"); end if;
          if JSON.Kind (FV) = JSON.JSON_Array then
             for I in 1 .. JSON.Length (FV) loop
-               Result.Unpacked_sfixed32.Append (Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (JSON.Element (FV, I)))));
+               Result.Unpacked_sfixed32.Append (Proto_JSON.To_Int32 (Proto_JSON.Scalar_Text (JSON.Element (FV, I))));
             end loop;
          end if;
       end;
@@ -4055,7 +4267,7 @@ package body Protobuf_test_messages_Proto3 is
       begin
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "oneof_uint32"); end if;
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Oneof_field := (Which => TestAllTypesProto3_Oneof_field_Oneof_uint32, Oneof_uint32 => Interfaces.Unsigned_32 (Proto_JSON.To_UInt64 (Proto_JSON.Scalar_Text (FV))));
+            Result.Oneof_field := (Which => TestAllTypesProto3_Oneof_field_Oneof_uint32, Oneof_uint32 => Proto_JSON.To_UInt32 (Proto_JSON.Scalar_Text (FV)));
          end if;
       end;
       declare
@@ -4071,7 +4283,7 @@ package body Protobuf_test_messages_Proto3 is
       begin
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "oneof_string"); end if;
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Oneof_field := (Which => TestAllTypesProto3_Oneof_field_Oneof_string, Oneof_string => To_Unbounded_String (Proto_JSON.Checked_UTF8 (JSON.As_String (FV))));
+            Result.Oneof_field := (Which => TestAllTypesProto3_Oneof_field_Oneof_string, Oneof_string => To_Unbounded_String (Proto_JSON.Checked_UTF8 (Proto_JSON.Checked_String (FV))));
          end if;
       end;
       declare
@@ -4079,7 +4291,7 @@ package body Protobuf_test_messages_Proto3 is
       begin
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "oneof_bytes"); end if;
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Oneof_field := (Which => TestAllTypesProto3_Oneof_field_Oneof_bytes, Oneof_bytes => To_Unbounded_String (Proto_JSON.From_Base64 (JSON.As_String (FV))));
+            Result.Oneof_field := (Which => TestAllTypesProto3_Oneof_field_Oneof_bytes, Oneof_bytes => To_Unbounded_String (Proto_JSON.From_Base64 (Proto_JSON.Checked_String (FV))));
          end if;
       end;
       declare
@@ -4345,10 +4557,80 @@ package body Protobuf_test_messages_Proto3 is
          end if;
       end;
       declare
+         FV : JSON.JSON_Value := JSON.Get (V, "repeatedDuration");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "repeated_duration"); end if;
+         if JSON.Kind (FV) = JSON.JSON_Array then
+            for I in 1 .. JSON.Length (FV) loop
+               Result.Repeated_duration.Append (To_Holder (Proto_WKT.Duration'(From_JSON (JSON.Element (FV, I)))));
+            end loop;
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "repeatedTimestamp");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "repeated_timestamp"); end if;
+         if JSON.Kind (FV) = JSON.JSON_Array then
+            for I in 1 .. JSON.Length (FV) loop
+               Result.Repeated_timestamp.Append (To_Holder (Proto_WKT.Timestamp'(From_JSON (JSON.Element (FV, I)))));
+            end loop;
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "repeatedFieldmask");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "repeated_fieldmask"); end if;
+         if JSON.Kind (FV) = JSON.JSON_Array then
+            for I in 1 .. JSON.Length (FV) loop
+               Result.Repeated_fieldmask.Append (To_Holder (Proto_WKT.Field_Mask'(From_JSON (JSON.Element (FV, I)))));
+            end loop;
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "repeatedAny");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "repeated_any"); end if;
+         if JSON.Kind (FV) = JSON.JSON_Array then
+            for I in 1 .. JSON.Length (FV) loop
+               Result.Repeated_any.Append (To_Holder (Proto_WKT.Any'(From_JSON (JSON.Element (FV, I)))));
+            end loop;
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "repeatedValue");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "repeated_value"); end if;
+         if JSON.Kind (FV) = JSON.JSON_Array then
+            for I in 1 .. JSON.Length (FV) loop
+               Result.Repeated_value.Append (To_Holder (Proto_WKT.Value'(From_JSON (JSON.Element (FV, I)))));
+            end loop;
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "repeatedListValue");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "repeated_list_value"); end if;
+         if JSON.Kind (FV) = JSON.JSON_Array then
+            for I in 1 .. JSON.Length (FV) loop
+               Result.Repeated_list_value.Append (To_Holder (Proto_WKT.List_Value'(From_JSON (JSON.Element (FV, I)))));
+            end loop;
+         end if;
+      end;
+      declare
+         FV : JSON.JSON_Value := JSON.Get (V, "repeatedStruct");
+      begin
+         if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "repeated_struct"); end if;
+         if JSON.Kind (FV) = JSON.JSON_Array then
+            for I in 1 .. JSON.Length (FV) loop
+               Result.Repeated_struct.Append (To_Holder (Proto_WKT.Struct'(From_JSON (JSON.Element (FV, I)))));
+            end loop;
+         end if;
+      end;
+      declare
          FV : JSON.JSON_Value := JSON.Get (V, "fieldname1");
       begin
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Fieldname1 := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+            Result.Fieldname1 := Proto_JSON.To_Int32 (Proto_JSON.Scalar_Text (FV));
          end if;
       end;
       declare
@@ -4356,7 +4638,7 @@ package body Protobuf_test_messages_Proto3 is
       begin
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "field_name2"); end if;
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Field_name2 := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+            Result.Field_name2 := Proto_JSON.To_Int32 (Proto_JSON.Scalar_Text (FV));
          end if;
       end;
       declare
@@ -4364,7 +4646,7 @@ package body Protobuf_test_messages_Proto3 is
       begin
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "_field_name3"); end if;
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Field_name3 := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+            Result.Field_name3 := Proto_JSON.To_Int32 (Proto_JSON.Scalar_Text (FV));
          end if;
       end;
       declare
@@ -4372,14 +4654,14 @@ package body Protobuf_test_messages_Proto3 is
       begin
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "field__name4_"); end if;
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Field_name4 := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+            Result.Field_name4 := Proto_JSON.To_Int32 (Proto_JSON.Scalar_Text (FV));
          end if;
       end;
       declare
          FV : JSON.JSON_Value := JSON.Get (V, "field0name5");
       begin
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Field0name5 := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+            Result.Field0name5 := Proto_JSON.To_Int32 (Proto_JSON.Scalar_Text (FV));
          end if;
       end;
       declare
@@ -4387,21 +4669,21 @@ package body Protobuf_test_messages_Proto3 is
       begin
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "field_0_name6"); end if;
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Field_0_name6 := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+            Result.Field_0_name6 := Proto_JSON.To_Int32 (Proto_JSON.Scalar_Text (FV));
          end if;
       end;
       declare
          FV : JSON.JSON_Value := JSON.Get (V, "fieldName7");
       begin
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.FieldName7 := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+            Result.FieldName7 := Proto_JSON.To_Int32 (Proto_JSON.Scalar_Text (FV));
          end if;
       end;
       declare
          FV : JSON.JSON_Value := JSON.Get (V, "FieldName8");
       begin
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.FieldName8 := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+            Result.FieldName8 := Proto_JSON.To_Int32 (Proto_JSON.Scalar_Text (FV));
          end if;
       end;
       declare
@@ -4409,7 +4691,7 @@ package body Protobuf_test_messages_Proto3 is
       begin
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "field_Name9"); end if;
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Field_Name9 := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+            Result.Field_Name9 := Proto_JSON.To_Int32 (Proto_JSON.Scalar_Text (FV));
          end if;
       end;
       declare
@@ -4417,7 +4699,7 @@ package body Protobuf_test_messages_Proto3 is
       begin
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "Field_Name10"); end if;
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Field_Name10 := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+            Result.Field_Name10 := Proto_JSON.To_Int32 (Proto_JSON.Scalar_Text (FV));
          end if;
       end;
       declare
@@ -4425,7 +4707,7 @@ package body Protobuf_test_messages_Proto3 is
       begin
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "FIELD_NAME11"); end if;
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.FIELD_NAME11 := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+            Result.FIELD_NAME11 := Proto_JSON.To_Int32 (Proto_JSON.Scalar_Text (FV));
          end if;
       end;
       declare
@@ -4433,7 +4715,7 @@ package body Protobuf_test_messages_Proto3 is
       begin
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "FIELD_name12"); end if;
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.FIELD_name12 := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+            Result.FIELD_name12 := Proto_JSON.To_Int32 (Proto_JSON.Scalar_Text (FV));
          end if;
       end;
       declare
@@ -4441,7 +4723,7 @@ package body Protobuf_test_messages_Proto3 is
       begin
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "__field_name13"); end if;
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Field_name13 := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+            Result.Field_name13 := Proto_JSON.To_Int32 (Proto_JSON.Scalar_Text (FV));
          end if;
       end;
       declare
@@ -4449,7 +4731,7 @@ package body Protobuf_test_messages_Proto3 is
       begin
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "__Field_name14"); end if;
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Field_name14 := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+            Result.Field_name14 := Proto_JSON.To_Int32 (Proto_JSON.Scalar_Text (FV));
          end if;
       end;
       declare
@@ -4457,7 +4739,7 @@ package body Protobuf_test_messages_Proto3 is
       begin
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "field__name15"); end if;
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Field_name15 := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+            Result.Field_name15 := Proto_JSON.To_Int32 (Proto_JSON.Scalar_Text (FV));
          end if;
       end;
       declare
@@ -4465,7 +4747,7 @@ package body Protobuf_test_messages_Proto3 is
       begin
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "field__Name16"); end if;
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Field_Name16 := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+            Result.Field_Name16 := Proto_JSON.To_Int32 (Proto_JSON.Scalar_Text (FV));
          end if;
       end;
       declare
@@ -4473,7 +4755,7 @@ package body Protobuf_test_messages_Proto3 is
       begin
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "field_name17__"); end if;
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Field_name17 := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+            Result.Field_name17 := Proto_JSON.To_Int32 (Proto_JSON.Scalar_Text (FV));
          end if;
       end;
       declare
@@ -4481,7 +4763,7 @@ package body Protobuf_test_messages_Proto3 is
       begin
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "Field_name18__"); end if;
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Field_name18 := Interfaces.Integer_32 (Proto_JSON.To_Int64 (Proto_JSON.Scalar_Text (FV)));
+            Result.Field_name18 := Proto_JSON.To_Int32 (Proto_JSON.Scalar_Text (FV));
          end if;
       end;
       return Result;

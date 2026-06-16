@@ -139,12 +139,15 @@ package body Conformance is
    function From_JSON (V : JSON.JSON_Value) return ConformanceRequest is
       Result : ConformanceRequest;
    begin
+      if JSON.Kind (V) /= JSON.JSON_Object then
+         raise Proto_JSON.Decode_Error with "expected a JSON object";
+      end if;
       declare
          FV : JSON.JSON_Value := JSON.Get (V, "protobufPayload");
       begin
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "protobuf_payload"); end if;
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Payload := (Which => ConformanceRequest_Payload_Protobuf_payload, Protobuf_payload => To_Unbounded_String (Proto_JSON.From_Base64 (JSON.As_String (FV))));
+            Result.Payload := (Which => ConformanceRequest_Payload_Protobuf_payload, Protobuf_payload => To_Unbounded_String (Proto_JSON.From_Base64 (Proto_JSON.Checked_String (FV))));
          end if;
       end;
       declare
@@ -152,7 +155,7 @@ package body Conformance is
       begin
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "json_payload"); end if;
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Payload := (Which => ConformanceRequest_Payload_Json_payload, Json_payload => To_Unbounded_String (Proto_JSON.Checked_UTF8 (JSON.As_String (FV))));
+            Result.Payload := (Which => ConformanceRequest_Payload_Json_payload, Json_payload => To_Unbounded_String (Proto_JSON.Checked_UTF8 (Proto_JSON.Checked_String (FV))));
          end if;
       end;
       declare
@@ -160,7 +163,7 @@ package body Conformance is
       begin
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "jspb_payload"); end if;
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Payload := (Which => ConformanceRequest_Payload_Jspb_payload, Jspb_payload => To_Unbounded_String (Proto_JSON.Checked_UTF8 (JSON.As_String (FV))));
+            Result.Payload := (Which => ConformanceRequest_Payload_Jspb_payload, Jspb_payload => To_Unbounded_String (Proto_JSON.Checked_UTF8 (Proto_JSON.Checked_String (FV))));
          end if;
       end;
       declare
@@ -168,7 +171,7 @@ package body Conformance is
       begin
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "text_payload"); end if;
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Payload := (Which => ConformanceRequest_Payload_Text_payload, Text_payload => To_Unbounded_String (Proto_JSON.Checked_UTF8 (JSON.As_String (FV))));
+            Result.Payload := (Which => ConformanceRequest_Payload_Text_payload, Text_payload => To_Unbounded_String (Proto_JSON.Checked_UTF8 (Proto_JSON.Checked_String (FV))));
          end if;
       end;
       declare
@@ -184,7 +187,7 @@ package body Conformance is
       begin
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "message_type"); end if;
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Message_type := To_Unbounded_String (Proto_JSON.Checked_UTF8 (JSON.As_String (FV)));
+            Result.Message_type := To_Unbounded_String (Proto_JSON.Checked_UTF8 (Proto_JSON.Checked_String (FV)));
          end if;
       end;
       return Result;
@@ -259,12 +262,15 @@ package body Conformance is
    function From_JSON (V : JSON.JSON_Value) return ConformanceResponse is
       Result : ConformanceResponse;
    begin
+      if JSON.Kind (V) /= JSON.JSON_Object then
+         raise Proto_JSON.Decode_Error with "expected a JSON object";
+      end if;
       declare
          FV : JSON.JSON_Value := JSON.Get (V, "parseError");
       begin
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "parse_error"); end if;
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Result := (Which => ConformanceResponse_Result_Parse_error, Parse_error => To_Unbounded_String (Proto_JSON.Checked_UTF8 (JSON.As_String (FV))));
+            Result.Result := (Which => ConformanceResponse_Result_Parse_error, Parse_error => To_Unbounded_String (Proto_JSON.Checked_UTF8 (Proto_JSON.Checked_String (FV))));
          end if;
       end;
       declare
@@ -272,7 +278,7 @@ package body Conformance is
       begin
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "serialize_error"); end if;
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Result := (Which => ConformanceResponse_Result_Serialize_error, Serialize_error => To_Unbounded_String (Proto_JSON.Checked_UTF8 (JSON.As_String (FV))));
+            Result.Result := (Which => ConformanceResponse_Result_Serialize_error, Serialize_error => To_Unbounded_String (Proto_JSON.Checked_UTF8 (Proto_JSON.Checked_String (FV))));
          end if;
       end;
       declare
@@ -280,7 +286,7 @@ package body Conformance is
       begin
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "runtime_error"); end if;
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Result := (Which => ConformanceResponse_Result_Runtime_error, Runtime_error => To_Unbounded_String (Proto_JSON.Checked_UTF8 (JSON.As_String (FV))));
+            Result.Result := (Which => ConformanceResponse_Result_Runtime_error, Runtime_error => To_Unbounded_String (Proto_JSON.Checked_UTF8 (Proto_JSON.Checked_String (FV))));
          end if;
       end;
       declare
@@ -288,7 +294,7 @@ package body Conformance is
       begin
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "protobuf_payload"); end if;
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Result := (Which => ConformanceResponse_Result_Protobuf_payload, Protobuf_payload => To_Unbounded_String (Proto_JSON.From_Base64 (JSON.As_String (FV))));
+            Result.Result := (Which => ConformanceResponse_Result_Protobuf_payload, Protobuf_payload => To_Unbounded_String (Proto_JSON.From_Base64 (Proto_JSON.Checked_String (FV))));
          end if;
       end;
       declare
@@ -296,14 +302,14 @@ package body Conformance is
       begin
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "json_payload"); end if;
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Result := (Which => ConformanceResponse_Result_Json_payload, Json_payload => To_Unbounded_String (Proto_JSON.Checked_UTF8 (JSON.As_String (FV))));
+            Result.Result := (Which => ConformanceResponse_Result_Json_payload, Json_payload => To_Unbounded_String (Proto_JSON.Checked_UTF8 (Proto_JSON.Checked_String (FV))));
          end if;
       end;
       declare
          FV : JSON.JSON_Value := JSON.Get (V, "skipped");
       begin
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Result := (Which => ConformanceResponse_Result_Skipped, Skipped => To_Unbounded_String (Proto_JSON.Checked_UTF8 (JSON.As_String (FV))));
+            Result.Result := (Which => ConformanceResponse_Result_Skipped, Skipped => To_Unbounded_String (Proto_JSON.Checked_UTF8 (Proto_JSON.Checked_String (FV))));
          end if;
       end;
       declare
@@ -311,7 +317,7 @@ package body Conformance is
       begin
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "text_payload"); end if;
          if JSON.Kind (FV) /= JSON.JSON_Null then
-            Result.Result := (Which => ConformanceResponse_Result_Text_payload, Text_payload => To_Unbounded_String (Proto_JSON.Checked_UTF8 (JSON.As_String (FV))));
+            Result.Result := (Which => ConformanceResponse_Result_Text_payload, Text_payload => To_Unbounded_String (Proto_JSON.Checked_UTF8 (Proto_JSON.Checked_String (FV))));
          end if;
       end;
       return Result;
