@@ -170,11 +170,11 @@ tools/run_conformance_crosscheck.sh   # honours $PROTOC / $PY_PROTOBUF overrides
 Google's official C++ `conformance-test-runner` has been run against
 `bin/conformance-runner`. The current result:
 
-    CONFORMANCE SUITE PASSED: 1372 successes, 1262 skipped,
-                              25 expected failures, 0 unexpected failures.
+    CONFORMANCE SUITE PASSED: 1375 successes, 1262 skipped,
+                              22 expected failures, 0 unexpected failures.
 
 The 1262 skipped are input types this proto3-only testee does not handle
-(proto2, editions, text format). The 25 expected failures are documented and
+(proto2, editions, text format). The 22 expected failures are documented and
 categorized in `conformance/failure_list_proto3.txt`; passing that file via
 `--failure_list` is what makes the suite report **0 unexpected failures**:
 
@@ -184,19 +184,21 @@ export CONFORMANCE_TEST_RUNNER=.../conformance_test_runner   # see script header
 tools/run_official_conformance.sh
 ```
 
-The 25 remaining gaps, by feature: `allow_alias` enums (8), `Any` from JSON (6),
-wire-level message merge (4), unknown-field retention (2), `Value` accepting
-JSON null (2), a map entry with a missing message value (2), and duplicate
-oneof members in JSON (1). The `tools/run_conformance_crosscheck.sh` oracle
+The 22 remaining gaps, by feature: `allow_alias` enums (8), `Any` from JSON (6),
+wire-level message merge (4), unknown-field retention (2), and a map entry with
+a missing message value (2). (Duplicate-oneof rejection and `Value`-accepting-
+null are now handled -- generated `From_JSON` rejects two members of one oneof
+in an object, and a `google.protobuf.Value` field set to JSON null becomes a
+present `Value{null_value}`.) The `tools/run_conformance_crosscheck.sh` oracle
 above complements this for environments without the C++ runner.
 
 ### Codegen roadmap (toward 100% proto3 + JSON)
 
-1. Close the 25 documented expected failures in
-   `conformance/failure_list_proto3.txt` -- in rough order of effort:
-   duplicate-oneof rejection and `Value`-null, then `allow_alias` enums and the
-   map missing-default, then `Any`-from-JSON resolution, and finally the
-   architectural items (message merge on decode, unknown-field retention).
+1. Close the 22 documented expected failures in
+   `conformance/failure_list_proto3.txt` -- in rough order of effort: the
+   `allow_alias` enums and the map missing-default, then `Any`-from-JSON
+   resolution, and finally the architectural items (message merge on decode,
+   unknown-field retention).
 
 ## Explicitly not implemented (yet)
 

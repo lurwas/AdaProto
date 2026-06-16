@@ -2048,6 +2048,12 @@ package body Proto_Compiler is
                   T : constant Type_Info := Resolve (To_String (F.Proto_Type));
                   C : constant String := Field_Ident (F);
                   P : constant String := To_String (F.Proto_Type);
+                  JN : constant String := Json_Name (To_String (F.Name));
+                  PN : constant String := To_String (F.Name);
+                  --  google.protobuf.Value is the one message type for which a
+                  --  JSON null is a *value* (null_value), not "field absent".
+                  Is_Value : constant Boolean :=
+                    T.Is_WKT and then To_String (T.Ada_Type) = "Value";
                begin
                   Emit_Lookup (F);
                   if F.Repeated then
@@ -2057,6 +2063,17 @@ package body Proto_Compiler is
                                     & Stored_From_JSON (P, "JSON.Element (FV, I)")
                                     & ");");
                      SL (Body_Text, "            end loop;");
+                     SL (Body_Text, "         end if;");
+                  elsif Is_Value then
+                     --  Assign whenever the key is present, even if its value is
+                     --  null: Value{null} round-trips to/from JSON/wire null_value.
+                     SL (Body_Text, "         if JSON.Has (V, " & Q & JN & Q & ")"
+                                    & (if JN /= PN then
+                                          " or else JSON.Has (V, " & Q & PN & Q & ")"
+                                       else "")
+                                    & " then");
+                     SL (Body_Text, "            Result." & C & " := "
+                                    & Stored_From_JSON (P, "FV") & ";");
                      SL (Body_Text, "         end if;");
                   else
                      SL (Body_Text, "         if JSON.Kind (FV) /= JSON.JSON_Null then");
@@ -2097,6 +2114,53 @@ package body Proto_Compiler is
                   SL (Body_Text, "         end if;");
                   SL (Body_Text, "      end;");
                end Emit_Oneof_From_JSON;
+
+               --  Boolean expression that is True iff this oneof member is
+               --  "selected" by the JSON object: for an ordinary member that
+               --  means its key is present with a non-null value; for the
+               --  NullValue member the bare presence of the key (value null)
+               --  selects it. Matches the assignment condition each member uses.
+               function Oneof_Set_Cond (F : Field_Def) return String is
+                  JN : constant String := Json_Name (To_String (F.Name));
+                  PN : constant String := To_String (F.Name);
+               begin
+                  if Resolve (To_String (F.Proto_Type)).Is_Null then
+                     return "JSON.Has (V, " & Q & JN & Q & ")"
+                            & (if JN /= PN then
+                                  " or else JSON.Has (V, " & Q & PN & Q & ")"
+                               else "");
+                  else
+                     return "JSON.Kind (JSON.Get (V, " & Q & JN & Q
+                            & ")) /= JSON.JSON_Null"
+                            & (if JN /= PN then
+                                  " or else JSON.Kind (JSON.Get (V, " & Q & PN & Q
+                                  & ")) /= JSON.JSON_Null"
+                               else "");
+                  end if;
+               end Oneof_Set_Cond;
+
+               --  proto3 JSON forbids more than one member of the same oneof
+               --  being present in an object. Count the selected members and
+               --  reject if two or more are set (the last-wins behaviour of the
+               --  per-member assignment is otherwise silent).
+               procedure Emit_Oneof_Dup_Guard (ON : String) is
+               begin
+                  SL (Body_Text, "      declare");
+                  SL (Body_Text, "         N : Natural := 0;");
+                  SL (Body_Text, "      begin");
+                  for F of M.Fields loop
+                     if To_String (F.Oneof) = ON then
+                        SL (Body_Text, "         if " & Oneof_Set_Cond (F)
+                                       & " then N := N + 1; end if;");
+                     end if;
+                  end loop;
+                  SL (Body_Text, "         if N > 1 then");
+                  SL (Body_Text, "            raise Proto_JSON.Decode_Error with "
+                                 & Q & "multiple members set for oneof '"
+                                 & ON & "'" & Q & ";");
+                  SL (Body_Text, "         end if;");
+                  SL (Body_Text, "      end;");
+               end Emit_Oneof_Dup_Guard;
 
                procedure Emit_Map_From_JSON (F : Field_Def) is
                   KT : constant Type_Info := Resolve (To_String (F.Map_Key));
@@ -2214,6 +2278,19 @@ package body Proto_Compiler is
                SL (Body_Text, "         raise Proto_JSON.Decode_Error with "
                               & """expected a JSON object"";");
                SL (Body_Text, "      end if;");
+               --  Reject duplicate oneof members before decoding any field.
+               declare
+                  Guarded : String_Vectors.Vector;
+               begin
+                  for F of M.Fields loop
+                     if Length (F.Oneof) > 0
+                       and then not In_Set (Guarded, To_String (F.Oneof))
+                     then
+                        Add_Once (Guarded, To_String (F.Oneof));
+                        Emit_Oneof_Dup_Guard (To_String (F.Oneof));
+                     end if;
+                  end loop;
+               end;
                for F of M.Fields loop
                   if F.Is_Map then
                      Emit_Map_From_JSON (F);

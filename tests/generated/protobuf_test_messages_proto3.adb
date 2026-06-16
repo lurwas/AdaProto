@@ -3312,6 +3312,23 @@ package body Protobuf_test_messages_Proto3 is
          raise Proto_JSON.Decode_Error with "expected a JSON object";
       end if;
       declare
+         N : Natural := 0;
+      begin
+         if JSON.Kind (JSON.Get (V, "oneofUint32")) /= JSON.JSON_Null or else JSON.Kind (JSON.Get (V, "oneof_uint32")) /= JSON.JSON_Null then N := N + 1; end if;
+         if JSON.Kind (JSON.Get (V, "oneofNestedMessage")) /= JSON.JSON_Null or else JSON.Kind (JSON.Get (V, "oneof_nested_message")) /= JSON.JSON_Null then N := N + 1; end if;
+         if JSON.Kind (JSON.Get (V, "oneofString")) /= JSON.JSON_Null or else JSON.Kind (JSON.Get (V, "oneof_string")) /= JSON.JSON_Null then N := N + 1; end if;
+         if JSON.Kind (JSON.Get (V, "oneofBytes")) /= JSON.JSON_Null or else JSON.Kind (JSON.Get (V, "oneof_bytes")) /= JSON.JSON_Null then N := N + 1; end if;
+         if JSON.Kind (JSON.Get (V, "oneofBool")) /= JSON.JSON_Null or else JSON.Kind (JSON.Get (V, "oneof_bool")) /= JSON.JSON_Null then N := N + 1; end if;
+         if JSON.Kind (JSON.Get (V, "oneofUint64")) /= JSON.JSON_Null or else JSON.Kind (JSON.Get (V, "oneof_uint64")) /= JSON.JSON_Null then N := N + 1; end if;
+         if JSON.Kind (JSON.Get (V, "oneofFloat")) /= JSON.JSON_Null or else JSON.Kind (JSON.Get (V, "oneof_float")) /= JSON.JSON_Null then N := N + 1; end if;
+         if JSON.Kind (JSON.Get (V, "oneofDouble")) /= JSON.JSON_Null or else JSON.Kind (JSON.Get (V, "oneof_double")) /= JSON.JSON_Null then N := N + 1; end if;
+         if JSON.Kind (JSON.Get (V, "oneofEnum")) /= JSON.JSON_Null or else JSON.Kind (JSON.Get (V, "oneof_enum")) /= JSON.JSON_Null then N := N + 1; end if;
+         if JSON.Has (V, "oneofNullValue") or else JSON.Has (V, "oneof_null_value") then N := N + 1; end if;
+         if N > 1 then
+            raise Proto_JSON.Decode_Error with "multiple members set for oneof 'oneof_field'";
+         end if;
+      end;
+      declare
          FV : JSON.JSON_Value := JSON.Get (V, "optionalInt32");
       begin
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "optional_int32"); end if;
@@ -4544,7 +4561,7 @@ package body Protobuf_test_messages_Proto3 is
          FV : JSON.JSON_Value := JSON.Get (V, "optionalValue");
       begin
          if JSON.Kind (FV) = JSON.JSON_Null then FV := JSON.Get (V, "optional_value"); end if;
-         if JSON.Kind (FV) /= JSON.JSON_Null then
+         if JSON.Has (V, "optionalValue") or else JSON.Has (V, "optional_value") then
             Result.Optional_value := To_Holder (Proto_WKT.Value'(From_JSON (FV)));
          end if;
       end;
