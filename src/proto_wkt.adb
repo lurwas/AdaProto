@@ -342,9 +342,17 @@ package body Proto_WKT is
    --  Duration JSON
    ---------------------------------------------------------------------------
 
+   --  proto3 range limits (google/protobuf/duration.proto, timestamp.proto).
+   Duration_Max_Secs : constant Integer_64 := 315576000000;
+   Timestamp_Min_Secs : constant Integer_64 := -62135596800;   --  0001-01-01Z
+   Timestamp_Max_Secs : constant Integer_64 := 253402300799;   --  9999-12-31Z
+
    function To_JSON (X : Duration) return JSON.JSON_Value is
       Neg : constant Boolean := X.Seconds < 0 or else X.Nanos < 0;
    begin
+      if abs X.Seconds > Duration_Max_Secs then
+         raise Proto_JSON.Decode_Error with "duration out of range";
+      end if;
       return JSON.To_Value
         ((if Neg then "-" else "")
          & Proto_JSON.Image (abs X.Seconds)
@@ -388,6 +396,9 @@ package body Proto_WKT is
          Secs  : constant Integer_64 := Integer_64'Value (Int_Part);
          Nanos : constant Integer_32 := Integer_32 (Frac_To_Nanos (Frac_Part));
       begin
+         if Secs > Duration_Max_Secs then
+            raise Proto_JSON.Decode_Error with "duration out of range";
+         end if;
          return (Seconds => (if Neg then -Secs else Secs),
                  Nanos   => (if Neg then -Nanos else Nanos));
       end;
@@ -404,6 +415,9 @@ package body Proto_WKT is
       M : Integer;
       D : Integer;
    begin
+      if X.Seconds < Timestamp_Min_Secs or else X.Seconds > Timestamp_Max_Secs then
+         raise Proto_JSON.Decode_Error with "timestamp out of range";
+      end if;
       Civil_From_Days (Days, Y, M, D);
       return JSON.To_Value
         (Pad (Y, 4) & "-" & Pad (Integer_64 (M), 2) & "-" & Pad (Integer_64 (D), 2)
@@ -430,9 +444,11 @@ package body Proto_WKT is
          return R;
       end Num;
 
+      --  proto3 JSON requires the canonical uppercase 'T' separator and 'Z'
+      --  zone; lowercase is rejected.
       procedure Expect (C : Character) is
       begin
-         if P > S'Last or else (S (P) /= C and then S (P) /= To_Lower (C)) then
+         if P > S'Last or else S (P) /= C then
             raise Proto_JSON.Decode_Error with "bad RFC3339 timestamp";
          end if;
          P := P + 1;
@@ -463,7 +479,7 @@ package body Proto_WKT is
 
       if P > S'Last then
          raise Proto_JSON.Decode_Error with "RFC3339 timestamp needs a zone";
-      elsif S (P) = 'Z' or else S (P) = 'z' then
+      elsif S (P) = 'Z' then
          P := P + 1;
       else
          declare
@@ -479,10 +495,19 @@ package body Proto_WKT is
          end;
       end if;
 
-      return
-        (Seconds => Days_From_Civil (Year, Integer (Mon), Integer (Day)) * 86400
-                    + Hr * 3600 + Mi * 60 + Se - Offset_Secs,
-         Nanos   => Integer_32 (Nanos));
+      if P <= S'Last then
+         raise Proto_JSON.Decode_Error with "trailing data after RFC3339 zone";
+      end if;
+      declare
+         Secs : constant Integer_64 :=
+           Days_From_Civil (Year, Integer (Mon), Integer (Day)) * 86400
+           + Hr * 3600 + Mi * 60 + Se - Offset_Secs;
+      begin
+         if Secs < Timestamp_Min_Secs or else Secs > Timestamp_Max_Secs then
+            raise Proto_JSON.Decode_Error with "timestamp out of range";
+         end if;
+         return (Seconds => Secs, Nanos => Integer_32 (Nanos));
+      end;
    end From_JSON;
 
    ---------------------------------------------------------------------------

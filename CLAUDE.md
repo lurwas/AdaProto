@@ -115,6 +115,7 @@ gprbuild -P protobuf_ada.gpr        # build runtime + generated code + the five 
 ./bin/conformance-runner            # conformance testee: length-prefixed Request/Response on stdin/stdout
 tools/conformance_smoke.py          # drive conformance-runner end-to-end (binary TestAllTypesProto3 in, JSON out)
 tools/run_conformance_crosscheck.sh # authoritative cross-check: pb/json x in/out vs reference Python protobuf (needs protoc + python protobuf)
+tools/run_official_conformance.sh   # Google's official conformance-test-runner + conformance/failure_list_proto3.txt (needs $CONFORMANCE_TEST_RUNNER)
 
 gprbuild -P protoc_ada.gpr          # build the protoc-ada generator
 tools/generate_ada.sh               # regenerate tests/generated/ from tests/proto/*.proto (deterministic)
@@ -174,7 +175,7 @@ Footguns the generator already guards against (and you must too if you touch it)
 - `src/proto_json.*` — runtime helpers the generated JSON code calls: 64-bit int → decimal text, float/double special values, base64 encode/decode, number/text parsing, and **UTF-8 validation** (`Checked_UTF8`, used to reject malformed `string` fields from both the wire and JSON — `bytes` fields are not validated).
 - proto3 JSON mapping highlights (in generated `To_JSON`/`From_JSON`): lowerCamelCase names (parse accepts both), 32-bit ints as numbers but **64-bit ints as strings**, `bytes` as base64, enums as value names, `map` as objects keyed by stringified keys.
 
-See `docs/CONFORMANCE.md` for the supported-feature list and the phased roadmap. Done: codegen 1a–1c (incl. recursion, oneof, map), JSON 2a–2c (`To_JSON`/`From_JSON`), 3a (UTF-8 validation), the well-known types, proto3 `optional` and nested type definitions, and a conformance runner routed to `protobuf_test_messages.proto3.TestAllTypesProto3` (generated from `tests/proto/test_messages_proto3.proto`). Remaining for a fully certified run: triage against Google's official `conformance-test-runner`.
+See `docs/CONFORMANCE.md` for the supported-feature list and the phased roadmap. Done: codegen 1a–1c (incl. recursion, oneof, map), JSON 2a–2c (`To_JSON`/`From_JSON`), 3a (UTF-8 validation), the well-known types, proto3 `optional` and nested type definitions, and a conformance runner routed to `protobuf_test_messages.proto3.TestAllTypesProto3` (generated from `tests/proto/test_messages_proto3.proto`). Google's official `conformance-test-runner` passes (1372 successes, 1262 skipped, 25 documented expected failures via `conformance/failure_list_proto3.txt`, 0 unexpected). The 25 remaining gaps (allow_alias enums, Any-from-JSON, message merge, unknown-field retention, Value-null, map missing-default, duplicate-oneof) are categorized in that file.
 
 ## Golden fixtures
 

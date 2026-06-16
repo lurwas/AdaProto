@@ -1287,6 +1287,125 @@ package body Protobuf_Tests is
       end;
    end Test_Generated_JSON_Field_Names;
 
+   --  Strictness guard for the Proto_JSON number helpers. The conformance
+   --  suite exercises these, but CI runs only this AUnit suite, so pin the
+   --  proto3-JSON number rules here: which integer/float literals are accepted
+   --  or rejected, and that doubles round-trip through their shortest form.
+   procedure Test_JSON_Number_Strictness is
+
+      --  True iff evaluating an Integer_64-returning parse raises Decode_Error.
+      function Rejects_Int (Text : String) return Boolean is
+         Dummy : Interfaces.Integer_64;
+         pragma Unreferenced (Dummy);
+      begin
+         Dummy := Proto_JSON.To_Int64 (Text);
+         return False;
+      exception
+         when Proto_JSON.Decode_Error => return True;
+      end Rejects_Int;
+
+      function Rejects_UInt32 (Text : String) return Boolean is
+         Dummy : Interfaces.Unsigned_32;
+         pragma Unreferenced (Dummy);
+      begin
+         Dummy := Proto_JSON.To_UInt32 (Text);
+         return False;
+      exception
+         when Proto_JSON.Decode_Error => return True;
+      end Rejects_UInt32;
+
+      function Rejects_Int32 (Text : String) return Boolean is
+         Dummy : Interfaces.Integer_32;
+         pragma Unreferenced (Dummy);
+      begin
+         Dummy := Proto_JSON.To_Int32 (Text);
+         return False;
+      exception
+         when Proto_JSON.Decode_Error => return True;
+      end Rejects_Int32;
+
+      function Rejects_Double (Text : String) return Boolean is
+         Dummy : Interfaces.IEEE_Float_64;
+         pragma Unreferenced (Dummy);
+      begin
+         Dummy := Proto_JSON.To_Double (Text);
+         return False;
+      exception
+         when Proto_JSON.Decode_Error => return True;
+      end Rejects_Double;
+
+      function Rejects_Float (Text : String) return Boolean is
+         Dummy : Interfaces.IEEE_Float_32;
+         pragma Unreferenced (Dummy);
+      begin
+         Dummy := Proto_JSON.To_Float (Text);
+         return False;
+      exception
+         when Proto_JSON.Decode_Error => return True;
+      end Rejects_Float;
+
+      use type Interfaces.Integer_64;
+      use type Interfaces.IEEE_Float_64;
+   begin
+      --  Integer-valued literals proto3 JSON accepts (incl. decimal/exponent
+      --  forms whose value is integral).
+      Assert (Proto_JSON.To_Int64 ("10") = 10
+              and then Proto_JSON.To_Int64 ("-10") = -10
+              and then Proto_JSON.To_Int64 ("0") = 0
+              and then Proto_JSON.To_Int64 ("10.0") = 10
+              and then Proto_JSON.To_Int64 ("1e2") = 100,
+              "To_Int64 accepts integral decimal/exponent forms");
+
+      --  Malformed or non-integral integer literals are rejected.
+      Assert (Rejects_Int (" 1") and then Rejects_Int ("1 ")
+              and then Rejects_Int ("+1") and then Rejects_Int ("01")
+              and then Rejects_Int ("1.5") and then Rejects_Int ("")
+              and then Rejects_Int ("0x10") and then Rejects_Int ("1e"),
+              "To_Int64 rejects whitespace, leading +, leading zero, "
+              & "non-integral, and malformed literals");
+
+      --  Range enforcement: 32-bit variants reject out-of-range, unsigned
+      --  rejects negatives, and 64-bit rejects beyond its range.
+      Assert (Rejects_Int32 ("2147483648")       --  Integer_32'Last + 1
+              and then Rejects_Int32 ("-2147483649")
+              and then Rejects_UInt32 ("-1")
+              and then Rejects_UInt32 ("4294967296")
+              and then Rejects_Int ("9223372036854775808"),  --  Int64'Last+1
+              "integer range limits are enforced");
+
+      --  Floats: the three non-finite tokens are accepted; garbage is not.
+      Assert (not Rejects_Double ("NaN") and then not Rejects_Double ("Infinity")
+              and then not Rejects_Double ("-Infinity")
+              and then not Rejects_Float ("NaN"),
+              "NaN/Infinity/-Infinity tokens are accepted");
+      Assert (Rejects_Double ("inf") and then Rejects_Double ("1.0.0")
+              and then Rejects_Double (" 1") and then Rejects_Float ("nan"),
+              "malformed float literals are rejected");
+
+      --  A finite double beyond the float range is rejected by To_Float but
+      --  fine for To_Double.
+      Assert (Rejects_Float ("1e39") and then not Rejects_Double ("1e39"),
+              "To_Float enforces the 32-bit finite range");
+
+      --  Shortest round-trip: Double_To_JSON emits the fewest-mantissa-digit
+      --  scientific form that reparses to the same value, and never loses
+      --  precision. (Float_IO always uses d.dddE(+|-)dd notation; "shortest"
+      --  means the minimal mantissa, not plain-decimal notation.)
+      declare
+         function RT (D : Interfaces.IEEE_Float_64) return String is
+           (Proto_JSON.Scalar_Text (Proto_JSON.Double_To_JSON (D)));
+      begin
+         Assert (RT (0.1) = "1.0E-1" and then RT (1.5) = "1.5E+0"
+                 and then RT (0.0) = "0"
+                 and then RT (3.141592653589793) = "3.141592653589793E+0",
+                 "Double_To_JSON emits the minimal-mantissa scientific form");
+         Assert (Proto_JSON.To_Double (RT (0.1)) = 0.1
+                 and then Proto_JSON.To_Double (RT (3.141592653589793))
+                          = 3.141592653589793,
+                 "shortest double form round-trips without precision loss");
+      end;
+   end Test_JSON_Number_Strictness;
+
    --  Phase 1c: nested (non-recursive) message fields via Indefinite_Holders
    --  (singular, with presence) and Vectors (repeated). Proves topological
    --  ordering, delegated encode/decode, and message-field presence semantics.
@@ -2653,6 +2772,7 @@ package body Protobuf_Tests is
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated enums and repeated", Test_Generated_Enums_And_Repeated'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated unpacked repeated", Test_Generated_Unpacked_Repeated'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated json field names", Test_Generated_JSON_Field_Names'Access));
+         AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("json number strictness", Test_JSON_Number_Strictness'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated nested messages", Test_Generated_Nested_Messages'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated oneof", Test_Generated_Oneof'Access));
          AUnit.Test_Suites.Add_Test (Registered_Suite, New_Case ("generated maps", Test_Generated_Maps'Access));

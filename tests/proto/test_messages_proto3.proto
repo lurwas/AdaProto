@@ -65,6 +65,9 @@ message TestAllTypesProto3 {
   ForeignMessage     optional_foreign_message = 19;
   NestedEnum         optional_nested_enum     = 21;
   ForeignEnum        optional_foreign_enum    = 22;
+  // ctype options are accepted and ignored; these are ordinary string fields.
+  string             optional_string_piece    = 24 [ctype = STRING_PIECE];
+  string             optional_cord            = 25 [ctype = CORD];
   TestAllTypesProto3 recursive_message        = 27;
 
   // Repeated.
@@ -87,6 +90,8 @@ message TestAllTypesProto3 {
   repeated ForeignMessage repeated_foreign_message = 49;
   repeated NestedEnum     repeated_nested_enum     = 51;
   repeated ForeignEnum    repeated_foreign_enum    = 52;
+  repeated string         repeated_string_piece    = 54 [ctype = STRING_PIECE];
+  repeated string         repeated_cord            = 55 [ctype = CORD];
 
   // Maps over the full range of key/value shapes.
   map<int32, int32>             map_int32_int32           = 56;
@@ -185,6 +190,15 @@ message TestAllTypesProto3 {
   google.protobuf.Any       optional_any        = 305;
   google.protobuf.Value     optional_value      = 306;
   google.protobuf.NullValue optional_null_value = 307;
+
+  // Repeated well-known types (canonical upstream field numbers).
+  repeated google.protobuf.Duration  repeated_duration   = 311;
+  repeated google.protobuf.Timestamp repeated_timestamp  = 312;
+  repeated google.protobuf.FieldMask repeated_fieldmask  = 313;
+  repeated google.protobuf.Any       repeated_any        = 315;
+  repeated google.protobuf.Value     repeated_value      = 316;
+  repeated google.protobuf.ListValue repeated_list_value = 317;
+  repeated google.protobuf.Struct    repeated_struct     = 324;
 
   // JSON field-name edge cases: every field's proto3 JSON name is derived by
   // the canonical ToJsonName algorithm (drop underscores, capitalize the char

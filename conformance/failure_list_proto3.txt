@@ -1,0 +1,73 @@
+# Conformance failure list for bin/conformance-runner (proto3).
+#
+# Passing this file to Google's official conformance-test-runner via
+# --failure_list marks these tests as *expected* failures, so a run reports
+# "0 unexpected failures" -- a clean certified proto3 result modulo the
+# documented gaps below. Drive it with tools/run_official_conformance.sh.
+#
+# As of the latest run: 1372 successes, 1262 skipped (proto2/editions/text
+# format -- input types this proto3-only testee does not handle), and the 25
+# expected failures below, grouped by the feature each one needs.
+
+# -- allow_alias enums (8) ----------------------------------------------------
+# TestAllTypesProto3.optional_aliased_enum uses `option allow_alias = true`,
+# with several names (incl. case-variants MOO/moo, bAz) mapping to one value.
+# The generator models enums as Ada constants, but Ada identifiers are
+# case-insensitive, so the case-variant alias names collide. Needs string-based
+# (not constant-based) enum-name matching in From_JSON to land.
+Required.Proto3.JsonInput.EnumFieldWithAlias.JsonOutput
+Required.Proto3.JsonInput.EnumFieldWithAlias.ProtobufOutput
+Required.Proto3.JsonInput.EnumFieldWithAliasUseAlias.JsonOutput
+Required.Proto3.JsonInput.EnumFieldWithAliasUseAlias.ProtobufOutput
+Required.Proto3.JsonInput.EnumFieldWithAliasLowerCase.JsonOutput
+Required.Proto3.JsonInput.EnumFieldWithAliasLowerCase.ProtobufOutput
+Required.Proto3.JsonInput.EnumFieldWithAliasDifferentCase.JsonOutput
+Required.Proto3.JsonInput.EnumFieldWithAliasDifferentCase.ProtobufOutput
+
+# -- google.protobuf.Any from JSON (6) ----------------------------------------
+# Parsing an Any from JSON needs the embedded "@type" URL resolved against a
+# registry that can parse the named message (here TestAllTypesProto3 itself),
+# including nested Any and an out-of-order @type key. The Any binary path and
+# the WKT registry exist; wiring the generated message into it as a resolvable
+# Any payload type is the remaining work.
+Required.Proto3.JsonInput.Any.JsonOutput
+Required.Proto3.JsonInput.Any.ProtobufOutput
+Required.Proto3.JsonInput.AnyNested.JsonOutput
+Required.Proto3.JsonInput.AnyNested.ProtobufOutput
+Required.Proto3.JsonInput.AnyUnorderedTypeTag.JsonOutput
+Required.Proto3.JsonInput.AnyUnorderedTypeTag.ProtobufOutput
+
+# -- message merge on the wire (4) --------------------------------------------
+# proto3 requires that a message-typed field (singular, repeated element, or
+# oneof member) appearing more than once on the wire be *merged*, not replaced.
+# The decoder currently keeps the last occurrence. Needs merge-on-decode.
+Required.Proto3.ProtobufInput.RepeatedScalarMessageMerge.JsonOutput
+Required.Proto3.ProtobufInput.RepeatedScalarMessageMerge.ProtobufOutput
+Required.Proto3.ProtobufInput.ValidDataOneof.MESSAGE.Merge.JsonOutput
+Required.Proto3.ProtobufInput.ValidDataOneof.MESSAGE.Merge.ProtobufOutput
+
+# -- unknown-field retention (2) ----------------------------------------------
+# A conformant testee preserves unknown fields and re-emits them on protobuf
+# output. The runtime parses unknown fields but the generated messages discard
+# them. Needs an unknown-field set carried on each generated message.
+Required.Proto3.ProtobufInput.UnknownOrdering.ProtobufOutput
+Required.Proto3.ProtobufInput.UnknownVarint.ProtobufOutput
+
+# -- google.protobuf.Value accepting JSON null (2) ----------------------------
+# A singular Value field set to JSON null must become Value{null_value}, but the
+# generated field decoder treats a null as "absent" (correct for ordinary
+# message fields) and skips it. Needs Value-typed fields to route null into
+# Proto_WKT.Value rather than skip.
+Required.Proto3.JsonInput.ValueAcceptNull.JsonOutput
+Required.Proto3.JsonInput.ValueAcceptNull.ProtobufOutput
+
+# -- map entry with a missing message value (2) -------------------------------
+# A map<string, message> wire entry that omits the value (field 2) should yield
+# a default-constructed message value; the decoder currently drops the entry.
+Required.Proto3.ProtobufInput.ValidDataMap.STRING.MESSAGE.MissingDefault.JsonOutput
+Required.Proto3.ProtobufInput.ValidDataMap.STRING.MESSAGE.MissingDefault.ProtobufOutput
+
+# -- duplicate oneof members in JSON (1) --------------------------------------
+# Two members of the same oneof present in one JSON object must be rejected;
+# the generated From_JSON currently lets the last one win.
+Required.Proto3.JsonInput.OneofFieldDuplicate

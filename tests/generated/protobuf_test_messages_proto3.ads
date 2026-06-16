@@ -209,6 +209,16 @@ package Protobuf_test_messages_Proto3 is
    function Element (H : Value_Holder) return Proto_WKT.Value;
    function Is_Empty (H : Value_Holder) return Boolean;
 
+   type List_Value_Access is access Proto_WKT.List_Value;
+   type List_Value_Holder is new Ada.Finalization.Controlled with record
+      Ptr : List_Value_Access := null;
+   end record;
+   overriding procedure Adjust (H : in out List_Value_Holder);
+   overriding procedure Finalize (H : in out List_Value_Holder);
+   function To_Holder (Value : Proto_WKT.List_Value) return List_Value_Holder;
+   function Element (H : List_Value_Holder) return Proto_WKT.List_Value;
+   function Is_Empty (H : List_Value_Holder) return Boolean;
+
    use type Interfaces.Integer_32;
    use type Interfaces.Integer_64;
    use type Interfaces.Unsigned_32;
@@ -251,6 +261,20 @@ package Protobuf_test_messages_Proto3 is
    package String_Value_Vectors is new Ada.Containers.Vectors (Positive, String_Value_Holder);
    use type Bytes_Value_Holder;
    package Bytes_Value_Vectors is new Ada.Containers.Vectors (Positive, Bytes_Value_Holder);
+   use type Duration_Holder;
+   package Duration_Vectors is new Ada.Containers.Vectors (Positive, Duration_Holder);
+   use type Timestamp_Holder;
+   package Timestamp_Vectors is new Ada.Containers.Vectors (Positive, Timestamp_Holder);
+   use type Field_Mask_Holder;
+   package Field_Mask_Vectors is new Ada.Containers.Vectors (Positive, Field_Mask_Holder);
+   use type Any_Holder;
+   package Any_Vectors is new Ada.Containers.Vectors (Positive, Any_Holder);
+   use type Value_Holder;
+   package Value_Vectors is new Ada.Containers.Vectors (Positive, Value_Holder);
+   use type List_Value_Holder;
+   package List_Value_Vectors is new Ada.Containers.Vectors (Positive, List_Value_Holder);
+   use type Struct_Holder;
+   package Struct_Vectors is new Ada.Containers.Vectors (Positive, Struct_Holder);
    use type Interfaces.Integer_32;
    use type Interfaces.Integer_32;
    package Integer_32_Integer_32_Maps is new Ada.Containers.Ordered_Maps (Interfaces.Integer_32, Interfaces.Integer_32);
@@ -334,6 +358,8 @@ package Protobuf_test_messages_Proto3 is
       Optional_foreign_message : ForeignMessage_Holder;
       Optional_nested_enum : TestAllTypesProto3_NestedEnum := 0;
       Optional_foreign_enum : ForeignEnum := 0;
+      Optional_string_piece : Ada.Strings.Unbounded.Unbounded_String := Ada.Strings.Unbounded.Null_Unbounded_String;
+      Optional_cord : Ada.Strings.Unbounded.Unbounded_String := Ada.Strings.Unbounded.Null_Unbounded_String;
       Recursive_message : TestAllTypesProto3_Holder;
       Repeated_int32 : Integer_32_Vectors.Vector;
       Repeated_int64 : Integer_64_Vectors.Vector;
@@ -354,6 +380,8 @@ package Protobuf_test_messages_Proto3 is
       Repeated_foreign_message : ForeignMessage_Vectors.Vector;
       Repeated_nested_enum : TestAllTypesProto3_NestedEnum_Vectors.Vector;
       Repeated_foreign_enum : ForeignEnum_Vectors.Vector;
+      Repeated_string_piece : Unbounded_String_Vectors.Vector;
+      Repeated_cord : Unbounded_String_Vectors.Vector;
       Map_int32_int32 : Integer_32_Integer_32_Maps.Map;
       Map_int64_int64 : Integer_64_Integer_64_Maps.Map;
       Map_uint32_uint32 : Unsigned_32_Unsigned_32_Maps.Map;
@@ -427,6 +455,13 @@ package Protobuf_test_messages_Proto3 is
       Optional_any : Any_Holder;
       Optional_value : Value_Holder;
       Optional_null_value : Interfaces.Integer_32 := 0;
+      Repeated_duration : Duration_Vectors.Vector;
+      Repeated_timestamp : Timestamp_Vectors.Vector;
+      Repeated_fieldmask : Field_Mask_Vectors.Vector;
+      Repeated_any : Any_Vectors.Vector;
+      Repeated_value : Value_Vectors.Vector;
+      Repeated_list_value : List_Value_Vectors.Vector;
+      Repeated_struct : Struct_Vectors.Vector;
       Fieldname1 : Interfaces.Integer_32 := 0;
       Field_name2 : Interfaces.Integer_32 := 0;
       Field_name3 : Interfaces.Integer_32 := 0;

@@ -27,8 +27,26 @@ package Proto_JSON is
    --  Parsing helpers for generated From_JSON code. The numeric text of a JSON
    --  value (proto3 JSON accepts numbers either bare or quoted as strings).
    function Scalar_Text (V : JSON.JSON_Value) return String;
-   function To_Int64 (Text : String) return Interfaces.Integer_64;
+
+   --  The value of a JSON string, or Decode_Error if V is not a JSON string.
+   --  proto3 requires `string` and `bytes` fields to be JSON strings (a bare
+   --  number or bool for such a field is a parse error).
+   function Checked_String (V : JSON.JSON_Value) return String;
+
+   --  Strict proto3 JSON integer parsing. The text must be a base-10 integer
+   --  (optionally signed, no leading '+', no leading zeros except a lone "0",
+   --  no surrounding whitespace) or an integer-VALUED decimal/exponent form
+   --  (e.g. "10.0", "1e2"); anything else -- a non-integral value, a malformed
+   --  literal, or a value outside the target type's range -- raises
+   --  Decode_Error. The 32-bit variants additionally enforce the 32-bit range.
+   function To_Int32  (Text : String) return Interfaces.Integer_32;
+   function To_Int64  (Text : String) return Interfaces.Integer_64;
+   function To_UInt32 (Text : String) return Interfaces.Unsigned_32;
    function To_UInt64 (Text : String) return Interfaces.Unsigned_64;
+
+   --  Strict proto3 JSON float/double parsing: a finite value in range, or one
+   --  of the tokens "NaN"/"Infinity"/"-Infinity". Out-of-range or malformed
+   --  input raises Decode_Error.
    function To_Double (Text : String) return Interfaces.IEEE_Float_64;
    function To_Float (Text : String) return Interfaces.IEEE_Float_32;
 

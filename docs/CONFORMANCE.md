@@ -165,12 +165,38 @@ gprbuild -P protobuf_ada.gpr
 tools/run_conformance_crosscheck.sh   # honours $PROTOC / $PY_PROTOBUF overrides
 ```
 
+### Official conformance run (`tools/run_official_conformance.sh`)
+
+Google's official C++ `conformance-test-runner` has been run against
+`bin/conformance-runner`. The current result:
+
+    CONFORMANCE SUITE PASSED: 1372 successes, 1262 skipped,
+                              25 expected failures, 0 unexpected failures.
+
+The 1262 skipped are input types this proto3-only testee does not handle
+(proto2, editions, text format). The 25 expected failures are documented and
+categorized in `conformance/failure_list_proto3.txt`; passing that file via
+`--failure_list` is what makes the suite report **0 unexpected failures**:
+
+```bash
+gprbuild -P protobuf_ada.gpr
+export CONFORMANCE_TEST_RUNNER=.../conformance_test_runner   # see script header
+tools/run_official_conformance.sh
+```
+
+The 25 remaining gaps, by feature: `allow_alias` enums (8), `Any` from JSON (6),
+wire-level message merge (4), unknown-field retention (2), `Value` accepting
+JSON null (2), a map entry with a missing message value (2), and duplicate
+oneof members in JSON (1). The `tools/run_conformance_crosscheck.sh` oracle
+above complements this for environments without the C++ runner.
+
 ### Codegen roadmap (toward 100% proto3 + JSON)
 
-1. Run Google's official C++ `conformance-test-runner` against
-   `bin/conformance-runner` (the cross-check above already validates the same
-   directions against the reference Python implementation) and triage any
-   residual cases its much larger corpus surfaces.
+1. Close the 25 documented expected failures in
+   `conformance/failure_list_proto3.txt` -- in rough order of effort:
+   duplicate-oneof rejection and `Value`-null, then `allow_alias` enums and the
+   map missing-default, then `Any`-from-JSON resolution, and finally the
+   architectural items (message merge on decode, unknown-field retention).
 
 ## Explicitly not implemented (yet)
 
